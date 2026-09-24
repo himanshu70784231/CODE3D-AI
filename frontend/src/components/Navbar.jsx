@@ -125,31 +125,31 @@ export default function Navbar({ activeTab, setActiveTab, onOpenCodeDoctor, onOp
               }`}
             >
               <img
-                src={user.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
-                alt={user.fullName || user.username}
+                src={user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                alt={user?.fullName || user?.username || 'User'}
                 className="w-6 h-6 rounded-full object-cover border border-cyan-500/40"
               />
               <div className="hidden sm:flex flex-col text-left pr-1">
                 <span className={`text-[11px] font-bold leading-tight ${isBright ? 'text-slate-900' : 'text-slate-200'}`}>
-                  {user.fullName ? user.fullName.split(' ')[0] : user.username}
+                  {user?.fullName ? user.fullName.split(' ')[0] : (user?.username || 'User')}
                 </span>
                 <span className="text-[9px] font-mono text-cyan-600 dark:text-cyan-400 leading-none">
-                  {user.role || 'Student'}
+                  {user?.role || 'Student'}
                 </span>
               </div>
               <ChevronDown size={12} className={isBright ? 'text-slate-500' : 'text-slate-400'} />
             </button>
 
             {/* Profile Dropdown */}
-            {isProfileMenuOpen && (
+            {isProfileMenuOpen && user && (
               <div className={`absolute right-0 mt-2 w-56 border rounded-xl shadow-2xl p-2 z-50 text-xs animate-fadeIn ${
                 isBright ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
               }`}>
                 <div className={`p-2 border-b ${isBright ? 'border-slate-100' : 'border-slate-800'}`}>
-                  <p className={`font-bold text-xs ${isBright ? 'text-slate-900' : 'text-white'}`}>{user.fullName || user.username}</p>
-                  <p className={`text-[10px] font-mono ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>{user.email || `${user.username}@code3d.edu`}</p>
+                  <p className={`font-bold text-xs ${isBright ? 'text-slate-900' : 'text-white'}`}>{user?.fullName || user?.username}</p>
+                  <p className={`text-[10px] font-mono ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>{user?.email || `${user?.username || 'student'}@code3d.edu`}</p>
                   <span className="inline-block mt-1 text-[9px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border border-cyan-500/20">
-                    {user.role || 'Student Developer'}
+                    {user?.role || 'Student Developer'}
                   </span>
                 </div>
 
@@ -169,8 +169,8 @@ export default function Navbar({ activeTab, setActiveTab, onOpenCodeDoctor, onOp
 
                   <button
                     onClick={() => {
-                      logout();
                       setIsProfileMenuOpen(false);
+                      logout();
                     }}
                     className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-red-500/10 text-red-500 flex items-center gap-2 cursor-pointer"
                   >

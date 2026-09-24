@@ -42,7 +42,24 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    try {
+      localStorage.removeItem('code3d_user');
+    } catch {}
     setUser(null);
+  };
+
+  const loginDemo = (role = 'Lead Architect') => {
+    const demoUser = {
+      success: true,
+      userId: 101,
+      username: 'himanshu',
+      fullName: 'Himanshu (Lead Architect)',
+      email: 'himanshu@code3d.edu',
+      role: role,
+      token: 'demo-token-himanshu'
+    };
+    setUser(demoUser);
+    return { success: true, user: demoUser };
   };
 
   return (
@@ -53,6 +70,7 @@ export function AuthProvider({ children }) {
         login,
         register,
         logout,
+        loginDemo,
         isLoginModalOpen,
         openLoginModal: () => setIsLoginModalOpen(true),
         closeLoginModal: () => setIsLoginModalOpen(false),
