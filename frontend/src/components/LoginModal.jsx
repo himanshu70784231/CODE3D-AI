@@ -4,7 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { X, LogIn, UserPlus, Sparkles, ShieldCheck, UserCheck, Key, Mail, User } from 'lucide-react';
 
 export default function LoginModal() {
-  const { isLoginModalOpen, closeLoginModal, login, register } = useAuth();
+  const { isLoginModalOpen, closeLoginModal, login, register, loginDemo } = useAuth();
   const { isBright } = useTheme();
   const [isRegister, setIsRegister] = useState(false);
 
@@ -219,6 +219,32 @@ export default function LoginModal() {
               <span>{loading ? 'Authenticating...' : isRegister ? 'Create Account' : 'Sign In'}</span>
             </button>
           </form>
+
+          {/* 1-Click Demo Access */}
+          <div className="relative my-3">
+            <div className="absolute inset-0 flex items-center"><div className={`w-full border-t ${isBright ? 'border-slate-200' : 'border-slate-800'}`} /></div>
+            <div className="relative flex justify-center text-[10px] uppercase font-mono">
+              <span className={`px-2 ${isBright ? 'bg-white text-slate-500' : 'bg-[#090d16] text-slate-500'}`}>Or Quick Evaluation</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (loginDemo) {
+                loginDemo('Lead Architect');
+                closeLoginModal();
+              }
+            }}
+            className={`w-full py-2.5 border font-semibold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              isBright
+                ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 text-emerald-900'
+                : 'bg-gradient-to-r from-emerald-600/20 to-cyan-600/20 hover:from-emerald-600/30 hover:to-cyan-600/30 border-emerald-500/40 text-emerald-300'
+            }`}
+          >
+            <Sparkles size={14} className={isBright ? 'text-emerald-600' : 'text-emerald-400'} />
+            <span>⚡ 1-Click Demo Login (Himanshu - Architect)</span>
+          </button>
 
           {/* Switch between Login and Register */}
           <div className="text-center pt-2">

@@ -19,11 +19,6 @@ function MainApp() {
   const [selectedConcept, setSelectedConcept] = useState(null);
   const [isDoctorOpen, setIsDoctorOpen] = useState(false);
 
-  // If user is not logged in, enforce AuthGate so the site is NOT accessible
-  if (!user) {
-    return <AuthGate />;
-  }
-
   const handleLaunchConcept = (concept) => {
     setSelectedConcept(concept);
     setActiveTab('visualizer');

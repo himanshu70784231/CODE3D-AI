@@ -7,7 +7,7 @@ export function ThemeProvider({ children }) {
     try {
       const saved = localStorage.getItem('code3d_theme');
       if (saved === 'bright' || saved === 'dark') return saved;
-      return window.matchMedia('(prefers-color-scheme: light)').matches ? 'bright' : 'dark';
+      return 'dark';
     } catch {
       return 'dark';
     }

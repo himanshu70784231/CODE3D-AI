@@ -171,6 +171,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenCodeDoctor, onOp
                     onClick={() => {
                       setIsProfileMenuOpen(false);
                       logout();
+                      if (setActiveTab) setActiveTab('dashboard');
                     }}
                     className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-red-500/10 text-red-500 flex items-center gap-2 cursor-pointer"
                   >

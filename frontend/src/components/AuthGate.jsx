@@ -82,9 +82,7 @@ export default function AuthGate() {
   };
 
   return (
-    <div className={`min-h-screen w-full flex flex-col justify-between overflow-x-hidden overflow-y-auto selection:bg-cyan-500/30 transition-colors duration-200 ${
-      isBright ? 'bg-slate-50 text-slate-900' : 'bg-[#060911] text-slate-100'
-    }`}>
+    <div className="min-h-screen w-full flex flex-col justify-between overflow-x-hidden overflow-y-auto selection:bg-cyan-500/30 bg-[#060911] text-slate-100">
       {/* Subtle Background Glows */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className={`absolute top-[-10%] left-[20%] w-[500px] h-[500px] rounded-full blur-[140px] ${
