@@ -12,6 +12,7 @@ import CodeDoctorModal from '../components/CodeDoctorModal';
 import StriverSheetDrawer from '../components/StriverSheetDrawer';
 import { useExecutionTimeline } from '../hooks/useExecutionTimeline';
 import { getExecutionTrace, extractNumbersFromCode } from '../services/executionSimulator';
+import { validateSourceCode } from '../services/codeValidator';
 import { DEFAULT_JAVA_CODE, SAMPLE_PROGRAMS, LANGUAGE_DEFAULTS, CURRICULUM_CATEGORIES } from '../utils/sampleCodes';
 import { STRIVER_PROBLEMS } from '../utils/striverCatalog';
 import { executeProgram, analyzeCode, checkBackendHealth, recordExecutionHistory } from '../services/apiService';
@@ -64,6 +65,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
   const [formInputValues, setFormInputValues] = useState('10, 20, 30, 40');
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionError, setExecutionError] = useState(null);
+  const [syntaxErrorLine, setSyntaxErrorLine] = useState(null);
 
   // Modals & responsive view state
   const [isAiOpen, setIsAiOpen] = useState(false);
@@ -396,11 +398,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
       return;
     }
     // If paused mid-way and code has not changed, clicking resumes
-    if (!isCodeDirty && !isAtEnd && !isAtStart) {
-      play();
-      return;
-    }
-    if (!isCodeDirty && isAtStart) {
+    if (!isCodeDirty && !isAtEnd && !isAtStart && !syntaxErrorLine) {
       play();
       return;
     }
@@ -410,11 +408,23 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
       return;
     }
 
+    // 1. Precise Multi-Language Syntax Validation
+    const validation = validateSourceCode(code, language);
+    if (!validation.isValid) {
+      const err = validation.error;
+      setSyntaxErrorLine(err.line);
+      setExecutionError(`[Syntax Error at Line ${err.line}] ${err.message} — ${err.suggestion}`);
+      setIsExecuting(false);
+      pause();
+      return;
+    }
+
     const nums = extractNumbersFromCode(code);
     if (nums && nums.length > 0) {
       setFormInputValues(nums.join(', '));
     }
 
+    setSyntaxErrorLine(null);
     setIsExecuting(true);
     setExecutionError(null);
 
@@ -913,7 +923,11 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
           >
             <CodeEditor
               code={code}
-              onChangeCode={setCode}
+              onChangeCode={(val) => {
+                setCode(val);
+                if (syntaxErrorLine) setSyntaxErrorLine(null);
+                if (executionError) setExecutionError(null);
+              }}
               language={language}
               onChangeLanguage={handleLanguageChange}
               onOpenCustomCode={() => setIsCustomCodeOpen(true)}
@@ -922,6 +936,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
               onOpenStriverSheet={() => setIsStriverSheetOpen(true)}
               onOpenLeetCode={() => setIsStriverSheetOpen(true)}
               currentLineNumber={currentStep?.lineNumber || null}
+              syntaxErrorLine={syntaxErrorLine}
               isPlaying={isPlaying}
               onPlay={handleRunCode}
               onRunCode={handleRunCode}

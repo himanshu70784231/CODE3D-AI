@@ -5332,34 +5332,134 @@ export function generateDynamicUniversalTrace(code, values, lang = 'code', custo
       percentage: 85.0
     };
 
-    // Helper: evaluate expression with current variables
+    // Helper: safely evaluate arithmetic and string expressions without Function() or eval()
+    const safeEvaluate = (expr, scope) => {
+      const str = String(expr).trim();
+      if (!str) return '';
+      if (str === 'true') return true;
+      if (str === 'false') return false;
+      if (!isNaN(Number(str)) && str !== '') return Number(str);
+      if ((str.startsWith('"') && str.endsWith('"')) || (str.startsWith("'") && str.endsWith("'"))) {
+        return str.slice(1, -1);
+      }
+      if (scope.hasOwnProperty(str)) return scope[str];
+
+      const tokens = [];
+      let idx = 0;
+      while (idx < str.length) {
+        const ch = str[idx];
+        if (/\s/.test(ch)) { idx++; continue; }
+        if (ch === '"' || ch === "'") {
+          const q = ch;
+          let lit = '';
+          idx++;
+          while (idx < str.length && str[idx] !== q) {
+            if (str[idx] === '\\' && idx + 1 < str.length) { lit += str[idx + 1]; idx += 2; }
+            else { lit += str[idx]; idx++; }
+          }
+          idx++;
+          tokens.push({ type: 'LITERAL', value: lit });
+          continue;
+        }
+        const two = str.slice(idx, idx + 2);
+        if (['==', '!=', '>=', '<=', '&&', '||'].includes(two)) {
+          tokens.push({ type: 'OP', value: two });
+          idx += 2;
+          continue;
+        }
+        if (['+', '-', '*', '/', '%', '>', '<', '!', '(', ')'].includes(ch)) {
+          tokens.push({ type: ch === '(' || ch === ')' ? 'PAREN' : 'OP', value: ch });
+          idx++;
+          continue;
+        }
+        if (/[\d.]/.test(ch)) {
+          let numStr = '';
+          while (idx < str.length && /[\d.]/.test(str[idx])) { numStr += str[idx]; idx++; }
+          tokens.push({ type: 'LITERAL', value: parseFloat(numStr) });
+          continue;
+        }
+        if (/[a-zA-Z_$]/.test(ch)) {
+          let id = '';
+          while (idx < str.length && /[a-zA-Z0-9_$]/.test(str[idx])) { id += str[idx]; idx++; }
+          if (id === 'and') tokens.push({ type: 'OP', value: '&&' });
+          else if (id === 'or') tokens.push({ type: 'OP', value: '||' });
+          else if (id === 'not') tokens.push({ type: 'OP', value: '!' });
+          else if (id === 'true') tokens.push({ type: 'LITERAL', value: true });
+          else if (id === 'false') tokens.push({ type: 'LITERAL', value: false });
+          else tokens.push({ type: 'LITERAL', value: scope.hasOwnProperty(id) ? scope[id] : id });
+          continue;
+        }
+        idx++;
+      }
+
+      const PRECEDENCE = {
+        '||': 1, '&&': 2, '==': 3, '!=': 3,
+        '<': 4, '>': 4, '<=': 4, '>=': 4,
+        '+': 5, '-': 5, '*': 6, '/': 6, '%': 6,
+      };
+
+      const out = [];
+      const ops = [];
+      for (const t of tokens) {
+        if (t.type === 'LITERAL') out.push(t.value);
+        else if (t.type === 'OP') {
+          while (ops.length > 0 && ops[ops.length - 1] !== '(' && (PRECEDENCE[ops[ops.length - 1]] || 0) >= (PRECEDENCE[t.value] || 0)) {
+            out.push(ops.pop());
+          }
+          ops.push(t.value);
+        } else if (t.value === '(') ops.push('(');
+        else if (t.value === ')') {
+          while (ops.length > 0 && ops[ops.length - 1] !== '(') out.push(ops.pop());
+          if (ops.length > 0 && ops[ops.length - 1] === '(') ops.pop();
+        }
+      }
+      while (ops.length > 0) out.push(ops.pop());
+
+      const stack = [];
+      for (const it of out) {
+        if (typeof it === 'string' && PRECEDENCE.hasOwnProperty(it)) {
+          const b = stack.pop();
+          const a = stack.pop();
+          let r = 0;
+          switch (it) {
+            case '+': r = (typeof a === 'string' || typeof b === 'string') ? `${a}${b}` : (Number(a) + Number(b)); break;
+            case '-': r = Number(a) - Number(b); break;
+            case '*': r = Number(a) * Number(b); break;
+            case '/': r = Number(b) !== 0 ? (Number(a) / Number(b)) : 0; break;
+            case '%': r = Number(b) !== 0 ? (Number(a) % Number(b)) : 0; break;
+            case '==': r = (a == b); break;
+            case '!=': r = (a != b); break;
+            case '>=': r = (Number(a) >= Number(b)); break;
+            case '<=': r = (Number(a) <= Number(b)); break;
+            case '>': r = (Number(a) > Number(b)); break;
+            case '<': r = (Number(a) < Number(b)); break;
+            case '&&': r = Boolean(a && b); break;
+            case '||': r = Boolean(a || b); break;
+            default: r = a;
+          }
+          stack.push(r);
+        } else {
+          stack.push(it);
+        }
+      }
+      return stack.length > 0 ? stack[0] : '';
+    };
+
+    // Helper: evaluate expression with current variables safely
     const evalExpression = (exprStr) => {
       try {
-        let clean = exprStr.trim();
-        const sortedKeys = Object.keys(vars).sort((a, b) => b.length - a.length);
-        for (const k of sortedKeys) {
-          const v = vars[k];
-          const replacer = typeof v === 'string' ? JSON.stringify(v) : v;
-          clean = clean.replace(new RegExp(`\\b${k}\\b`, 'g'), replacer);
-        }
-        return Function(`'use strict'; return (${clean})`)();
+        return safeEvaluate(exprStr, vars);
       } catch (e) {
         const parsed = parseFloat(exprStr);
         return isNaN(parsed) ? exprStr.trim() : parsed;
       }
     };
 
-    // Helper: evaluate boolean condition with variables
+    // Helper: evaluate boolean condition with variables safely
     const evalCondition = (condStr) => {
       try {
-        let clean = condStr.trim();
-        const sortedKeys = Object.keys(vars).sort((a, b) => b.length - a.length);
-        for (const k of sortedKeys) {
-          const v = vars[k];
-          const replacer = typeof v === 'string' ? JSON.stringify(v) : v;
-          clean = clean.replace(new RegExp(`\\b${k}\\b`, 'g'), replacer);
-        }
-        return Boolean(Function(`'use strict'; return (${clean})`)());
+        const res = safeEvaluate(condStr, vars);
+        return Boolean(res);
       } catch (e) {
         return false;
       }

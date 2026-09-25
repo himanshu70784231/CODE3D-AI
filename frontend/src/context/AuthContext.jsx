@@ -48,20 +48,6 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  const loginDemo = (role = 'Lead Architect') => {
-    const demoUser = {
-      success: true,
-      userId: 101,
-      username: 'himanshu',
-      fullName: 'Himanshu (Lead Architect)',
-      email: 'himanshu@code3d.edu',
-      role: role,
-      token: 'demo-token-himanshu'
-    };
-    setUser(demoUser);
-    return { success: true, user: demoUser };
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -70,7 +56,6 @@ export function AuthProvider({ children }) {
         login,
         register,
         logout,
-        loginDemo,
         isLoginModalOpen,
         openLoginModal: () => setIsLoginModalOpen(true),
         closeLoginModal: () => setIsLoginModalOpen(false),

@@ -4,7 +4,6 @@ import { useTheme } from '../context/ThemeContext';
 import {
   LogIn,
   UserPlus,
-  Sparkles,
   ShieldCheck,
   Box,
   Cpu,
@@ -18,7 +17,7 @@ import {
 } from 'lucide-react';
 
 export default function AuthGate() {
-  const { login, register, loginDemo } = useAuth();
+  const { login, register } = useAuth();
   const { isBright, toggleTheme } = useTheme();
   const [isRegister, setIsRegister] = useState(false);
 
@@ -56,25 +55,6 @@ export default function AuthGate() {
         if (!res.success) {
           setError(res.message || 'Invalid username or password');
         }
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDemoAccess = async () => {
-    setError(null);
-    setLoading(true);
-    try {
-      const res = await login({ username: 'himanshu', password: 'password123' });
-      if (!res.success) {
-        if (loginDemo) {
-          loginDemo('Lead Architect');
-        }
-      }
-    } catch {
-      if (loginDemo) {
-        loginDemo('Lead Architect');
       }
     } finally {
       setLoading(false);
@@ -360,29 +340,7 @@ export default function AuthGate() {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center"><div className={`w-full border-t ${isBright ? 'border-slate-200' : 'border-slate-800'}`} /></div>
-            <div className="relative flex justify-center text-[10px] uppercase font-mono">
-              <span className={`px-2 ${isBright ? 'bg-white text-slate-500' : 'bg-[#090d18] text-slate-500'}`}>Or Instant Evaluation</span>
-            </div>
-          </div>
-
-          {/* 1-Click Demo Login */}
-          <button
-            onClick={handleDemoAccess}
-            disabled={loading}
-            className={`w-full py-2.5 border font-semibold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
-              isBright
-                ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 text-emerald-900'
-                : 'bg-gradient-to-r from-emerald-600/20 to-cyan-600/20 hover:from-emerald-600/30 hover:to-cyan-600/30 border-emerald-500/40 text-emerald-300'
-            }`}
-          >
-            <Sparkles size={14} className={isBright ? 'text-emerald-600' : 'text-emerald-400'} />
-            <span>⚡ 1-Click Demo Login (Himanshu - Architect)</span>
-          </button>
-
-          <p className={`text-[10px] text-center mt-3 font-mono ${isBright ? 'text-slate-500' : 'text-slate-500'}`}>
+          <p className={`text-[10px] text-center mt-4 font-mono ${isBright ? 'text-slate-500' : 'text-slate-500'}`}>
             Default test account: <span className={isBright ? 'text-slate-800 font-semibold' : 'text-slate-400'}>himanshu</span> / <span className={isBright ? 'text-slate-800 font-semibold' : 'text-slate-400'}>admin123</span>
           </p>
         </div>

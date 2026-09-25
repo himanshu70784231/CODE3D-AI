@@ -59,6 +59,7 @@ export default function CodeEditor({
   onRunCode,
   onResetCode,
   isExecuting = false,
+  syntaxErrorLine = null,
 }) {
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
@@ -128,14 +129,29 @@ export default function CodeEditor({
     }
   }, [isBright]);
 
-  // Update line highlighting whenever currentLineNumber changes
+  // Update line highlighting whenever currentLineNumber or syntaxErrorLine changes
   useEffect(() => {
-    if (!editorRef.current || !currentLineNumber) return;
-
+    if (!editorRef.current) return;
     const editor = editorRef.current;
 
-    const newDecorations = [
-      {
+    const newDecorations = [];
+    if (syntaxErrorLine) {
+      newDecorations.push({
+        range: {
+          startLineNumber: syntaxErrorLine,
+          startColumn: 1,
+          endLineNumber: syntaxErrorLine,
+          endColumn: 1,
+        },
+        options: {
+          isWholeLine: true,
+          className: 'syntax-error-line-bg',
+          glyphMarginClassName: 'syntax-error-glyph',
+        },
+      });
+      editor.revealLineInCenterIfOutsideViewport(syntaxErrorLine);
+    } else if (currentLineNumber) {
+      newDecorations.push({
         range: {
           startLineNumber: currentLineNumber,
           startColumn: 1,
@@ -147,12 +163,12 @@ export default function CodeEditor({
           className: 'active-execution-line-bg',
           glyphMarginClassName: 'active-execution-line-glyph',
         },
-      },
-    ];
+      });
+      editor.revealLineInCenterIfOutsideViewport(currentLineNumber);
+    }
 
     decorationsRef.current = editor.deltaDecorations(decorationsRef.current, newDecorations);
-    editor.revealLineInCenterIfOutsideViewport(currentLineNumber);
-  }, [currentLineNumber]);
+  }, [currentLineNumber, syntaxErrorLine]);
 
   return (
     <div className={`flex flex-col h-full border-r select-none transition-colors duration-200 ${
