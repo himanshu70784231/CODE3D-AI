@@ -469,9 +469,9 @@ export function extractNumbersFromCode(code) {
     if (parsed.length > 0) return parsed.slice(0, 12);
   }
 
-  // 3. Detect Python range(N) or loop bound `i < N`
-  const rangeMatch = code.match(/range\s*\(\s*(\d+)\s*\)/) || code.match(/[i|j|k]\s*<\s*(\d+)/);
-  if (rangeMatch && rangeMatch[1]) {
+  // 3. Detect Python range(N) only if there is an explicit array iteration in the code
+  const rangeMatch = code.match(/range\s*\(\s*(\d+)\s*\)/);
+  if (rangeMatch && rangeMatch[1] && (code.includes('[') || code.includes('array'))) {
     const count = Math.min(10, Math.max(2, parseInt(rangeMatch[1], 10)));
     const loopVals = [];
     for (let k = 0; k < count; k++) {
@@ -1623,6 +1623,564 @@ export function generateDynamicRecursionTrace(values = [4], language = 'java') {
       aiHint: 'Call stack unwinds backwards.'
     });
   }
+
+  return steps;
+}
+
+/**
+ * Dynamic 3D Pure Numeric Loop Generator
+ * Handles for-loops and while-loops without arrays (e.g. for (int i = 0; i < 5; i++) { System.out.println(i); })
+ */
+export function generateDynamicLoopTrace(code, cleanCode, language = 'java') {
+  const steps = [];
+  let step = 1;
+  const output = [];
+
+  // 1. Extract loop variable name
+  const varMatch = code.match(/for\s*\(\s*(?:int|let|var)?\s*([a-zA-Z_]\w*)\s*=/i) ||
+    code.match(/for\s+([a-zA-Z_]\w*)\s+in\s+range/i) ||
+    code.match(/while\s*\(\s*([a-zA-Z_]\w*)\s*(?:<|<=|>|>=|!=|==)/i) ||
+    code.match(/(?:int|let|var)?\s*([a-zA-Z_]\w*)\s*=\s*\d+;?\s*while/i);
+  const loopVar = varMatch ? varMatch[1] : 'i';
+
+  // 2. Extract start value
+  const initMatch = code.match(new RegExp(`(?:int|let|var)?\\s*${loopVar}\\s*=\\s*(-?\\d+)`));
+  const rangeMatch = code.match(/range\s*\(\s*(-?\\d+)\s*(?:,\s*(-?\\d+))?\s*\)/);
+  let startVal = 0;
+  if (rangeMatch) {
+    if (rangeMatch[2] !== undefined) {
+      startVal = parseInt(rangeMatch[1], 10);
+    } else {
+      startVal = 0;
+    }
+  } else if (initMatch) {
+    startVal = parseInt(initMatch[1], 10);
+  }
+
+  // 3. Extract condition operator and bound
+  const condMatch = code.match(new RegExp(`${loopVar}\\s*(<=|>=|<|>|!=|==)\\s*(-?\\d+)`));
+  let op = '<';
+  let boundVal = 5;
+  if (rangeMatch) {
+    op = '<';
+    boundVal = rangeMatch[2] !== undefined ? parseInt(rangeMatch[2], 10) : parseInt(rangeMatch[1], 10);
+  } else if (condMatch) {
+    op = condMatch[1];
+    boundVal = parseInt(condMatch[2], 10);
+  }
+
+  // 4. Extract step / delta
+  let delta = 1;
+  if (code.match(new RegExp(`${loopVar}\\s*\\+\\+`)) || code.match(new RegExp(`\\+\\+\\s*${loopVar}`)) || code.match(new RegExp(`${loopVar}\\s*\\+=\\s*1`))) {
+    delta = 1;
+  } else if (code.match(new RegExp(`${loopVar}\\s*--`)) || code.match(new RegExp(`--\\s*${loopVar}`)) || code.match(new RegExp(`${loopVar}\\s*-=\\s*1`))) {
+    delta = -1;
+  } else {
+    const stepMatch = code.match(new RegExp(`${loopVar}\\s*\\+=\\s*(\\d+)`)) || code.match(new RegExp(`${loopVar}\\s*=\\s*${loopVar}\\s*\\+\\s*(\\d+)`));
+    if (stepMatch) delta = parseInt(stepMatch[1], 10);
+    else if (op === '>' || op === '>=') delta = -1;
+  }
+
+  // 5. Detect accumulator variables (e.g. sum += i, total = total + i)
+  let accVar = null;
+  let accVal = 0;
+  if (cleanCode.includes('sum') && (cleanCode.includes('+=') || cleanCode.includes('sum +'))) {
+    accVar = 'sum';
+  } else if (cleanCode.includes('total') && (cleanCode.includes('+=') || cleanCode.includes('total +'))) {
+    accVar = 'total';
+  }
+
+  // 6. Detect print expression
+  const printMatch = code.match(/(?:System\.out\.println|System\.out\.print|console\.log|print|printf|cout\s*<<)\s*\(([^)]*)\)|cout\s*<<\s*([^;]+)/);
+  const printExpr = printMatch ? (printMatch[1] || printMatch[2]).trim() : null;
+
+  // Helper to evaluate condition
+  const testCond = (val) => {
+    switch (op) {
+      case '<': return val < boundVal;
+      case '<=': return val <= boundVal;
+      case '>': return val > boundVal;
+      case '>=': return val >= boundVal;
+      case '!=': return val !== boundVal;
+      case '==': return val === boundVal;
+      default: return val < boundVal;
+    }
+  };
+
+  // Step 1: LOOP_INIT
+  const currentVars = { [loopVar]: startVal };
+  if (accVar) currentVars[accVar] = accVal;
+
+  steps.push({
+    stepNumber: step++,
+    lineNumber: 1,
+    eventType: 'LOOP_INIT',
+    variables: { ...currentVars },
+    changedVariable: loopVar,
+    currentValue: startVal,
+    condition: null,
+    output: [...output],
+    dataStructureState: {
+      type: 'universal-execution',
+      name: 'Loop Memory Space',
+      variables: { ...currentVars },
+      variableTypes: { [loopVar]: 'int', ...(accVar ? { [accVar]: 'int' } : {}) },
+      activeVariable: loopVar,
+      outputStream: [...output],
+      label: `Loop Initialized: ${loopVar} = ${startVal}`,
+      focusInfo: `Loop counter initialized to starting value ${startVal}`
+    },
+    explanation: `Loop initialization: variable '${loopVar}' declared and initialized to ${startVal}. Bound condition is '${loopVar} ${op} ${boundVal}'.`,
+    aiHint: `Counter '${loopVar}' prepared in memory register.`
+  });
+
+  let currentVal = startVal;
+  let iterations = 0;
+  const maxIterations = 25; // Safety cap to avoid freezing
+
+  while (testCond(currentVal) && iterations < maxIterations) {
+    iterations++;
+
+    // Condition Check: TRUE
+    const condStr = `${loopVar} ${op} ${boundVal}`;
+    const evalStr = `${currentVal} ${op} ${boundVal}`;
+
+    steps.push({
+      stepNumber: step++,
+      lineNumber: 1,
+      eventType: 'CONDITION_CHECK',
+      variables: { ...currentVars, [loopVar]: currentVal },
+      condition: {
+        expression: condStr,
+        evaluation: evalStr,
+        result: true,
+        branch: 'ENTER LOOP BODY'
+      },
+      output: [...output],
+      dataStructureState: {
+        type: 'universal-execution',
+        name: 'Control Flow Gate',
+        variables: { ...currentVars, [loopVar]: currentVal },
+        variableTypes: { [loopVar]: 'int', ...(accVar ? { [accVar]: 'int' } : {}) },
+        activeVariable: loopVar,
+        conditionInfo: {
+          expression: condStr,
+          evaluation: evalStr,
+          result: true,
+          branch: 'ENTER LOOP BODY'
+        },
+        outputStream: [...output],
+        label: `${evalStr}: TRUE ➜ Executing Body`,
+        focusInfo: `Condition satisfied: ${currentVal} ${op} ${boundVal}`
+      },
+      explanation: `Condition check: '${condStr}' (${evalStr}) evaluates to TRUE. Execution enters loop body.`,
+      aiHint: 'Condition passed! Entering loop block braces.'
+    });
+
+    // Loop Body: Print / Output
+    let printedVal = String(currentVal);
+    if (printExpr) {
+      if (printExpr === loopVar) {
+        printedVal = String(currentVal);
+      } else if (printExpr.includes('"') || printExpr.includes("'")) {
+        const clean = printExpr.replace(/['"]/g, '').replace(/\\n/g, '');
+        printedVal = clean.replace(new RegExp(`\\b${loopVar}\\b`, 'g'), String(currentVal));
+      }
+    }
+    output.push(printedVal);
+
+    if (accVar) {
+      accVal += currentVal;
+      currentVars[accVar] = accVal;
+    }
+
+    steps.push({
+      stepNumber: step++,
+      lineNumber: 2,
+      eventType: 'PRINT_OUTPUT',
+      variables: { ...currentVars, [loopVar]: currentVal },
+      changedVariable: accVar || 'output',
+      currentValue: printedVal,
+      output: [...output],
+      dataStructureState: {
+        type: 'universal-execution',
+        name: 'Standard Console Stream',
+        variables: { ...currentVars, [loopVar]: currentVal },
+        variableTypes: { [loopVar]: 'int', ...(accVar ? { [accVar]: 'int' } : {}) },
+        activeVariable: loopVar,
+        outputStream: [...output],
+        label: `Output: ${printedVal}`,
+        focusInfo: `Printed ${printedVal} to virtual terminal`
+      },
+      explanation: `Loop body execution: standard output printed '${printedVal}' to terminal.`,
+      aiHint: 'Virtual console buffer updated.'
+    });
+
+    // Increment / Step
+    const nextVal = currentVal + delta;
+    steps.push({
+      stepNumber: step++,
+      lineNumber: 1,
+      eventType: 'LOOP_INCREMENT',
+      variables: { ...currentVars, [loopVar]: nextVal },
+      changedVariable: loopVar,
+      previousValue: currentVal,
+      currentValue: nextVal,
+      output: [...output],
+      dataStructureState: {
+        type: 'universal-execution',
+        name: 'Counter Increment Gate',
+        variables: { ...currentVars, [loopVar]: nextVal },
+        variableTypes: { [loopVar]: 'int', ...(accVar ? { [accVar]: 'int' } : {}) },
+        activeVariable: loopVar,
+        outputStream: [...output],
+        label: `${loopVar} += ${delta} ➜ ${nextVal}`,
+        focusInfo: `Counter updated: ${currentVal} ➜ ${nextVal}`
+      },
+      explanation: `Loop counter increment: '${loopVar}' updated from ${currentVal} to ${nextVal} (step ${delta >= 0 ? `+${delta}` : delta}).`,
+      aiHint: 'Counter updated. Moving to next condition evaluation.'
+    });
+
+    currentVal = nextVal;
+    currentVars[loopVar] = currentVal;
+  }
+
+  // Condition Check: FALSE (Termination)
+  const finalCondStr = `${loopVar} ${op} ${boundVal}`;
+  const finalEvalStr = `${currentVal} ${op} ${boundVal}`;
+  steps.push({
+    stepNumber: step++,
+    lineNumber: 1,
+    eventType: 'CONDITION_CHECK',
+    variables: { ...currentVars, [loopVar]: currentVal },
+    condition: {
+      expression: finalCondStr,
+      evaluation: finalEvalStr,
+      result: false,
+      branch: 'EXIT LOOP'
+    },
+    output: [...output],
+    dataStructureState: {
+      type: 'universal-execution',
+      name: 'Control Flow Gate',
+      variables: { ...currentVars, [loopVar]: currentVal },
+      variableTypes: { [loopVar]: 'int', ...(accVar ? { [accVar]: 'int' } : {}) },
+      activeVariable: loopVar,
+      conditionInfo: {
+        expression: finalCondStr,
+        evaluation: finalEvalStr,
+        result: false,
+        branch: 'EXIT LOOP'
+      },
+      outputStream: [...output],
+      label: `${finalEvalStr}: FALSE ➜ Loop Finished`,
+      focusInfo: `Condition ${finalEvalStr} is FALSE. Terminating loop.`
+    },
+    explanation: `Condition check: '${finalCondStr}' (${finalEvalStr}) evaluates to FALSE. Loop terminates successfully.`,
+    aiHint: 'Loop termination condition met. Execution moves past loop block.'
+  });
+
+  // Final PROGRAM_END
+  steps.push({
+    stepNumber: step,
+    lineNumber: 3,
+    eventType: 'PROGRAM_END',
+    variables: { ...currentVars, [loopVar]: currentVal },
+    output: [...output, `Program execution complete (${iterations} iterations)`],
+    dataStructureState: {
+      type: 'universal-execution',
+      name: 'Program Execution Complete',
+      variables: { ...currentVars, [loopVar]: currentVal },
+      variableTypes: { [loopVar]: 'int', ...(accVar ? { [accVar]: 'int' } : {}) },
+      activeVariable: null,
+      outputStream: [...output, `[Execution Finished: ${iterations} iterations]`],
+      label: `Loop Finished: ${loopVar} = ${currentVal}`,
+      focusInfo: `Loop executed ${iterations} iterations cleanly.`
+    },
+    explanation: `Pure loop executed ${iterations} iterations with exit code 0. Final value of ${loopVar} = ${currentVal}.`,
+    aiHint: 'Numeric execution trace finalized.'
+  });
+
+  return steps;
+}
+
+/**
+ * Dynamic 3D Function Execution & Call Stack Frame Generator
+ * Handles functions like:
+ * function add(a, b) { return a + b; }
+ * add(10, 20);
+ */
+export function generateDynamicFunctionCallTrace(code, cleanCode, language = 'javascript') {
+  const steps = [];
+  let step = 1;
+  const output = [];
+
+  // 1. Detect function name
+  const funcMatch = code.match(/(?:function|def)\s+([a-zA-Z_]\w*)\s*\(([^)]*)\)/i) ||
+    code.match(/(?:int|double|float|String|boolean|void)\s+([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*\{/i);
+  const funcName = funcMatch ? (funcMatch[1] || 'add') : 'add';
+  const paramStr = funcMatch && funcMatch[2] ? funcMatch[2] : 'a, b';
+  const params = paramStr.split(',').map(p => {
+    const parts = p.trim().split(/\s+/);
+    return parts[parts.length - 1];
+  }).filter(Boolean);
+
+  // 2. Detect call arguments in code or use defaults
+  const callRegex = new RegExp(`\\b${funcName}\\s*\\(([^)]*)\\)`);
+  const lines = code.split('\n');
+  let callArgs = [10, 20];
+  let callLineNum = lines.length;
+  let defLineNum = 1;
+
+  for (let idx = 0; idx < lines.length; idx++) {
+    const l = lines[idx];
+    if (l.includes(funcName) && (l.includes('function') || l.includes('def') || l.includes('{'))) {
+      defLineNum = idx + 1;
+    } else if (callRegex.test(l)) {
+      callLineNum = idx + 1;
+      const m = l.match(callRegex);
+      if (m && m[1].trim()) {
+        const parsed = m[1].split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+        if (parsed.length > 0) callArgs = parsed;
+      }
+    }
+  }
+
+  // 3. Map arguments to parameters
+  const boundParams = {};
+  params.forEach((param, i) => {
+    boundParams[param] = callArgs[i] !== undefined ? callArgs[i] : (i + 1) * 10;
+  });
+
+  // 4. Detect return expression or computation
+  const returnMatch = code.match(/return\s+([^;}\n]+)/i);
+  const returnExpr = returnMatch ? returnMatch[1].trim() : `${params.join(' + ') || 'a + b'}`;
+  let returnVal = 0;
+  try {
+    const pKeys = Object.keys(boundParams);
+    if (pKeys.length === 2 && (returnExpr === 'a + b' || returnExpr === `${pKeys[0]} + ${pKeys[1]}`)) {
+      returnVal = boundParams[pKeys[0]] + boundParams[pKeys[1]];
+    } else if (pKeys.length === 2 && (returnExpr === 'a * b' || returnExpr === `${pKeys[0]} * ${pKeys[1]}`)) {
+      returnVal = boundParams[pKeys[0]] * boundParams[pKeys[1]];
+    } else {
+      let sum = 0;
+      Object.values(boundParams).forEach(v => { sum += (typeof v === 'number' ? v : 0); });
+      returnVal = sum || 30;
+    }
+  } catch (e) {
+    returnVal = 30;
+  }
+
+  const callSignature = `${funcName}(${Object.values(boundParams).join(', ')})`;
+
+  // Step 1: Function Declaration
+  const callStack = [{ func: 'main()', state: 'ACTIVE' }];
+  steps.push({
+    stepNumber: step++,
+    lineNumber: defLineNum,
+    eventType: 'FUNCTION_DECLARE',
+    variables: {},
+    output: [],
+    dataStructureState: {
+      type: 'recursion',
+      callStack: [...callStack],
+      label: `Function Defined: ${funcName}(${params.join(', ')})`,
+      focusInfo: `Function loaded into memory. Call signature: ${funcName}(${params.join(', ')})`
+    },
+    explanation: `Function '${funcName}(${params.join(', ')})' declared in memory scope.`,
+    aiHint: 'Function definition compiled. Ready for invocations.'
+  });
+
+  // Step 2: Function Call (Push Stack Frame)
+  callStack[0].state = 'WAITING';
+  callStack.push({
+    func: callSignature,
+    params: { ...boundParams },
+    state: 'ACTIVE'
+  });
+
+  steps.push({
+    stepNumber: step++,
+    lineNumber: callLineNum,
+    eventType: 'FUNCTION_CALL',
+    variables: { ...boundParams, callDepth: 2 },
+    changedVariable: funcName,
+    output: [],
+    dataStructureState: {
+      type: 'recursion',
+      callStack: [...callStack],
+      label: `Push Frame: ${callSignature}`,
+      focusInfo: `Call frame pushed. Bound: ${Object.entries(boundParams).map(([k, v]) => `${k}=${v}`).join(', ')}`
+    },
+    explanation: `Function call '${callSignature}' initiated. New call stack frame pushed with parameters: ${Object.entries(boundParams).map(([k, v]) => `${k} = ${v}`).join(', ')}.`,
+    aiHint: 'Call stack frame allocated in memory with isolated local scope.'
+  });
+
+  // Step 3: Function Body Execution
+  steps.push({
+    stepNumber: step++,
+    lineNumber: defLineNum + 1,
+    eventType: 'FUNCTION_EXECUTE',
+    variables: { ...boundParams, evaluating: returnExpr },
+    output: [],
+    dataStructureState: {
+      type: 'recursion',
+      callStack: [...callStack],
+      label: `Executing: ${returnExpr} ➜ ${returnVal}`,
+      focusInfo: `Evaluating '${returnExpr}' inside ${funcName}`
+    },
+    explanation: `Inside '${funcName}': evaluating return statement 'return ${returnExpr}'. Computed result = ${returnVal}.`,
+    aiHint: 'Arithmetic logic unit computes expression inside local frame.'
+  });
+
+  // Step 4: Return State (Frame marked RETURN)
+  callStack[1].state = 'RETURN';
+  callStack[1].returnValue = returnVal;
+
+  output.push(`${callSignature} returned ${returnVal}`);
+
+  steps.push({
+    stepNumber: step++,
+    lineNumber: defLineNum + 1,
+    eventType: 'FUNCTION_RETURN',
+    variables: { ...boundParams, returnValue: returnVal },
+    output: [...output],
+    dataStructureState: {
+      type: 'recursion',
+      callStack: [...callStack],
+      label: `Returned: ${returnVal}`,
+      focusInfo: `Result ${returnVal} ready to pass back to caller`
+    },
+    explanation: `Function '${funcName}' finished execution and returns ${returnVal}. Call frame marked for unwinding.`,
+    aiHint: 'Return value transmitted to caller.'
+  });
+
+  // Step 5: Stack Frame Pop
+  callStack.pop();
+  callStack[0].state = 'ACTIVE';
+
+  steps.push({
+    stepNumber: step++,
+    lineNumber: callLineNum,
+    eventType: 'FRAME_POP',
+    variables: { result: returnVal, callDepth: 1 },
+    output: [...output],
+    dataStructureState: {
+      type: 'recursion',
+      callStack: [...callStack],
+      label: `Frame Popped ➜ Caller Resumed`,
+      focusInfo: `Call frame deallocated. Received result: ${returnVal}`
+    },
+    explanation: `Call stack frame for '${callSignature}' popped and deallocated. Control resumed at caller main() with result ${returnVal}.`,
+    aiHint: 'Stack memory unwound cleanly.'
+  });
+
+  // Step 6: PROGRAM_END
+  steps.push({
+    stepNumber: step,
+    lineNumber: callLineNum,
+    eventType: 'PROGRAM_END',
+    variables: { result: returnVal },
+    output: [...output, `Program execution complete: Result = ${returnVal}`],
+    dataStructureState: {
+      type: 'recursion',
+      callStack: [...callStack],
+      label: `Execution Finished: Result = ${returnVal}`,
+      focusInfo: `Final return value verified: ${returnVal}`
+    },
+    explanation: `Program completed successfully with exit code 0. Function call result: ${returnVal}.`,
+    aiHint: 'Full call lifecycle visualized.'
+  });
+
+  return steps;
+}
+
+/**
+ * Dynamic 3D Array Creation & Memory Allocation Generator
+ * Handles direct array initializers (e.g. int[] arr = {5, 2, 8, 1}; or const arr = [5, 2, 8, 1];)
+ */
+export function generateDynamicArrayCreationTrace(code, values = [5, 2, 8, 1], language = 'java') {
+  const steps = [];
+  let step = 1;
+  const output = [];
+
+  // 1. Detect Array Identifier Name
+  const nameMatch = code.match(/(?:int\s*\[\s*\]|vector\s*<\s*int\s*>|let|const|var)\s+([a-zA-Z_]\w*)/i) ||
+    code.match(/([a-zA-Z_]\w*)\s*\[\s*\]\s*=/i) ||
+    code.match(/([a-zA-Z_]\w*)\s*=\s*[\[{]/i);
+  const arrayName = nameMatch ? nameMatch[1] : 'arr';
+
+  const arr = values && values.length > 0 ? [...values] : [5, 2, 8, 1];
+  const n = arr.length;
+
+  // Step 1: Array Allocation
+  steps.push({
+    stepNumber: step++,
+    lineNumber: 1,
+    eventType: 'ARRAY_CREATION',
+    variables: { [arrayName]: `[${arr.join(', ')}]`, size: n },
+    changedVariable: arrayName,
+    currentValue: `[${arr.join(', ')}]`,
+    output: [`Allocated array ${arrayName}[${n}] = [${arr.join(', ')}]`],
+    dataStructureState: {
+      type: 'array',
+      name: arrayName,
+      values: [...arr],
+      activeIndex: null,
+      pointers: {},
+      label: `Array Created: ${arrayName}[${n}]`,
+      focusInfo: `Memory allocated for ${n} contiguous elements`
+    },
+    explanation: `Memory allocated for contiguous array '${arrayName}' with ${n} slots: [${arr.join(', ')}].`,
+    aiHint: 'Arrays allocate contiguous blocks of heap or stack memory indexed from 0.'
+  });
+
+  // Step 2..N: Element Inspection / Assignment
+  for (let i = 0; i < n; i++) {
+    const val = arr[i];
+    output.push(`${arrayName}[${i}] = ${val}`);
+
+    steps.push({
+      stepNumber: step++,
+      lineNumber: 1,
+      eventType: 'ARRAY_ASSIGN',
+      variables: { [arrayName]: `[${arr.join(', ')}]`, i, [`${arrayName}[${i}]`]: val },
+      changedVariable: `${arrayName}[${i}]`,
+      currentValue: val,
+      output: [...output],
+      dataStructureState: {
+        type: 'array',
+        name: arrayName,
+        values: [...arr],
+        activeIndex: i,
+        pointers: { [i]: `${arrayName}[${i}]` },
+        label: `${arrayName}[${i}] = ${val}`,
+        focusInfo: `Index ${i} element stored at offset ${i * 4} bytes`
+      },
+      explanation: `Element at index [${i}] assigned value ${val}. Positioned in 3D memory slot ${i}.`,
+      aiHint: `Index ${i} visual bar raised to height ${val}.`
+    });
+  }
+
+  // Final Step: Array Ready
+  steps.push({
+    stepNumber: step,
+    lineNumber: 1,
+    eventType: 'PROGRAM_END',
+    variables: { [arrayName]: `[${arr.join(', ')}]`, size: n },
+    output: [...output, `Array initialization complete: [${arr.join(', ')}]`],
+    dataStructureState: {
+      type: 'array',
+      name: arrayName,
+      values: [...arr],
+      activeIndex: null,
+      pointers: {},
+      label: `Array ${arrayName} Ready [${arr.join(', ')}]`,
+      focusInfo: `All ${n} elements initialized and verified in memory`
+    },
+    explanation: `Array '${arrayName}' successfully verified with ${n} elements. Ready for algorithms.`,
+    aiHint: 'Data structure initialized in 3D space.'
+  });
 
   return steps;
 }
@@ -5898,24 +6456,37 @@ export function generateDynamicUniversalTrace(code, values, lang = 'code', custo
     }
 
     if (steps.length > 0) {
+      const isGradeProg = vars.hasOwnProperty('grade') || vars.hasOwnProperty('percentage') || vars.hasOwnProperty('marks');
       const summaryGrade = vars['grade'] || (vars['percentage'] ? (vars['percentage'] >= 90 ? 'A+' : vars['percentage'] >= 80 ? 'A' : 'B') : 'Passed');
+      const finalVarsStr = Object.entries(vars).map(([k, v]) => `${k} = ${v}`).join(', ');
+
       steps.push({
         stepNumber: step,
         lineNumber: rawLines.length,
         eventType: 'PROGRAM_END',
-        variables: { ...vars, grade: summaryGrade },
-        output: [...output, `Program Completed: Status 0 (Result: Grade ${summaryGrade})`],
+        variables: { ...vars, ...(isGradeProg ? { grade: summaryGrade } : {}) },
+        output: [
+          ...output,
+          isGradeProg
+            ? `Program Completed: Status 0 (Result: Grade ${summaryGrade})`
+            : `Program Completed: Status 0 (${finalVarsStr || 'Success'})`
+        ],
         dataStructureState: {
           type: 'universal-execution',
-          name: 'Student Result Finalized',
-          variables: { ...vars, grade: summaryGrade },
-          variableTypes: { ...varTypes, grade: 'String' },
+          name: isGradeProg ? 'Student Result Finalized' : 'Execution Completed',
+          variables: { ...vars, ...(isGradeProg ? { grade: summaryGrade } : {}) },
+          variableTypes: { ...varTypes, ...(isGradeProg ? { grade: 'String' } : {}) },
           activeVariable: null,
-          outputStream: [...output, `[Execution Finished: Grade ${summaryGrade}]`],
-          label: `Result: Grade ${summaryGrade}`,
+          outputStream: [
+            ...output,
+            isGradeProg ? `[Execution Finished: Grade ${summaryGrade}]` : `[Execution Finished: ${finalVarsStr || 'Success'}]`
+          ],
+          label: isGradeProg ? `Result: Grade ${summaryGrade}` : `Execution Complete: ${finalVarsStr || 'Status 0'}`,
           focusInfo: `Execution complete. All variables verified.`
         },
-        explanation: `Complete program executed successfully with exit code 0. Student result calculated with Grade ${summaryGrade}.`,
+        explanation: isGradeProg
+          ? `Complete program executed successfully with exit code 0. Student result calculated with Grade ${summaryGrade}.`
+          : `Complete program executed successfully with exit code 0. Final state: ${finalVarsStr || 'Success'}.`,
         aiHint: 'Universal 3D Execution Engine completed procedural dry run.'
       });
       return steps;
@@ -6890,7 +7461,9 @@ function _computeExecutionTrace(code, cleanCode, values, language, customInput, 
 
   // 28. Recursion / Call Stack
   if (cleanCode.includes('factorial') || cleanCode.includes('fib') || cleanCode.includes('recur')) {
-    return generateDynamicRecursionTrace(values, language);
+    const factCallMatch = code.match(/(?:factorial|fact|fibonacci|fib)\s*\(\s*(\d+)\s*\)/i);
+    const n = factCallMatch ? parseInt(factCallMatch[1], 10) : (values && values.length > 0 && values[0] > 0 && values[0] <= 6 ? values[0] : 4);
+    return generateDynamicRecursionTrace([n], language);
   }
 
   // 29. Graph BFS / DFS / Dijkstra
@@ -6933,6 +7506,37 @@ function _computeExecutionTrace(code, cleanCode, values, language, customInput, 
     if (arch.includes('sliding-window')) return generateDynamicSlidingWindowMaxTrace(values, language);
     if (arch.includes('trapping-water')) return generateDynamicTrappingWaterTrace(values, language);
     if (arch.includes('container-water')) return generateDynamicContainerWaterTrace(values, language);
+  }
+
+  // 33B. Dynamic Function Call & Call Stack Simulation (e.g. function add(a, b) { return a + b; } add(10, 20);)
+  const hasFunctionDef = /(?:function|def)\s+([a-zA-Z_]\w*)|(?:int|void|double|float|String|bool)\s+([a-zA-Z_]\w*)\s*\([^)]*\)\s*\{/i.test(code);
+  const funcMatch = code.match(/(?:function|def)\s+([a-zA-Z_]\w*)|(?:int|void|double|float|String|bool)\s+([a-zA-Z_]\w*)\s*\([^)]*\)\s*\{/i);
+  const funcName = funcMatch ? (funcMatch[1] || funcMatch[2]) : null;
+  const isNotMainOrClass = funcName && funcName !== 'main' && funcName !== 'solution' && !cleanCode.includes('class solution');
+  const isFunction = (hasFunctionDef && isNotMainOrClass) || (cleanCode.includes('add(') && !cleanCode.includes('arraylist'));
+  if (isFunction && !cleanCode.includes('tree') && !cleanCode.includes('graph') && !cleanCode.includes('matrix') && !cleanCode.includes('grid')) {
+    return generateDynamicFunctionCallTrace(code, cleanCode, language);
+  }
+
+  // 33C. Direct Array Declaration & Memory Allocation (e.g. int[] arr = {5, 2, 8, 1}; or let arr = [5, 2, 8, 1];)
+  const hasLoopKeyword = cleanCode.includes('for') || cleanCode.includes('while');
+  const arrayDeclMatch = code.match(/(?:(?:int|double|float|String|char|long)\s*\[\s*\]\s*|vector\s*<\s*\w+\s*>\s*|(?:let|const|var)\s+)([a-zA-Z_]\w*)\s*=\s*([\[{][^;\]}]+[\]}])/i) ||
+    code.match(/([a-zA-Z_]\w*)\s*\[\s*\]\s*=\s*([\[{][^;\]}]+[\]}])/i);
+  if (arrayDeclMatch && !hasLoopKeyword && !cleanCode.includes('tree') && !cleanCode.includes('matrix') && !cleanCode.includes('grid')) {
+    const rawArrStr = arrayDeclMatch[2];
+    const extractedArr = rawArrStr.replace(/[\[\]{}]/g, '').split(/[\s,]+/).map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+    const finalVals = extractedArr.length > 0 ? extractedArr : values;
+    return generateDynamicArrayCreationTrace(code, finalVals, language);
+  }
+
+  // 33D. Pure Numeric Loop Simulation (e.g. for (int i = 0; i < 5; i++) { System.out.println(i); })
+  const hasArraySyntax = cleanCode.includes('[') || cleanCode.includes(']') ||
+    cleanCode.includes('int[]') || cleanCode.includes('int []') ||
+    cleanCode.includes('vector<') || cleanCode.includes('array') ||
+    (cleanCode.includes('{') && cleanCode.includes('}') && /\{\s*\d+/.test(cleanCode));
+  const isPureNumericLoop = hasLoopKeyword && !hasArraySyntax && !cleanCode.includes('tree') && !cleanCode.includes('graph') && !cleanCode.includes('matrix');
+  if (isPureNumericLoop) {
+    return generateDynamicLoopTrace(code, cleanCode, language);
   }
 
   // 34. Master Universal Arbitrary Code Simulation Engine

@@ -1,14 +1,14 @@
 import React, { Suspense, useState, useEffect, useRef } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Center, Grid, Sparkles, ContactShadows } from '@react-three/drei';
-import { Compass, RotateCw, ZoomIn, Maximize2, Minimize2, Camera, RefreshCw, Trophy, Sparkles as SparklesIcon, Cpu, Terminal, Eye, Layers, ChevronDown, ChevronUp } from 'lucide-react';
+import { Compass, RotateCw, ZoomIn, ZoomOut, Maximize2, Minimize2, Camera, RefreshCw, Trophy, Sparkles as SparklesIcon, Cpu, Terminal, Eye, Layers, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import OutputHologram3D from './OutputHologram3D';
 import DryRunHologram3D from './DryRunHologram3D';
 import * as THREE from 'three';
 
 /**
- * Handles smooth dynamic camera transitions to preset viewpoints (Top, Front, Isometric, Reset).
+ * Handles smooth dynamic camera transitions to preset viewpoints (Top, Front, Isometric, Reset, Zoom In/Out).
  */
 function CameraPresetHandler({ preset, onApplied, controlsRef }) {
   const { camera } = useThree();
@@ -24,6 +24,10 @@ function CameraPresetHandler({ preset, onApplied, controlsRef }) {
       camera.position.set(0, 2.5, 12);
     } else if (preset === 'iso') {
       camera.position.set(9, 9, 10);
+    } else if (preset === 'zoom-in') {
+      camera.position.multiplyScalar(0.8);
+    } else if (preset === 'zoom-out') {
+      camera.position.multiplyScalar(1.25);
     } else if (preset === 'reset') {
       camera.position.set(0, 4.5, 11);
       if (controlsRef?.current) {
@@ -232,6 +236,20 @@ export default function SceneContainer({
             title="Top-Down Plan View"
           >
             Top
+          </button>
+          <button
+            onClick={() => setCameraPreset('zoom-in')}
+            className="p-1 rounded text-[11px] transition hover:text-cyan-500 text-slate-400 cursor-pointer"
+            title="Zoom In"
+          >
+            <ZoomIn size={11} />
+          </button>
+          <button
+            onClick={() => setCameraPreset('zoom-out')}
+            className="p-1 rounded text-[11px] transition hover:text-cyan-500 text-slate-400 cursor-pointer"
+            title="Zoom Out"
+          >
+            <ZoomOut size={11} />
           </button>
           <button
             onClick={() => setCameraPreset('reset')}
