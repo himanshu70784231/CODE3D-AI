@@ -60,6 +60,8 @@ export default function CodeEditor({
   onResetCode,
   isExecuting = false,
   syntaxErrorLine = null,
+  breakpoints = new Set(),
+  onToggleBreakpoint,
 }) {
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
@@ -112,12 +114,50 @@ export default function CodeEditor({
 
     monaco.editor.setTheme(isBright ? 'code3dLight' : 'code3dDark');
 
-    // Register Ctrl+Enter / Cmd+Enter shortcut directly inside Monaco
+    // Register Ctrl+Enter / Cmd+Enter shortcut
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
       if (onRunCode) {
         onRunCode();
       } else if (onPlay) {
         onPlay();
+      }
+    });
+
+    // F5: Play / Resume execution
+    editor.addCommand(monaco.KeyCode.F5, () => {
+      if (isPlaying) {
+        if (onPause) onPause();
+      } else {
+        if (onPlay) onPlay();
+        else if (onRunCode) onRunCode();
+      }
+    });
+
+    // F10: Step forward
+    editor.addCommand(monaco.KeyCode.F10, () => {
+      if (onNext) onNext();
+    });
+
+    // Shift + F10: Step backward
+    editor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.F10, () => {
+      if (onPrev) onPrev();
+    });
+
+    // Escape: Stop / Reset execution
+    editor.addCommand(monaco.KeyCode.Escape, () => {
+      if (onReset) onReset();
+    });
+
+    // Glyph margin click listener to toggle breakpoints
+    editor.onMouseDown((e) => {
+      if (
+        e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN ||
+        e.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS
+      ) {
+        const line = e.target.position?.lineNumber;
+        if (line && onToggleBreakpoint) {
+          onToggleBreakpoint(line);
+        }
       }
     });
   };
@@ -129,12 +169,33 @@ export default function CodeEditor({
     }
   }, [isBright]);
 
-  // Update line highlighting whenever currentLineNumber or syntaxErrorLine changes
+  // Update line highlighting & breakpoints whenever currentLineNumber, syntaxErrorLine, or breakpoints change
   useEffect(() => {
     if (!editorRef.current) return;
     const editor = editorRef.current;
 
     const newDecorations = [];
+
+    // 1. Breakpoints in glyph margin
+    if (breakpoints && breakpoints.size > 0) {
+      breakpoints.forEach((line) => {
+        newDecorations.push({
+          range: {
+            startLineNumber: line,
+            startColumn: 1,
+            endLineNumber: line,
+            endColumn: 1,
+          },
+          options: {
+            isWholeLine: false,
+            glyphMarginClassName: line === currentLineNumber ? 'breakpoint-active-glyph' : 'breakpoint-glyph',
+            glyphMarginHoverMessage: { value: `Breakpoint on line ${line}` },
+          },
+        });
+      });
+    }
+
+    // 2. Syntax Error or Active Line
     if (syntaxErrorLine) {
       newDecorations.push({
         range: {
@@ -168,7 +229,7 @@ export default function CodeEditor({
     }
 
     decorationsRef.current = editor.deltaDecorations(decorationsRef.current, newDecorations);
-  }, [currentLineNumber, syntaxErrorLine]);
+  }, [currentLineNumber, syntaxErrorLine, breakpoints]);
 
   return (
     <div className={`flex flex-col h-full border-r select-none transition-colors duration-200 ${

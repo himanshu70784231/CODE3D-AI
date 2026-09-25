@@ -2873,7 +2873,7 @@ public class MultiLanguageExecutionService {
         }
 
         if (steps.isEmpty()) {
-            return generateArrayLoopTrace(List.of(10, 20, 30, 40));
+            return generateUserUniversalTrace(rawCode, List.of(10, 20, 30, 40), 1, 3, 4, lang);
         }
 
         ExecutionStep sEnd = new ExecutionStep();

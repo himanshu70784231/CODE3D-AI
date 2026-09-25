@@ -131,49 +131,116 @@ export default function StatePanel({ currentStep, totalSteps, correctOutput = nu
             ) : (
               Object.entries(variables).map(([name, val]) => {
                 const isRecentlyChanged = changedVariable === name;
+                const varTypes = currentStep?.dataStructureState?.variableTypes || {};
+                
+                // Infer type
+                let inferredType = varTypes[name];
+                if (!inferredType) {
+                  if (Array.isArray(val) || (typeof val === 'string' && val.startsWith('[') && val.endsWith(']'))) {
+                    inferredType = 'int[]';
+                  } else if (typeof val === 'number') {
+                    inferredType = Number.isInteger(val) ? 'int' : 'double';
+                  } else if (typeof val === 'boolean') {
+                    inferredType = 'boolean';
+                  } else {
+                    inferredType = 'var';
+                  }
+                }
+
+                // Check if this variable is an array to show element breakdown
+                let arrayElements = null;
+                if (Array.isArray(val)) {
+                  arrayElements = val;
+                } else if (typeof val === 'string' && val.startsWith('[') && val.endsWith(']')) {
+                  try {
+                    const parsed = JSON.parse(val);
+                    if (Array.isArray(parsed)) arrayElements = parsed;
+                  } catch (e) {
+                    const items = val.slice(1, -1).split(',').map(s => s.trim()).filter(Boolean);
+                    if (items.length > 0) arrayElements = items;
+                  }
+                }
+
+                const activeIdx = currentStep?.dataStructureState?.activeIndex;
 
                 return (
-                  <div
-                    key={name}
-                    className={`flex items-center justify-between p-2 rounded transition-all border ${
-                      isRecentlyChanged
-                        ? isBright
-                          ? 'bg-cyan-50/90 border-cyan-400 text-cyan-950 font-semibold'
-                          : 'bg-cyan-950/40 border-cyan-500/50 text-cyan-200'
-                        : isBright
-                        ? 'bg-white border-slate-200 text-slate-700 shadow-2xs'
-                        : 'bg-slate-950/50 border-slate-800/60 text-slate-300'
-                    }`}
-                  >
-                    <span className={isBright ? 'text-slate-600 font-medium' : 'text-slate-400 font-medium'}>
-                      {name}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {isRecentlyChanged && previousValue !== null && (
-                        <div className={`flex items-center gap-1 text-[10px] line-through ${
-                          isBright ? 'text-slate-400' : 'text-slate-500'
-                        }`}>
-                          <span>{String(previousValue)}</span>
-                          <ArrowRight size={10} className="text-slate-400 no-underline" />
-                        </div>
-                      )}
-                      <span className={`font-bold ${
+                  <div key={name} className="flex flex-col gap-1">
+                    <div
+                      className={`flex items-center justify-between p-2 rounded transition-all border ${
                         isRecentlyChanged
-                          ? isBright ? 'text-cyan-700' : 'text-cyan-300'
-                          : isBright ? 'text-slate-900' : 'text-slate-100'
-                      }`}>
-                        {String(val)}
-                      </span>
-                      {isRecentlyChanged && (
-                        <span className={`text-[9px] px-1 py-0.2 rounded font-sans uppercase font-bold ${
-                          isBright
-                            ? 'bg-cyan-100 text-cyan-800'
-                            : 'bg-cyan-900/80 text-cyan-300'
+                          ? isBright
+                            ? 'bg-cyan-50/90 border-cyan-400 text-cyan-950 font-semibold'
+                            : 'bg-cyan-950/40 border-cyan-500/50 text-cyan-200'
+                          : isBright
+                          ? 'bg-white border-slate-200 text-slate-700 shadow-2xs'
+                          : 'bg-slate-950/50 border-slate-800/60 text-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[10px] px-1 py-0.2 rounded font-mono ${
+                          isBright ? 'bg-slate-200 text-slate-700' : 'bg-slate-800 text-slate-400'
                         }`}>
-                          Updated
+                          {inferredType}
                         </span>
-                      )}
+                        <span className={isBright ? 'text-slate-700 font-medium' : 'text-slate-300 font-medium'}>
+                          {name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isRecentlyChanged && previousValue !== null && (
+                          <div className={`flex items-center gap-1 text-[10px] line-through ${
+                            isBright ? 'text-slate-400' : 'text-slate-500'
+                          }`}>
+                            <span>{String(previousValue)}</span>
+                            <ArrowRight size={10} className="text-slate-400 no-underline" />
+                          </div>
+                        )}
+                        <span className={`font-bold ${
+                          isRecentlyChanged
+                            ? isBright ? 'text-cyan-700' : 'text-cyan-300'
+                            : isBright ? 'text-slate-900' : 'text-slate-100'
+                        }`}>
+                          {String(val)}
+                        </span>
+                        {isRecentlyChanged && (
+                          <span className={`text-[9px] px-1 py-0.2 rounded font-sans uppercase font-bold ${
+                            isBright
+                              ? 'bg-cyan-100 text-cyan-800'
+                              : 'bg-cyan-900/80 text-cyan-300'
+                          }`}>
+                            Updated
+                          </span>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Array Index Breakdown for Arrays */}
+                    {arrayElements && arrayElements.length > 0 && arrayElements.length <= 16 && (
+                      <div className={`ml-3 pl-2 border-l py-1 flex flex-wrap gap-1 ${
+                        isBright ? 'border-slate-300' : 'border-slate-800'
+                      }`}>
+                        {arrayElements.map((el, idx) => {
+                          const isActiveSlot = (activeIdx === idx);
+                          return (
+                            <div
+                              key={idx}
+                              className={`text-[10px] px-1.5 py-0.5 rounded font-mono border transition ${
+                                isActiveSlot
+                                  ? isBright
+                                    ? 'bg-cyan-200 border-cyan-400 text-cyan-950 font-bold ring-1 ring-cyan-400'
+                                    : 'bg-cyan-500/30 border-cyan-400 text-cyan-200 font-bold ring-1 ring-cyan-400'
+                                  : isBright
+                                  ? 'bg-slate-100 border-slate-200 text-slate-600'
+                                  : 'bg-slate-900 border-slate-800 text-slate-400'
+                              }`}
+                              title={`${name}[${idx}] = ${el}${isActiveSlot ? ' (Active)' : ''}`}
+                            >
+                              <span className="opacity-60">{name}[{idx}]:</span> {String(el)}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })

@@ -7,12 +7,40 @@ export function useExecutionTimeline(trace = []) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1); // 0.5, 1, 1.5, 2
+  const [breakpoints, setBreakpoints] = useState(new Set());
   const timerRef = useRef(null);
 
   const totalSteps = trace ? trace.length : 0;
   const currentStep = (trace && trace[currentStepIndex]) || null;
   const isAtStart = currentStepIndex === 0;
   const isAtEnd = currentStepIndex >= totalSteps - 1;
+
+  // Toggle breakpoint on specific line
+  const toggleBreakpoint = useCallback((lineNumber) => {
+    if (!lineNumber) return;
+    setBreakpoints((prev) => {
+      const next = new Set(prev);
+      if (next.has(lineNumber)) {
+        next.delete(lineNumber);
+      } else {
+        next.add(lineNumber);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearBreakpoints = useCallback(() => {
+    setBreakpoints(new Set());
+  }, []);
+
+  // Execution State Machine (IDLE, READY, RUNNING, PAUSED, COMPLETED, STOPPED)
+  const executionState = (() => {
+    if (totalSteps === 0) return 'IDLE';
+    if (isPlaying) return 'RUNNING';
+    if (isAtEnd) return 'COMPLETED';
+    if (currentStepIndex > 0) return 'PAUSED';
+    return 'READY';
+  })();
 
   // Auto-reset index whenever a new execution trace is loaded
   useEffect(() => {
@@ -69,21 +97,28 @@ export function useExecutionTimeline(trace = []) {
     setCurrentStepIndex(0);
   }, [pause]);
 
-  // Interval timer for playback
+  // Interval timer for playback with breakpoint checking
   useEffect(() => {
     if (isPlaying) {
       if (totalSteps <= 1) {
         setIsPlaying(false);
         return;
       }
-      const intervalMs = Math.max(300, Math.round(1400 / playbackSpeed));
+      const intervalMs = Math.max(250, Math.round(1400 / playbackSpeed));
       timerRef.current = setInterval(() => {
         setCurrentStepIndex((prev) => {
           if (prev >= totalSteps - 1) {
             setIsPlaying(false);
             return prev;
           }
-          return prev + 1;
+          const nextIdx = prev + 1;
+          const nextStepObj = trace && trace[nextIdx];
+          // If next step hits a set breakpoint, pause on that line!
+          if (nextStepObj && breakpoints.has(nextStepObj.lineNumber)) {
+            setIsPlaying(false);
+            return nextIdx;
+          }
+          return nextIdx;
         });
       }, intervalMs);
     }
@@ -94,7 +129,7 @@ export function useExecutionTimeline(trace = []) {
         timerRef.current = null;
       }
     };
-  }, [isPlaying, playbackSpeed, totalSteps]);
+  }, [isPlaying, playbackSpeed, totalSteps, trace, breakpoints]);
 
   // Accumulate stdout output from step 0 up to currentStepIndex
   const cumulativeOutput = (() => {
@@ -185,6 +220,10 @@ export function useExecutionTimeline(trace = []) {
     pause,
     togglePlay,
     reset,
+    breakpoints,
+    toggleBreakpoint,
+    clearBreakpoints,
+    executionState,
     cumulativeOutput,
     finalCorrectOutput,
   };

@@ -10,6 +10,7 @@ import QuizModal from '../components/QuizModal';
 import CustomCodeModal from '../components/CustomCodeModal';
 import CodeDoctorModal from '../components/CodeDoctorModal';
 import StriverSheetDrawer from '../components/StriverSheetDrawer';
+import CompareModeModal from '../components/CompareModeModal';
 import { useExecutionTimeline } from '../hooks/useExecutionTimeline';
 import { getExecutionTrace, extractNumbersFromCode } from '../services/executionSimulator';
 import { validateSourceCode } from '../services/codeValidator';
@@ -34,7 +35,8 @@ import {
   EyeOff,
   Play,
   Trophy,
-  BookOpen
+  BookOpen,
+  Scale,
 } from 'lucide-react';
 
 export default function Visualizer({ initialConcept, initialOpenStriver = false }) {
@@ -73,6 +75,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
   const [isCustomCodeOpen, setIsCustomCodeOpen] = useState(false);
   const [isCodeDoctorOpen, setIsCodeDoctorOpen] = useState(false);
   const [isStriverSheetOpen, setIsStriverSheetOpen] = useState(initialOpenStriver);
+  const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [activeStriverProblem, setActiveStriverProblem] = useState(null);
   const [mobileTab, setMobileTab] = useState('3d'); // '3d' | 'code' | 'state'
 
@@ -91,6 +94,9 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     play,
     pause,
     reset,
+    breakpoints,
+    toggleBreakpoint,
+    executionState,
     cumulativeOutput,
     finalCorrectOutput,
   } = useExecutionTimeline(trace);
@@ -768,10 +774,36 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
             <span>Striver Sheet 📜</span>
             <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/30 text-amber-200 font-mono">182</span>
           </button>
+
+          {/* Algorithm Compare Mode Toggle Button */}
+          <button
+            onClick={() => setIsCompareOpen(true)}
+            className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition shadow-xs shrink-0 border cursor-pointer ${
+              isBright
+                ? 'bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100'
+                : 'bg-blue-950/40 text-blue-300 border-blue-800/60 hover:bg-blue-900/60 shadow-blue-950/20'
+            }`}
+            title="Algorithm Compare Mode: Benchmark 2 Algorithms Side-by-Side"
+          >
+            <Scale size={13} className="text-blue-400" />
+            <span>Compare ⚖️</span>
+          </button>
         </div>
 
-        {/* Center: Complexity Badges & Backend status */}
+        {/* Center: Execution State, Complexity Badges & Backend status */}
         <div className="hidden lg:flex items-center gap-2 text-[11px] font-mono shrink-0">
+          <div className={`h-8 flex items-center border rounded-lg px-2.5 font-bold uppercase transition ${
+            executionState === 'RUNNING'
+              ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/50 animate-pulse'
+              : executionState === 'PAUSED'
+              ? 'bg-amber-500/20 text-amber-400 border-amber-500/50'
+              : executionState === 'COMPLETED'
+              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50'
+              : isBright ? 'bg-slate-50 border-slate-300 text-slate-600' : 'bg-slate-950/70 border-slate-800 text-slate-400'
+          }`}>
+            <span className="w-1.5 h-1.5 rounded-full mr-1.5 bg-current"></span>
+            {executionState}
+          </div>
           <div className={`h-8 flex items-center border rounded-lg px-2.5 ${
             isBright ? 'bg-slate-50 border-slate-300 text-slate-700' : 'bg-slate-950/70 border-slate-800'
           }`}>
@@ -949,6 +981,8 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
               onReset={reset}
               isAtStart={isAtStart}
               isAtEnd={isAtEnd}
+              breakpoints={breakpoints}
+              onToggleBreakpoint={toggleBreakpoint}
             />
           </div>
         )}
@@ -1255,6 +1289,11 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
         onToggle={() => setIsStriverSheetOpen((prev) => !prev)}
         onSelectProblem={handleSelectStriverProblem}
         currentLanguage={language}
+      />
+
+      <CompareModeModal
+        isOpen={isCompareOpen}
+        onClose={() => setIsCompareOpen(false)}
       />
     </div>
   );

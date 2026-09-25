@@ -6811,6 +6811,29 @@ export function generateDynamicUniversalTrace(code, values, lang = 'code', custo
   // -------------------------------------------------------------
   // PATH D: UNIVERSAL 1D TRAVERSAL WITH DYNAMIC EVALUATION
   // -------------------------------------------------------------
+  const rawLines = rawCode.split('\n');
+  let arrayInitLine = 2;
+  let loopLine = 3;
+  let printLine = 4;
+  let endLine = rawLines.length;
+
+  rawLines.forEach((l, idx) => {
+    const lineNum = idx + 1;
+    const trimmed = l.trim();
+    if ((trimmed.includes('[]') || trimmed.includes('vector<') || trimmed.includes('let ' + arrayName)) && (trimmed.includes('=') || trimmed.includes('{'))) {
+      arrayInitLine = lineNum;
+    }
+    if (/^\s*(?:for|while)\s*\(/.test(trimmed) || /^\s*for\s+/.test(trimmed)) {
+      loopLine = lineNum;
+    }
+    if (/System\.out\.print|console\.log|cout\s*<<|printf|print\s*\(/.test(trimmed)) {
+      printLine = lineNum;
+    }
+    if (trimmed === '}' || trimmed === 'return 0;' || trimmed === 'return;') {
+      endLine = lineNum;
+    }
+  });
+
   const liveVars = {
     [arrayName]: `[${arr.join(', ')}]`,
     size: n,
@@ -6825,7 +6848,7 @@ export function generateDynamicUniversalTrace(code, values, lang = 'code', custo
 
   steps.push({
     stepNumber: step++,
-    lineNumber: 2,
+    lineNumber: arrayInitLine,
     eventType: 'VARIABLES_INITIALIZED',
     variables: { ...liveVars },
     changedVariable: arrayName,
@@ -6846,7 +6869,7 @@ export function generateDynamicUniversalTrace(code, values, lang = 'code', custo
   liveVars.i = 0;
   steps.push({
     stepNumber: step++,
-    lineNumber: 3,
+    lineNumber: loopLine,
     eventType: 'LOOP_INIT',
     variables: { ...liveVars },
     changedVariable: 'i',
@@ -6871,7 +6894,7 @@ export function generateDynamicUniversalTrace(code, values, lang = 'code', custo
 
     steps.push({
       stepNumber: step++,
-      lineNumber: 3,
+      lineNumber: loopLine,
       eventType: 'CONDITION_CHECK',
       variables: { ...liveVars },
       condition: {
@@ -7083,6 +7106,26 @@ export function generateDynamicUniversalTrace(code, values, lang = 'code', custo
 
     if (cleanCode.includes('print') || cleanCode.includes('cout') || cleanCode.includes('log')) {
       output.push(String(val));
+      steps.push({
+        stepNumber: step++,
+        lineNumber: printLine,
+        eventType: 'PRINT_OUTPUT',
+        variables: { ...liveVars },
+        changedVariable: 'output',
+        currentValue: String(val),
+        output: [...output],
+        dataStructureState: {
+          type: 'array',
+          name: arrayName,
+          values: [...arr],
+          activeIndex: i,
+          pointers: { i },
+          label: `Print ${arrayName}[${i}] = ${val}`,
+          focusInfo: `Current Index: ${i} | Printed: ${val}`
+        },
+        explanation: `Print statement executed: Output ${val} from ${arrayName}[${i}].`,
+        aiHint: `Array element at index ${i} sent to standard output.`
+      });
     }
 
     const nextI = i + 1;
@@ -7091,7 +7134,7 @@ export function generateDynamicUniversalTrace(code, values, lang = 'code', custo
 
     steps.push({
       stepNumber: step++,
-      lineNumber: 3,
+      lineNumber: loopLine,
       eventType: 'LOOP_INCREMENT',
       variables: { ...liveVars },
       changedVariable: 'i',
@@ -7112,6 +7155,31 @@ export function generateDynamicUniversalTrace(code, values, lang = 'code', custo
     });
   }
 
+  // Loop termination condition check
+  steps.push({
+    stepNumber: step++,
+    lineNumber: loopLine,
+    eventType: 'CONDITION_CHECK',
+    variables: { ...liveVars, i: n },
+    condition: {
+      expression: `i < ${n}`,
+      evaluation: `${n} < ${n}`,
+      result: false,
+      branch: 'EXIT LOOP'
+    },
+    output: [...output],
+    dataStructureState: {
+      type: 'array',
+      name: arrayName,
+      values: [...arr],
+      activeIndex: null,
+      label: `Loop Terminated: ${n} < ${n} is FALSE`,
+      focusInfo: 'Loop condition failed; loop terminates.'
+    },
+    explanation: `Loop condition 'i < ${n}' (${n} < ${n}) evaluates to FALSE. Execution exits loop.`,
+    aiHint: 'Loop has traversed all elements.'
+  });
+
   const finalSummaryVars = Object.entries(liveVars)
     .filter(([k]) => k !== arrayName && k !== 'lang')
     .map(([k, v]) => `${k} = ${v}`)
@@ -7119,7 +7187,7 @@ export function generateDynamicUniversalTrace(code, values, lang = 'code', custo
 
   steps.push({
     stepNumber: step,
-    lineNumber: 8,
+    lineNumber: endLine,
     eventType: 'PROGRAM_END',
     variables: { ...liveVars },
     output: [...output, `Execution Finished: ${finalSummaryVars}`],

@@ -7,15 +7,19 @@ import com.github.javaparser.ast.expr.ArrayInitializerExpr;
 import com.github.javaparser.ast.expr.IntegerLiteralExpr;
 import org.springframework.stereotype.Service;
 
+import com.code3d.engine.JavaAstExecutionEngine;
 import java.util.*;
 
 @Service
 public class DsaExecutionService {
 
     private final MultiLanguageExecutionService multiLanguageExecutionService;
+    private final JavaAstExecutionEngine javaAstExecutionEngine;
 
-    public DsaExecutionService(MultiLanguageExecutionService multiLanguageExecutionService) {
+    public DsaExecutionService(MultiLanguageExecutionService multiLanguageExecutionService,
+                               JavaAstExecutionEngine javaAstExecutionEngine) {
         this.multiLanguageExecutionService = multiLanguageExecutionService;
+        this.javaAstExecutionEngine = javaAstExecutionEngine;
     }
 
     public ExecuteResponse execute(ExecuteRequest request) {
@@ -23,8 +27,14 @@ public class DsaExecutionService {
         String code = request.getCode();
         String language = request.getLanguage();
 
-        // 1. If code is provided by user (custom or edited preset), always dynamically execute it!
+        // 1. If code is provided by user (custom or edited preset), execute dynamically
         if (code != null && !code.isBlank()) {
+            if (language == null || "java".equalsIgnoreCase(language)) {
+                ExecuteResponse javaResp = javaAstExecutionEngine.execute(code);
+                if (javaResp != null && "SUCCESS".equalsIgnoreCase(javaResp.getStatus())) {
+                    return javaResp;
+                }
+            }
             return multiLanguageExecutionService.executeUserCode(request);
         }
 
