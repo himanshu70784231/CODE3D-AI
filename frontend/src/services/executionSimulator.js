@@ -1636,6 +1636,27 @@ export function generateDynamicLoopTrace(code, cleanCode, language = 'java') {
   let step = 1;
   const output = [];
 
+  // Determine actual line numbers in source code
+  const codeLines = (code || '').split('\n');
+  let loopLineNum = 1;
+  let bodyLineNum = 2;
+  let endLineNum = codeLines.length > 0 ? codeLines.length : 1;
+
+  for (let idx = 0; idx < codeLines.length; idx++) {
+    const l = codeLines[idx];
+    if (/\b(?:for|while)\b/.test(l)) {
+      loopLineNum = idx + 1;
+    } else if (/\b(?:System\.out|print|console\.log|cout|\+=)\b/.test(l) && (idx + 1 > loopLineNum)) {
+      if (bodyLineNum <= loopLineNum || bodyLineNum === 2) {
+        bodyLineNum = idx + 1;
+      }
+    }
+  }
+  if (bodyLineNum <= loopLineNum) {
+    bodyLineNum = loopLineNum + 1 <= codeLines.length ? loopLineNum + 1 : loopLineNum;
+  }
+  endLineNum = bodyLineNum + 1 <= codeLines.length ? bodyLineNum + 1 : codeLines.length;
+
   // 1. Extract loop variable name
   const varMatch = code.match(/for\s*\(\s*(?:int|let|var)?\s*([a-zA-Z_]\w*)\s*=/i) ||
     code.match(/for\s+([a-zA-Z_]\w*)\s+in\s+range/i) ||
@@ -1713,7 +1734,7 @@ export function generateDynamicLoopTrace(code, cleanCode, language = 'java') {
 
   steps.push({
     stepNumber: step++,
-    lineNumber: 1,
+    lineNumber: loopLineNum,
     eventType: 'LOOP_INIT',
     variables: { ...currentVars },
     changedVariable: loopVar,
@@ -1747,7 +1768,7 @@ export function generateDynamicLoopTrace(code, cleanCode, language = 'java') {
 
     steps.push({
       stepNumber: step++,
-      lineNumber: 1,
+      lineNumber: loopLineNum,
       eventType: 'CONDITION_CHECK',
       variables: { ...currentVars, [loopVar]: currentVal },
       condition: {
@@ -1796,7 +1817,7 @@ export function generateDynamicLoopTrace(code, cleanCode, language = 'java') {
 
     steps.push({
       stepNumber: step++,
-      lineNumber: 2,
+      lineNumber: bodyLineNum,
       eventType: 'PRINT_OUTPUT',
       variables: { ...currentVars, [loopVar]: currentVal },
       changedVariable: accVar || 'output',
@@ -1820,7 +1841,7 @@ export function generateDynamicLoopTrace(code, cleanCode, language = 'java') {
     const nextVal = currentVal + delta;
     steps.push({
       stepNumber: step++,
-      lineNumber: 1,
+      lineNumber: loopLineNum,
       eventType: 'LOOP_INCREMENT',
       variables: { ...currentVars, [loopVar]: nextVal },
       changedVariable: loopVar,
@@ -1850,7 +1871,7 @@ export function generateDynamicLoopTrace(code, cleanCode, language = 'java') {
   const finalEvalStr = `${currentVal} ${op} ${boundVal}`;
   steps.push({
     stepNumber: step++,
-    lineNumber: 1,
+    lineNumber: loopLineNum,
     eventType: 'CONDITION_CHECK',
     variables: { ...currentVars, [loopVar]: currentVal },
     condition: {
@@ -1883,7 +1904,7 @@ export function generateDynamicLoopTrace(code, cleanCode, language = 'java') {
   // Final PROGRAM_END
   steps.push({
     stepNumber: step,
-    lineNumber: 3,
+    lineNumber: endLineNum,
     eventType: 'PROGRAM_END',
     variables: { ...currentVars, [loopVar]: currentVal },
     output: [...output, `Program execution complete (${iterations} iterations)`],
@@ -2104,11 +2125,23 @@ export function generateDynamicArrayCreationTrace(code, values = [5, 2, 8, 1], l
   let step = 1;
   const output = [];
 
+  const rawCode = code || '';
+  const lines = rawCode.split('\n');
+
   // 1. Detect Array Identifier Name
-  const nameMatch = code.match(/(?:int\s*\[\s*\]|vector\s*<\s*int\s*>|let|const|var)\s+([a-zA-Z_]\w*)/i) ||
-    code.match(/([a-zA-Z_]\w*)\s*\[\s*\]\s*=/i) ||
-    code.match(/([a-zA-Z_]\w*)\s*=\s*[\[{]/i);
+  const nameMatch = rawCode.match(/(?:int\s*\[\s*\]|vector\s*<\s*int\s*>|let|const|var)\s+([a-zA-Z_]\w*)/i) ||
+    rawCode.match(/([a-zA-Z_]\w*)\s*\[\s*\]\s*=/i) ||
+    rawCode.match(/([a-zA-Z_]\w*)\s*=\s*[\[{]/i);
   const arrayName = nameMatch ? nameMatch[1] : 'arr';
+
+  // Find declaration line
+  let declLineNum = 1;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].includes(arrayName) && (lines[i].includes('{') || lines[i].includes('['))) {
+      declLineNum = i + 1;
+      break;
+    }
+  }
 
   const arr = values && values.length > 0 ? [...values] : [5, 2, 8, 1];
   const n = arr.length;
@@ -2116,7 +2149,7 @@ export function generateDynamicArrayCreationTrace(code, values = [5, 2, 8, 1], l
   // Step 1: Array Allocation
   steps.push({
     stepNumber: step++,
-    lineNumber: 1,
+    lineNumber: declLineNum,
     eventType: 'ARRAY_CREATION',
     variables: { [arrayName]: `[${arr.join(', ')}]`, size: n },
     changedVariable: arrayName,
@@ -2135,14 +2168,14 @@ export function generateDynamicArrayCreationTrace(code, values = [5, 2, 8, 1], l
     aiHint: 'Arrays allocate contiguous blocks of heap or stack memory indexed from 0.'
   });
 
-  // Step 2..N: Element Inspection / Assignment
+  // Step 2..N: Initial Elements
   for (let i = 0; i < n; i++) {
     const val = arr[i];
     output.push(`${arrayName}[${i}] = ${val}`);
 
     steps.push({
       stepNumber: step++,
-      lineNumber: 1,
+      lineNumber: declLineNum,
       eventType: 'ARRAY_ASSIGN',
       variables: { [arrayName]: `[${arr.join(', ')}]`, i, [`${arrayName}[${i}]`]: val },
       changedVariable: `${arrayName}[${i}]`,
@@ -2162,25 +2195,134 @@ export function generateDynamicArrayCreationTrace(code, values = [5, 2, 8, 1], l
     });
   }
 
-  // Final Step: Array Ready
-  steps.push({
-    stepNumber: step,
-    lineNumber: 1,
-    eventType: 'PROGRAM_END',
-    variables: { [arrayName]: `[${arr.join(', ')}]`, size: n },
-    output: [...output, `Array initialization complete: [${arr.join(', ')}]`],
-    dataStructureState: {
-      type: 'array',
-      name: arrayName,
-      values: [...arr],
-      activeIndex: null,
-      pointers: {},
-      label: `Array ${arrayName} Ready [${arr.join(', ')}]`,
-      focusInfo: `All ${n} elements initialized and verified in memory`
-    },
-    explanation: `Array '${arrayName}' successfully verified with ${n} elements. Ready for algorithms.`,
-    aiHint: 'Data structure initialized in 3D space.'
-  });
+  // Scan subsequent lines for array access or modifications
+  let hitException = false;
+  for (let i = 0; i < lines.length; i++) {
+    const lineNum = i + 1;
+    const line = lines[i].trim();
+
+    // Skip declaration line itself
+    if (lineNum === declLineNum) continue;
+    // Skip empty lines or comments
+    if (!line || line.startsWith('//') || line.startsWith('/*') || line.startsWith('*')) continue;
+
+    // Check if line accesses the array (e.g. arr[5], System.out.println(arr[5]))
+    const accessRegex = new RegExp(`\\b${arrayName}\\s*\\[\\s*(-?\\d+|[a-zA-Z_]\\w*)\\s*\\]`, 'g');
+    let m;
+    while ((m = accessRegex.exec(line)) !== null) {
+      const idxToken = m[1].trim();
+      const targetIdx = parseInt(idxToken, 10);
+
+      if (!isNaN(targetIdx)) {
+        // Bounds checking
+        if (targetIdx < 0 || targetIdx >= n) {
+          const excMsg = `ArrayIndexOutOfBoundsException: Index ${targetIdx} out of bounds for length ${n}`;
+          steps.push({
+            stepNumber: step++,
+            lineNumber: lineNum,
+            eventType: 'EXCEPTION',
+            variables: { [arrayName]: `[${arr.join(', ')}]`, size: n, attemptedIndex: targetIdx },
+            changedVariable: 'exception',
+            currentValue: 'ArrayIndexOutOfBoundsException',
+            error: excMsg,
+            output: [
+              ...output,
+              `Exception in thread "main" java.lang.${excMsg}`
+            ],
+            dataStructureState: {
+              type: 'array',
+              name: arrayName,
+              values: [...arr],
+              activeIndex: null,
+              errorIndex: targetIdx,
+              label: `Runtime Exception: ${excMsg}`,
+              focusInfo: `Attempted access to index ${targetIdx} exceeds array boundaries [0..${n - 1}]`
+            },
+            explanation: `Runtime exception: java.lang.ArrayIndexOutOfBoundsException: Index ${targetIdx} out of bounds for length ${n}.`,
+            aiHint: `Array indices in Java are 0 to ${n - 1}. Accessing index ${targetIdx} triggers an unhandled ArrayIndexOutOfBoundsException.`
+          });
+          hitException = true;
+          break;
+        } else {
+          // In-bounds access
+          const isAssign = new RegExp(`\\b${arrayName}\\s*\\[\\s*${targetIdx}\\s*\\]\\s*=\\s*(-?\\d+)`).exec(line);
+          if (isAssign) {
+            const newVal = parseInt(isAssign[1], 10);
+            arr[targetIdx] = newVal;
+            output.push(`${arrayName}[${targetIdx}] = ${newVal}`);
+            steps.push({
+              stepNumber: step++,
+              lineNumber: lineNum,
+              eventType: 'ARRAY_ASSIGN',
+              variables: { [arrayName]: `[${arr.join(', ')}]`, [`${arrayName}[${targetIdx}]`]: newVal },
+              changedVariable: `${arrayName}[${targetIdx}]`,
+              currentValue: newVal,
+              output: [...output],
+              dataStructureState: {
+                type: 'array',
+                name: arrayName,
+                values: [...arr],
+                activeIndex: targetIdx,
+                pointers: { [targetIdx]: `${arrayName}[${targetIdx}]` },
+                label: `Updated ${arrayName}[${targetIdx}] = ${newVal}`,
+                focusInfo: `Memory at index ${targetIdx} overwritten with ${newVal}`
+              },
+              explanation: `Assigned new value ${newVal} to ${arrayName}[${targetIdx}].`,
+              aiHint: `Index ${targetIdx} value updated.`
+            });
+          } else {
+            // Read / Print
+            const val = arr[targetIdx];
+            output.push(String(val));
+            steps.push({
+              stepNumber: step++,
+              lineNumber: lineNum,
+              eventType: 'ARRAY_ACCESS',
+              variables: { [arrayName]: `[${arr.join(', ')}]`, [`${arrayName}[${targetIdx}]`]: val },
+              changedVariable: 'output',
+              currentValue: val,
+              output: [...output],
+              dataStructureState: {
+                type: 'array',
+                name: arrayName,
+                values: [...arr],
+                activeIndex: targetIdx,
+                pointers: { [targetIdx]: `${arrayName}[${targetIdx}]` },
+                label: `Reading ${arrayName}[${targetIdx}] = ${val}`,
+                focusInfo: `Index ${targetIdx} accessed: value is ${val}`
+              },
+              explanation: `Accessed element at ${arrayName}[${targetIdx}] (value ${val}). Sent to standard output.`,
+              aiHint: `Element at index ${targetIdx} read from memory.`
+            });
+          }
+        }
+      }
+    }
+    if (hitException) break;
+  }
+
+  // If no exception, emit PROGRAM_END on the final non-empty line
+  if (!hitException) {
+    const lastLineNum = lines.length > 0 ? lines.length : 1;
+    steps.push({
+      stepNumber: step,
+      lineNumber: lastLineNum,
+      eventType: 'PROGRAM_END',
+      variables: { [arrayName]: `[${arr.join(', ')}]`, size: n },
+      output: [...output, `Array execution complete: [${arr.join(', ')}]`],
+      dataStructureState: {
+        type: 'array',
+        name: arrayName,
+        values: [...arr],
+        activeIndex: null,
+        pointers: {},
+        label: `Array ${arrayName} Ready [${arr.join(', ')}]`,
+        focusInfo: `All ${n} elements initialized and verified in memory`
+      },
+      explanation: `Array '${arrayName}' successfully executed with ${n} elements. Ready for algorithms.`,
+      aiHint: 'Data structure execution finished cleanly.'
+    });
+  }
 
   return steps;
 }
@@ -5844,7 +5986,11 @@ export function generateDynamicUniversalTrace(code, values, lang = 'code', custo
   const hasCount = cleanCode.includes('count') || cleanCode.includes('ans') || cleanCode.includes('evens') || cleanCode.includes('odds');
   const countVarName = cleanCode.includes('evens') ? 'evens' : cleanCode.includes('odds') ? 'odds' : cleanCode.includes('ans') ? 'ans' : 'count';
 
-  const hasLoop = cleanCode.includes('for') || cleanCode.includes('while') || cleanCode.includes('foreach') || cleanCode.includes('def ') || cleanCode.includes('void ');
+  const hasLoop = (
+    /\b(?:for|while|do)\b/.test(cleanCode) ||
+    cleanCode.includes('for(') || cleanCode.includes('for (') ||
+    cleanCode.includes('while(') || cleanCode.includes('while (')
+  );
 
   // -------------------------------------------------------------
   // PATH 0: PROCEDURAL / ARITHMETIC / SCANNER / CONDITIONAL EXECUTION
@@ -7225,12 +7371,14 @@ export function getExecutionTrace(code, language = 'java', customInput = null, e
 function _computeExecutionTrace(code, cleanCode, values, language, customInput, explicitArchetype) {
 
   // 00. Procedural / Scanner / Student Result / Variable Execution
+  const hasArraySyntaxCheck = cleanCode.includes('[') || cleanCode.includes(']') || cleanCode.includes('int[]') || cleanCode.includes('vector<');
   const isProceduralProgram = cleanCode.includes('scanner') ||
     cleanCode.includes('student') ||
     cleanCode.includes('percentage') ||
     cleanCode.includes('grade') ||
     cleanCode.includes('marks') ||
-    (cleanCode.includes('total') && (cleanCode.includes('print') || cleanCode.includes('println')));
+    (cleanCode.includes('total') && (cleanCode.includes('print') || cleanCode.includes('println'))) ||
+    (!cleanCode.includes('for') && !cleanCode.includes('while') && !hasArraySyntaxCheck && (cleanCode.includes('=') || cleanCode.includes('print')));
 
   if (isProceduralProgram && !cleanCode.includes('tree') && !cleanCode.includes('graph') && !cleanCode.includes('matrix')) {
     return generateDynamicUniversalTrace(code, values, language, customInput);

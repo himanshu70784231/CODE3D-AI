@@ -1,14 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Layers, HelpCircle, History, Settings, Play, Home, Code2, User, LogOut, Sparkles, ChevronDown, Sun, Moon, BookOpen } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Box, Layers, HelpCircle, History, Settings, Play, Home, Code2, User, LogOut, Sparkles, ChevronDown, Sun, Moon, BookOpen, Terminal, Bot } from 'lucide-react';
 import { checkBackendHealth } from '../services/apiService';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
 export default function Navbar({ activeTab, setActiveTab, onOpenCodeDoctor, onOpenPersonalProblem }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [backendOnline, setBackendOnline] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const { user, isAuthenticated, logout, openLoginModal } = useAuth();
   const { theme, toggleTheme, isBright } = useTheme();
+
+  const currentPath = location.pathname;
+  const currentTab = currentPath === '/' ? 'dashboard' : currentPath.replace('/', '');
+
+  const handleNavClick = (id) => {
+    const targetPath = id === 'dashboard' ? '/' : `/${id}`;
+    navigate(targetPath);
+    if (setActiveTab) setActiveTab(id);
+  };
 
   useEffect(() => {
     checkBackendHealth().then((online) => setBackendOnline(online));
@@ -19,13 +31,15 @@ export default function Navbar({ activeTab, setActiveTab, onOpenCodeDoctor, onOp
   }, []);
 
   const navLinks = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home, enabled: true },
-    { id: 'visualizer', label: 'Visualizer', icon: Code2, enabled: true },
-    { id: 'striver', label: 'Striver Sheet 📜', icon: BookOpen, enabled: true, badge: '182' },
-    { id: 'dsa', label: 'DSA Hub', icon: Layers, enabled: true },
-    { id: 'quiz', label: 'Quiz Arena', icon: HelpCircle, enabled: true },
-    { id: 'history', label: 'History', icon: History, enabled: true },
-    { id: 'settings', label: 'Settings', icon: Settings, enabled: true },
+    { id: 'dashboard', path: '/', label: 'Dashboard', icon: Home, enabled: true },
+    { id: 'visualizer', path: '/visualizer', label: 'Visualizer', icon: Code2, enabled: true },
+    { id: 'playground', path: '/playground', label: 'Playground', icon: Terminal, enabled: true },
+    { id: 'ai', path: '/ai', label: 'AI Tutor', icon: Bot, enabled: true },
+    { id: 'striver', path: '/striver', label: 'Striver 📜', icon: BookOpen, enabled: true, badge: '182' },
+    { id: 'dsa', path: '/dsa', label: 'DSA Hub', icon: Layers, enabled: true },
+    { id: 'quiz', path: '/quiz', label: 'Quiz', icon: HelpCircle, enabled: true },
+    { id: 'history', path: '/history', label: 'History', icon: History, enabled: true },
+    { id: 'settings', path: '/settings', label: 'Settings', icon: Settings, enabled: true },
   ];
 
   return (
@@ -35,7 +49,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenCodeDoctor, onOp
         : 'bg-slate-900/90 border-slate-800/80 shadow-md shadow-black/20'
     }`}>
       {/* Brand logo & title */}
-      <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
+      <div className="flex items-center gap-3 cursor-pointer" onClick={() => handleNavClick('dashboard')}>
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-md shadow-cyan-500/20">
           <Box className="w-5 h-5 text-slate-950 stroke-[2.5]" />
         </div>
@@ -55,12 +69,12 @@ export default function Navbar({ activeTab, setActiveTab, onOpenCodeDoctor, onOp
       <nav className="hidden md:flex items-center gap-1 sm:gap-1.5">
         {navLinks.map((item) => {
           const Icon = item.icon;
-          const isActive = activeTab === item.id;
+          const isActive = (activeTab ? activeTab === item.id : currentTab === item.id) || currentPath === item.path;
 
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => handleNavClick(item.id)}
               className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                 isActive
                   ? isBright

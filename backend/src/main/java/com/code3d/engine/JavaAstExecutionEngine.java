@@ -93,6 +93,20 @@ public class JavaAstExecutionEngine {
             return ExecuteResponse.error("Execution Limit: Program exceeded 1000 step limit (infinite loop detected).");
         } catch (UnsupportedConstructException ue) {
             return ExecuteResponse.error("Unsupported Java construct: " + ue.getMessage());
+        } catch (IndexOutOfBoundsException oob) {
+            ExecutionStep errStep = new ExecutionStep();
+            errStep.setStepNumber(ctx.stepCounter++);
+            errStep.setLineNumber(ctx.currentLine);
+            errStep.setEventType("EXCEPTION");
+            errStep.setExplanation("Runtime Error: " + oob.getMessage());
+            errStep.setVariables(new LinkedHashMap<>(ctx.variables));
+            ctx.stdout.add("[Exception] " + oob.getMessage());
+            errStep.setOutput(new ArrayList<>(ctx.stdout));
+            errStep.setDataStructureState(ctx.buildDataStructureState("Runtime Exception", oob.getMessage()));
+            ctx.steps.add(errStep);
+            ExecuteResponse resp = new ExecuteResponse("ERROR", ctx.steps.size(), ctx.steps);
+            resp.setError(oob.getMessage());
+            return resp;
         } catch (Exception ex) {
             return ExecuteResponse.error("Runtime Evaluation Error: " + ex.getMessage());
         }
@@ -618,9 +632,11 @@ public class JavaAstExecutionEngine {
     private int getSourceLine(Node node, ExecutionContext ctx) {
         if (node.getBegin().isPresent()) {
             int line = node.getBegin().get().line - ctx.lineOffset;
-            return Math.max(1, line);
+            int finalLine = Math.max(1, line);
+            ctx.currentLine = finalLine;
+            return finalLine;
         }
-        return 1;
+        return ctx.currentLine;
     }
 
     private void checkLimits(ExecutionContext ctx, long startTime) {
@@ -646,6 +662,7 @@ public class JavaAstExecutionEngine {
     private static class ExecutionContext {
         final int lineOffset;
         int stepCounter = 1;
+        int currentLine = 1;
         final Map<String, Object> variables = new LinkedHashMap<>();
         final Map<String, String> variableTypes = new LinkedHashMap<>();
         final List<String> stdout = new ArrayList<>();
