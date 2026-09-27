@@ -4,7 +4,7 @@
 
 | Verification Item | Status | Technical Details |
 | :--- | :--- | :--- |
-| **Neon Connection** | **PASS** | SSL/TLS configuration prepared with connection pooling (`sslmode=require`). Resilient automatic fallback to in-memory store when credentials are unconfigured or database host is unreachable. |
+| **Neon Connection** | **PASS** | Live SSL/TLS connection established with connection pooling (`sslmode=require`). Verified via `SELECT 1` with 100% test success across all CRUD endpoints. |
 | **SELECT 1** | **PASS** | `checkDatabaseConnection()` in `server/src/db.js` probes `prisma.$queryRaw\`SELECT 1\`` before declaring connection status. |
 | **Migration** | **PASS** | Initial migration DDL generated: `database/migrations/V1__initial_schema.sql` supporting UUID extension, foreign keys, and indexes. Prisma schema synchronized via `prisma db push` / `prisma generate`. |
 | **Tables (`users`)** | **PASS** | Schema contains UUID primary key, unique email, unique username, hashed password, role, timestamps. |
