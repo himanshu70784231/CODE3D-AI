@@ -1,7 +1,7 @@
 import React, { Suspense, useState, useEffect, useRef } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Center, Grid, Sparkles, ContactShadows } from '@react-three/drei';
-import { Compass, RotateCw, ZoomIn, ZoomOut, Maximize2, Minimize2, Camera, RefreshCw, Trophy, Sparkles as SparklesIcon, Cpu, Terminal, Eye, Layers, ChevronDown, ChevronUp } from 'lucide-react';
+import { Compass, RotateCw, ZoomIn, ZoomOut, Maximize2, Minimize2, Camera, RefreshCw, Trophy, Sparkles as SparklesIcon, Cpu, Terminal, Eye, Layers, Box, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import OutputHologram3D from './OutputHologram3D';
 import DryRunHologram3D from './DryRunHologram3D';
@@ -376,24 +376,8 @@ export default function SceneContainer({
         )}
       </div>
 
-      {/* Empty State / 2D Fallback / 3D Canvas Viewport */}
-      {!currentStep ? (
-        <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-8 text-center select-none">
-          <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-4 shadow-lg shadow-cyan-500/20">
-            <Cpu size={32} />
-          </div>
-          <h3 className={`text-base font-bold mb-1 ${isBright ? 'text-slate-800' : 'text-slate-200'}`}>
-            No Active Simulation
-          </h3>
-          <p className="text-xs text-slate-400 max-w-sm font-sans mb-4">
-            Click Run (F5) or Step Forward (F10) in the code editor to execute and visualize in 3D WebGL space.
-          </p>
-          <div className="flex items-center gap-2 text-[11px] font-mono text-cyan-400 bg-cyan-950/40 border border-cyan-800/60 rounded-lg px-3 py-1.5">
-            <SparklesIcon size={13} />
-            <span>Interactive 3D Stage Ready</span>
-          </div>
-        </div>
-      ) : isFallback2D || webglContextLost ? (
+      {/* 2D Fallback / 3D Canvas Viewport */}
+      {isFallback2D || webglContextLost ? (
         <div className="w-full h-full relative">
           {webglContextLost && (
             <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 px-3 py-1.5 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
