@@ -4,9 +4,13 @@ import { useTheme } from '../context/ThemeContext';
 import { X, LogIn, UserPlus, ShieldCheck, UserCheck, Key, Mail, User } from 'lucide-react';
 
 export default function LoginModal() {
-  const { isLoginModalOpen, closeLoginModal, login, register } = useAuth();
+  const { isLoginModalOpen, closeLoginModal, login, register, authModalMode } = useAuth();
   const { isBright } = useTheme();
-  const [isRegister, setIsRegister] = useState(false);
+  const [isRegister, setIsRegister] = useState(authModalMode === 'register');
+
+  React.useEffect(() => {
+    setIsRegister(authModalMode === 'register');
+  }, [authModalMode]);
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -239,4 +243,13 @@ export default function LoginModal() {
       </div>
     </div>
   );
+}
+
+// Section 9: Named Exports for SignInModal and SignUpModal
+export function SignInModal() {
+  return <LoginModal />;
+}
+
+export function SignUpModal() {
+  return <LoginModal />;
 }

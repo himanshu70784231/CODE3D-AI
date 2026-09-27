@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Box, Layers, History, Settings, Code2, User, LogOut, Sparkles, ChevronDown, Sun, Moon, Bookmark, Bot, Check, Shield } from 'lucide-react';
+import { Home, Box, Layers, History, Settings, Code2, User, LogOut, Sparkles, ChevronDown, Sun, Moon, Bookmark, Bot, Check, Shield, UserPlus } from 'lucide-react';
 import { checkBackendHealth } from '../services/apiService';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import AccountMenu from './AccountMenu';
 
 export default function Navbar({ activeTab, setActiveTab }) {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
   const [backendOnline, setBackendOnline] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef(null);
-  const { user, isAuthenticated, logout, openLoginModal } = useAuth();
+  const { user, isAuthenticated, logout, openLoginModal, openRegisterModal } = useAuth();
   const { theme, toggleTheme, isBright } = useTheme();
 
   const currentPath = location.pathname;
@@ -57,20 +58,39 @@ export default function Navbar({ activeTab, setActiveTab }) {
         ? 'bg-white/95 border-slate-200 shadow-xs'
         : 'bg-[#090d16]/95 border-slate-800/80 shadow-md shadow-black/20'
     }`}>
-      {/* Brand logo & title */}
-      <div className="flex items-center gap-3 cursor-pointer" onClick={() => handleNavClick('visualizer')}>
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-md shadow-cyan-500/20">
-          <Box className="w-5 h-5 text-slate-950 stroke-[2.5]" />
-        </div>
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2">
-            <span className={`font-bold text-base tracking-wider font-sans ${isBright ? 'text-slate-900' : 'text-white'}`}>
-              CODE<span className="text-cyan-500 dark:text-cyan-400">3D</span> <span className="text-xs bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 rounded px-1.5 py-0.2 font-mono">AI</span>
+      {/* Dedicated Home Button & Brand Logo (Section 10) */}
+      <div className="flex items-center gap-2.5">
+        <button
+          onClick={() => navigate('/')}
+          className={`h-9 w-9 rounded-lg flex items-center justify-center border transition-all cursor-pointer ${
+            location.pathname === '/'
+              ? isBright
+                ? 'bg-cyan-100 text-cyan-800 border-cyan-300 shadow-xs'
+                : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-xs'
+              : isBright
+                ? 'bg-slate-100 text-slate-700 hover:text-cyan-700 hover:bg-cyan-50 border-slate-200'
+                : 'bg-slate-900 text-slate-300 hover:text-cyan-300 hover:bg-slate-800 border-slate-800'
+          }`}
+          title="Home - Return to CODE3D-AI Dashboard"
+          aria-label="Home"
+        >
+          <Home size={18} />
+        </button>
+
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-md shadow-cyan-500/20">
+            <Box className="w-5 h-5 text-slate-950 stroke-[2.5]" />
+          </div>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className={`font-bold text-base tracking-wider font-sans ${isBright ? 'text-slate-900' : 'text-white'}`}>
+                CODE<span className="text-cyan-500 dark:text-cyan-400">3D</span> <span className="text-xs bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 rounded px-1.5 py-0.2 font-mono">AI</span>
+              </span>
+            </div>
+            <span className={`text-[10px] hidden sm:inline tracking-tight -mt-0.5 ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>
+              Interactive 3D Code & Algorithm Execution
             </span>
           </div>
-          <span className={`text-[10px] hidden sm:inline tracking-tight -mt-0.5 ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>
-            Interactive 3D Code & Algorithm Execution
-          </span>
         </div>
       </div>
 
@@ -160,101 +180,10 @@ export default function Navbar({ activeTab, setActiveTab }) {
             )}
           </button>
 
-          {/* Account Dropdown Menu */}
+          {/* Account Dropdown Menu (Section 9) */}
           {isAccountMenuOpen && (
-            <div className={`absolute right-0 mt-2 w-56 border rounded-xl shadow-2xl p-2 z-50 text-xs animate-fadeIn ${
-              isBright ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
-            }`}>
-              {/* Header inside Account menu */}
-              {isAuthenticated && user ? (
-                <div className={`p-2 border-b mb-1 ${isBright ? 'border-slate-100' : 'border-slate-800'}`}>
-                  <p className={`font-bold text-xs ${isBright ? 'text-slate-900' : 'text-white'}`}>{user?.fullName || user?.username}</p>
-                  <p className={`text-[10px] font-mono ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>{user?.email || 'Signed In'}</p>
-                  <span className="inline-block mt-1 text-[9px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border border-cyan-500/20">
-                    {user?.role || 'Student Developer'}
-                  </span>
-                </div>
-              ) : (
-                <div className={`p-2 border-b mb-1 ${isBright ? 'border-slate-100' : 'border-slate-800'}`}>
-                  <button
-                    onClick={() => {
-                      setIsAccountMenuOpen(false);
-                      openLoginModal();
-                    }}
-                    className="w-full py-1.5 px-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
-                  >
-                    <User size={13} />
-                    <span>Sign In / Register</span>
-                  </button>
-                  <p className={`text-[10px] text-center mt-1.5 ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>
-                    Sign in to sync your saved traces and history.
-                  </p>
-                </div>
-              )}
-
-              {/* Menu items: Save, History, Settings, Sign Out */}
-              <div className="py-1 space-y-0.5">
-                <button
-                  onClick={() => {
-                    setIsAccountMenuOpen(false);
-                    if (!isAuthenticated) {
-                      openLoginModal();
-                    } else {
-                      navigate('/saved');
-                    }
-                  }}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2 cursor-pointer transition ${
-                    isBright ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-slate-800 text-slate-300'
-                  }`}
-                >
-                  <Bookmark size={13} className="text-cyan-500" />
-                  <div className="flex-1 flex items-center justify-between">
-                    <span>Saved Traces</span>
-                    {!isAuthenticated && <span className="text-[9px] font-mono text-amber-500 font-bold">Sign-in</span>}
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setIsAccountMenuOpen(false);
-                    navigate('/history');
-                  }}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2 cursor-pointer transition ${
-                    isBright ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-slate-800 text-slate-300'
-                  }`}
-                >
-                  <History size={13} className="text-amber-500" />
-                  <div className="flex-1 flex items-center justify-between">
-                    <span>Execution History</span>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setIsAccountMenuOpen(false);
-                    navigate('/settings');
-                  }}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2 cursor-pointer transition ${
-                    isBright ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-slate-800 text-slate-300'
-                  }`}
-                >
-                  <Settings size={13} className="text-purple-400" />
-                  <span>Settings</span>
-                </button>
-
-                {isAuthenticated && (
-                  <button
-                    onClick={() => {
-                      setIsAccountMenuOpen(false);
-                      logout();
-                    }}
-                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-rose-500/10 text-rose-500 flex items-center gap-2 cursor-pointer transition"
-                  >
-                    <LogOut size={13} />
-                    <span>Sign Out</span>
-                  </button>
-                )}
-              </div>
+            <div className="absolute right-0 mt-2 z-50">
+              <AccountMenu onClose={() => setIsAccountMenuOpen(false)} />
             </div>
           )}
         </div>

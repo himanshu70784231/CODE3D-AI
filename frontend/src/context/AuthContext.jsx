@@ -63,6 +63,8 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const [authModalMode, setAuthModalMode] = useState('login'); // 'login' | 'register'
+
   return (
     <AuthContext.Provider
       value={{
@@ -73,7 +75,16 @@ export function AuthProvider({ children }) {
         register,
         logout,
         isLoginModalOpen,
-        openLoginModal: () => setIsLoginModalOpen(true),
+        authModalMode,
+        setAuthModalMode,
+        openLoginModal: (mode = 'login') => {
+          setAuthModalMode(mode);
+          setIsLoginModalOpen(true);
+        },
+        openRegisterModal: () => {
+          setAuthModalMode('register');
+          setIsLoginModalOpen(true);
+        },
         closeLoginModal: () => setIsLoginModalOpen(false),
       }}
     >

@@ -58,7 +58,7 @@ export async function fetchDsaConcepts() {
 
 export async function executeProgram(code, conceptId = null, language = 'java', input = null) {
   try {
-    const res = await smartFetch('/execute/run', {
+    const res = await smartFetch('/execute', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code, conceptId, language, input, title: conceptId || 'Custom Execution' }),
@@ -68,6 +68,63 @@ export async function executeProgram(code, conceptId = null, language = 'java', 
   } catch (err) {
     console.warn('Backend execution unavailable:', err);
     return null;
+  }
+}
+
+// Projects API (Section 13)
+export async function fetchProjects() {
+  try {
+    const res = await smartFetch('/projects');
+    if (!res.ok) throw new Error('Failed to fetch projects');
+    return await res.json();
+  } catch (err) {
+    return { success: false, projects: [] };
+  }
+}
+
+export async function saveProject(projectData) {
+  try {
+    const res = await smartFetch('/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(projectData),
+    });
+    return await res.json();
+  } catch (err) {
+    return { success: false, message: 'Failed to save project.' };
+  }
+}
+
+export async function deleteProject(id) {
+  try {
+    const res = await smartFetch(`/projects/${id}`, { method: 'DELETE' });
+    return await res.json();
+  } catch (err) {
+    return { success: false, message: 'Failed to delete project.' };
+  }
+}
+
+// Quiz Attempts API (Section 48)
+export async function saveQuizAttempt(attemptData) {
+  try {
+    const res = await smartFetch('/quiz/attempts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(attemptData),
+    });
+    return await res.json();
+  } catch (err) {
+    return { success: false, message: 'Failed to save quiz attempt.' };
+  }
+}
+
+export async function fetchQuizAttempts() {
+  try {
+    const res = await smartFetch('/quiz/attempts');
+    if (!res.ok) throw new Error('Failed to fetch quiz attempts');
+    return await res.json();
+  } catch (err) {
+    return { success: false, attempts: [] };
   }
 }
 
