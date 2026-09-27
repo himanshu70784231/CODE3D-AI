@@ -24,15 +24,25 @@ export const visualizerRegistry = {
   searching: SortingVisualizer3D,
   linkedList: LinkedListVisualizer3D,
   'linked-list': LinkedListVisualizer3D,
+  'doubly-linked-list': LinkedListVisualizer3D,
   stack: StackVisualizer3D,
   queue: QueueVisualizer3D,
+  deque: QueueVisualizer3D,
   tree: TreeVisualizer3D,
   bst: TreeVisualizer3D,
+  avl: TreeVisualizer3D,
+  'avl-tree': TreeVisualizer3D,
+  'red-black-tree': TreeVisualizer3D,
+  trie: TreeVisualizer3D,
   heap: HeapVisualizer3D,
   graph: GraphVisualizer3D,
   hashTable: HashTableVisualizer3D,
   'hash-table': HashTableVisualizer3D,
+  'hash-map': HashTableVisualizer3D,
   matrix: MatrixVisualizer3D,
+  dp: MatrixVisualizer3D,
+  'dp-table': MatrixVisualizer3D,
+  'dynamic-programming': MatrixVisualizer3D,
   recursion: RecursionVisualizer3D,
   universal: UniversalExecutionVisualizer3D,
   'universal-execution': UniversalExecutionVisualizer3D,
@@ -40,6 +50,6 @@ export const visualizerRegistry = {
 
 export function getVisualizerComponent(type) {
   if (!type) return ArrayVisualizer3D;
-  const normalized = type.toLowerCase().trim();
-  return visualizerRegistry[normalized] || ArrayVisualizer3D;
+  const normalized = type.toLowerCase().trim().replace(/_/g, '-');
+  return visualizerRegistry[normalized] || visualizerRegistry[type.toLowerCase().trim()] || ArrayVisualizer3D;
 }
