@@ -70,7 +70,7 @@ export default function LoginModal() {
               <ShieldCheck size={20} />
             </div>
             <div>
-              <h3 className={`text-base font-bold tracking-wide ${isBright ? 'text-slate-900' : 'white'}`}>
+              <h3 className={`text-base font-bold tracking-wide ${isBright ? 'text-slate-900' : 'text-white'}`}>
                 {isRegister ? 'Create CODE3D Account' : 'Welcome to CODE3D AI'}
               </h3>
               <p className={`text-xs ${isBright ? 'text-slate-600' : 'text-slate-400'}`}>

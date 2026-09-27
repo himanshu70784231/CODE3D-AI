@@ -46,6 +46,10 @@ model User {
   settings            UserSettings?
   executions          AlgorithmExecution[]
   savedVisualizations SavedVisualization[]
+  projects            Project[]
+  executionsList      Execution[]
+  historyList         History[]
+  quizAttempts        QuizAttempt[]
   progress            UserProblemProgress[]
   notes               UserProblemNote[]
   submissions         UserSubmission[]
@@ -117,6 +121,106 @@ model SavedVisualization {
 
   @@index([userId])
   @@map("saved_visualizations")
+}
+
+model Project {
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id")
+  name              String
+  code              String   @db.Text
+  language          String   @default("java")
+  visualizationType String?  @default("array") @map("visualization_type")
+  metadata          Json?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([updatedAt])
+  @@map("projects")
+}
+
+model Execution {
+  id                String          @id @default(uuid())
+  userId            String?         @map("user_id")
+  title             String
+  language          String
+  code              String          @db.Text
+  stdin             String?
+  stdout            String?
+  stderr            String?
+  status            String          @default("COMPLETED")
+  stepCount         Int             @default(0) @map("step_count")
+  executionTimeMs   Int             @default(0) @map("execution_time_ms")
+  traceJson         Json?           @map("trace_json")
+  complexityJson    Json?           @map("complexity_json")
+  errorMessage      String?         @map("error_message") @db.Text
+  createdAt         DateTime        @default(now()) @map("created_at")
+
+  user              User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  steps             ExecutionStep[]
+  historyItems      History[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("executions")
+}
+
+model ExecutionStep {
+  id                 String    @id @default(uuid())
+  executionId        String    @map("execution_id")
+  stepNumber         Int       @map("step_number")
+  lineNumber         Int?      @map("line_number")
+  eventType          String    @map("event_type")
+  variables          Json?
+  callStack          Json?     @map("call_stack")
+  condition          Json?
+  output             String?
+  dataStructureState Json?     @map("data_structure_state")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  execution          Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@index([executionId, stepNumber])
+  @@map("execution_steps")
+}
+
+model History {
+  id                  String     @id @default(uuid())
+  userId              String     @map("user_id")
+  executionId         String?    @map("execution_id")
+  programName         String     @map("program_name")
+  language            String
+  executionStatus     String     @default("COMPLETED") @map("execution_status")
+  visualizationType   String     @default("array") @map("visualization_type")
+  executionDurationMs Int        @default(0) @map("execution_duration_ms")
+  codeSnapshot        String?    @map("code_snapshot") @db.Text
+  createdAt           DateTime   @default(now()) @map("created_at")
+
+  user                User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  execution           Execution? @relation(fields: [executionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("history")
+}
+
+model QuizAttempt {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  quizMode       String   @map("quiz_mode")
+  category       String
+  score          Int      @default(0)
+  totalQuestions Int      @default(0) @map("total_questions")
+  percentage     Float    @default(0.0)
+  answersJson    Json?    @map("answers_json")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("quiz_attempts")
 }
 
 model DsaTopic {

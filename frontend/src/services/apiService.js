@@ -400,6 +400,7 @@ export function clearExecutionHistory() {
   try {
     localStorage.removeItem(STORAGE_KEY_EXECUTIONS);
     localStorage.removeItem(STORAGE_KEY_QUIZZES);
+    smartFetch('/history', { method: 'DELETE' }).catch(() => {});
   } catch (e) {}
 }
 
