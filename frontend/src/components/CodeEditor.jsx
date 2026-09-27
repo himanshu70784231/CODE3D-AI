@@ -62,6 +62,7 @@ export default function CodeEditor({
   syntaxErrorLine = null,
   breakpoints = new Set(),
   onToggleBreakpoint,
+  onSelectLine = null,
 }) {
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
@@ -148,16 +149,18 @@ export default function CodeEditor({
       if (onReset) onReset();
     });
 
-    // Glyph margin click listener to toggle breakpoints
+    // Glyph margin click listener to toggle breakpoints & line click navigation
     editor.onMouseDown((e) => {
+      const line = e.target.position?.lineNumber;
       if (
         e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN ||
         e.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS
       ) {
-        const line = e.target.position?.lineNumber;
         if (line && onToggleBreakpoint) {
           onToggleBreakpoint(line);
         }
+      } else if (line && onSelectLine) {
+        onSelectLine(line);
       }
     });
   };

@@ -1,12 +1,211 @@
 import React, { Suspense, useState, useEffect, useRef } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, Center, Grid, Sparkles, ContactShadows } from '@react-three/drei';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import { OrbitControls, Center, Grid, Sparkles, ContactShadows, Text, Float } from '@react-three/drei';
 import { Compass, RotateCw, ZoomIn, ZoomOut, Maximize2, Minimize2, Camera, RefreshCw, Trophy, Sparkles as SparklesIcon, Cpu, Terminal, Eye, Layers, Box, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import OutputHologram3D from './OutputHologram3D';
 import DryRunHologram3D from './DryRunHologram3D';
 import Dsa2DFallback from './Dsa2DFallback';
 import * as THREE from 'three';
+
+/**
+ * 3D Conceptual CPU Core Hologram (Section 34)
+ * Represents execution core state: Opcode, instruction register, and clock cycle.
+ * Clearly presented as an educational abstraction.
+ */
+function CpuCoreHologram3D({ currentStep, activeCodeLine, visible = true, position = [-6.2, 2.5, 0] }) {
+  const meshRef = useRef();
+  const ringRef = useRef();
+  const { isBright } = useTheme();
+
+  // Opcode detection based on step type, condition, or code
+  let opcode = 'EXEC';
+  let opcodeColor = '#38bdf8';
+  if (currentStep?.condition) {
+    opcode = 'CMP';
+    opcodeColor = currentStep.condition.result ? '#10b981' : '#f43f5e';
+  } else if (currentStep?.changedVariable) {
+    opcode = 'STORE';
+    opcodeColor = '#f59e0b';
+  } else if (activeCodeLine && (activeCodeLine.includes('return') || activeCodeLine.includes('break'))) {
+    opcode = 'JMP';
+    opcodeColor = '#a855f7';
+  } else if (activeCodeLine && (activeCodeLine.includes('System.out') || activeCodeLine.includes('print'))) {
+    opcode = 'OUT';
+    opcodeColor = '#06b6d4';
+  }
+
+  useFrame((_, delta) => {
+    if (meshRef.current) {
+      meshRef.current.rotation.y += delta * 0.8;
+    }
+    if (ringRef.current) {
+      ringRef.current.rotation.x += delta * 1.2;
+      ringRef.current.rotation.z += delta * 0.6;
+    }
+  });
+
+  if (!visible) return null;
+
+  return (
+    <group position={position}>
+      {/* Central Cybernetic CPU Microchip */}
+      <mesh ref={meshRef} castShadow>
+        <boxGeometry args={[1.4, 0.35, 1.4]} />
+        <meshStandardMaterial
+          color={isBright ? '#334155' : '#0f172a'}
+          metalness={0.8}
+          roughness={0.2}
+          emissive={opcodeColor}
+          emissiveIntensity={0.6}
+        />
+      </mesh>
+
+      {/* Orbiting Quantum Logic Ring */}
+      <mesh ref={ringRef}>
+        <torusGeometry args={[1.1, 0.025, 16, 32]} />
+        <meshBasicMaterial color={opcodeColor} wireframe />
+      </mesh>
+
+      {/* Floating Holographic CPU Header & Opcode */}
+      <Float speed={3} floatIntensity={0.15}>
+        <group position={[0, 0.95, 0]}>
+          <Text fontSize={0.22} color={opcodeColor} fontWeight="bold" anchorX="center" anchorY="middle">
+            {`[CPU] ${opcode}`}
+          </Text>
+          <Text position={[0, -0.28, 0]} fontSize={0.13} color="#94a3b8" anchorX="center" anchorY="middle">
+            {currentStep?.lineNumber ? `IP: Line ${currentStep.lineNumber}` : 'CYCLE ACTIVE'}
+          </Text>
+          <Text position={[0, -0.48, 0]} fontSize={0.1} color="#64748b" anchorX="center" anchorY="middle">
+            Conceptual Core
+          </Text>
+        </group>
+      </Float>
+    </group>
+  );
+}
+
+/**
+ * 3D Decision Gate for if / while / for conditionals (Section 37)
+ * Evaluated gate with TRUE (open emerald portal) / FALSE (barrier rose shield).
+ */
+function ConditionGate3D({ condition, visible = true, position = [0, 4.2, -2.5] }) {
+  const gateRef = useRef();
+
+  useFrame((_, delta) => {
+    if (gateRef.current) {
+      gateRef.current.rotation.y += delta * 0.3;
+    }
+  });
+
+  if (!visible || !condition) return null;
+
+  const isTrue = !!condition.result;
+  const gateColor = isTrue ? '#10b981' : '#f43f5e';
+
+  return (
+    <group position={position}>
+      {/* 3D Decision Arch Gate */}
+      <group ref={gateRef}>
+        <mesh position={[-1.2, 0, 0]}>
+          <cylinderGeometry args={[0.08, 0.08, 1.8, 16]} />
+          <meshStandardMaterial color={gateColor} emissive={gateColor} emissiveIntensity={0.8} />
+        </mesh>
+        <mesh position={[1.2, 0, 0]}>
+          <cylinderGeometry args={[0.08, 0.08, 1.8, 16]} />
+          <meshStandardMaterial color={gateColor} emissive={gateColor} emissiveIntensity={0.8} />
+        </mesh>
+        <mesh position={[0, 0.9, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.08, 0.08, 2.4, 16]} />
+          <meshStandardMaterial color={gateColor} emissive={gateColor} emissiveIntensity={0.8} />
+        </mesh>
+        {/* Holographic Gate Field */}
+        <mesh position={[0, 0, 0]}>
+          <planeGeometry args={[2.3, 1.7]} />
+          <meshBasicMaterial
+            color={gateColor}
+            transparent
+            opacity={isTrue ? 0.22 : 0.45}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      </group>
+
+      {/* Floating Gate Text Banner */}
+      <Float speed={4} floatIntensity={0.12}>
+        <group position={[0, 1.45, 0]}>
+          <Text fontSize={0.24} color={gateColor} fontWeight="bold" anchorX="center" anchorY="middle">
+            {`GATE: ${isTrue ? 'TRUE (CONTINUE ✓)' : 'FALSE (EXIT ✗)'}`}
+          </Text>
+          <Text position={[0, -0.28, 0]} fontSize={0.16} color="#e2e8f0" anchorX="center" anchorY="middle">
+            {`${condition.expression || ''} => ${condition.evaluation || (isTrue ? 'true' : 'false')}`}
+          </Text>
+        </group>
+      </Float>
+    </group>
+  );
+}
+
+/**
+ * 3D Floating Variable Hologram Register Bank (Section 39)
+ * Floats live mutated runtime variables in 3D WebGL space.
+ */
+function VariableHologram3D({ variables = {}, changedVariable = null, visible = true, position = [6.2, 2.5, 0] }) {
+  if (!visible) return null;
+
+  const entries = Object.entries(variables || {})
+    .filter(([k]) => k !== 'arr' && k !== 'matrix' && k !== 'lang' && k !== 'size' && k !== 'rawInput')
+    .slice(0, 6);
+
+  if (entries.length === 0) return null;
+
+  return (
+    <group position={position}>
+      {/* Holographic Glass Panel Backing */}
+      <mesh position={[0, 0, -0.05]}>
+        <planeGeometry args={[2.8, Math.max(1.6, entries.length * 0.45 + 0.6)]} />
+        <meshBasicMaterial color="#080e1e" transparent opacity={0.85} side={THREE.DoubleSide} />
+      </mesh>
+      <lineSegments position={[0, 0, -0.04]}>
+        <edgesGeometry args={[new THREE.BoxGeometry(2.82, Math.max(1.6, entries.length * 0.45 + 0.6), 0.02)]} />
+        <lineBasicMaterial color="#38bdf8" />
+      </lineSegments>
+
+      <Text position={[0, (entries.length * 0.45) / 2 + 0.15, 0.05]} fontSize={0.18} color="#38bdf8" fontWeight="bold" anchorX="center">
+        LIVE REGISTERS
+      </Text>
+
+      {entries.map(([key, val], idx) => {
+        const isChanged = changedVariable === key;
+        const yPos = (entries.length * 0.45) / 2 - 0.25 - idx * 0.4;
+        return (
+          <group key={key} position={[0, yPos, 0.05]}>
+            <Text
+              position={[-1.1, 0, 0]}
+              fontSize={0.17}
+              color={isChanged ? '#fbbf24' : '#e2e8f0'}
+              fontWeight={isChanged ? 'bold' : 'normal'}
+              anchorX="left"
+              anchorY="middle"
+            >
+              {`${key} :`}
+            </Text>
+            <Text
+              position={[1.1, 0, 0]}
+              fontSize={0.18}
+              color={isChanged ? '#34d399' : '#38bdf8'}
+              fontWeight="bold"
+              anchorX="right"
+              anchorY="middle"
+            >
+              {String(val)}
+            </Text>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
 
 /**
  * Handles smooth dynamic camera transitions to preset viewpoints (Top, Front, Isometric, Reset, Zoom In/Out).
@@ -102,12 +301,16 @@ export default function SceneContainer({
   cumulativeOutput = [],
   hoveredBoxInfo = null,
   isFull3DView = false,
-  onToggleFull3D
+  onToggleFull3D,
+  onSelectElement = null,
 }) {
   const { isBright } = useTheme();
   const [cameraPreset, setCameraPreset] = useState(null);
   const [showHologram, setShowHologram] = useState(true);
   const [showDryRunHologram, setShowDryRunHologram] = useState(false); // Default OFF so 3D objects are 100% visible and unobstructed
+  const [isXRayMode, setIsXRayMode] = useState(false);
+  const [showCpuCore, setShowCpuCore] = useState(true);
+  const [showVariableHolo, setShowVariableHolo] = useState(true);
   const [isHudExpanded, setIsHudExpanded] = useState(false);
   const [isFallback2D, setIsFallback2D] = useState(false);
   const [webglContextLost, setWebglContextLost] = useState(false);
@@ -325,6 +528,38 @@ export default function SceneContainer({
           </button>
         </div>
 
+        {/* X-Ray Mode Toggle Button (Section 41) */}
+        <button
+          onClick={() => setIsXRayMode((prev) => !prev)}
+          className={`h-7 px-2 rounded-lg text-xs font-semibold backdrop-blur-md border transition shadow-md cursor-pointer flex items-center gap-1 ${
+            isXRayMode
+              ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-violet-950/30'
+              : isBright
+              ? 'bg-white/90 border-slate-200 text-slate-600 hover:text-slate-900'
+              : 'bg-slate-900/85 border-slate-800 text-slate-400 hover:text-slate-200'
+          }`}
+          title="Toggle X-Ray Mode: Expose conceptual memory addresses, references & wireframes"
+        >
+          <Eye size={12} className={isXRayMode ? 'text-violet-400' : 'text-slate-400'} />
+          <span className="hidden md:inline">X-Ray</span>
+        </button>
+
+        {/* 3D CPU Core Toggle Button (Section 34) */}
+        <button
+          onClick={() => setShowCpuCore((prev) => !prev)}
+          className={`h-7 px-2 rounded-lg text-xs font-semibold backdrop-blur-md border transition shadow-md cursor-pointer flex items-center gap-1 ${
+            showCpuCore
+              ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300 shadow-cyan-950/30'
+              : isBright
+              ? 'bg-white/90 border-slate-200 text-slate-600 hover:text-slate-900'
+              : 'bg-slate-900/85 border-slate-800 text-slate-400 hover:text-slate-200'
+          }`}
+          title="Toggle 3D Conceptual CPU Execution Core"
+        >
+          <Cpu size={12} className={showCpuCore ? 'text-cyan-400' : 'text-slate-400'} />
+          <span className="hidden md:inline">CPU</span>
+        </button>
+
         {/* 2D / 3D Fallback Mode Toggle */}
         <button
           onClick={() => setIsFallback2D((prev) => !prev)}
@@ -427,8 +662,38 @@ export default function SceneContainer({
             />
 
             <Center top position={[0, -0.3, 0]}>
-              {children}
+              {React.isValidElement(children)
+                ? React.cloneElement(children, {
+                    isXRayMode,
+                    onSelectElement: (idx, val) => {
+                      if (onSelectElement) onSelectElement(idx, val);
+                    },
+                  })
+                : children}
             </Center>
+
+            {/* 3D Conceptual CPU Core Hologram (Section 34) */}
+            <CpuCoreHologram3D
+              currentStep={currentStep}
+              activeCodeLine={activeCodeLine}
+              visible={showCpuCore}
+              position={[-Math.max(5.5, Math.min((elementCount || 4) * 1.05 + 1.5, 12)), 2.0, 0]}
+            />
+
+            {/* 3D Decision Gate for Conditionals (Section 37) */}
+            <ConditionGate3D
+              condition={currentStep?.condition}
+              visible={!!currentStep?.condition}
+              position={[0, 4.0, -2.8]}
+            />
+
+            {/* 3D Floating Variable Hologram Register Bank (Section 39) */}
+            <VariableHologram3D
+              variables={currentStep?.variables}
+              changedVariable={currentStep?.changedVariable}
+              visible={showVariableHolo}
+              position={[Math.max(5.5, Math.min((elementCount || 4) * 1.05 + 1.5, 12)), 2.0, 0]}
+            />
 
             {/* 3D Full-Code Dynamic Dry Run Hologram (Positioned comfortably behind stage) */}
             <DryRunHologram3D

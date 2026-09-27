@@ -528,6 +528,36 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     reset();
   };
 
+  // Bidirectional interaction: 3D Element Click -> Seek Timeline & Code Line (Section 40)
+  const handleSelectElementFrom3D = (index, value) => {
+    if (!timelineSteps || timelineSteps.length === 0) return;
+    const forwardStep = timelineSteps.findIndex((step, idx) => {
+      if (idx < currentStepIndex) return false;
+      const ds = step.dataStructureState;
+      return ds?.activeIndex === index || (ds?.pointers && Object.values(ds.pointers).includes(index));
+    });
+    if (forwardStep !== -1) {
+      jumpToStep(forwardStep);
+      return;
+    }
+    const anyStep = timelineSteps.findIndex((step) => {
+      const ds = step.dataStructureState;
+      return ds?.activeIndex === index || (ds?.pointers && Object.values(ds.pointers).includes(index));
+    });
+    if (anyStep !== -1) {
+      jumpToStep(anyStep);
+    }
+  };
+
+  // Bidirectional interaction: Code Editor Line Click -> Seek Timeline & 3D Scene (Section 40)
+  const handleSelectLineFromEditor = (lineNumber) => {
+    if (!timelineSteps || timelineSteps.length === 0 || !lineNumber) return;
+    const matchedStep = timelineSteps.findIndex((step) => step.lineNumber === lineNumber);
+    if (matchedStep !== -1) {
+      jumpToStep(matchedStep);
+    }
+  };
+
   // Handle Personal Problem applied solution & 3D visualization
   const handleApplyCorrectedCode = async ({
     code: correctedCode,
@@ -901,30 +931,6 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
             {isFull3DView ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
             <span className="hidden sm:inline">{isFull3DView ? 'Exit 3D' : 'Full 3D'}</span>
           </button>
-
-          <button
-            onClick={() => setIsAiOpen(true)}
-            className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition border shadow-xs cursor-pointer ${
-              isBright
-                ? 'bg-cyan-50 hover:bg-cyan-100 border-cyan-300 text-cyan-800'
-                : 'bg-cyan-950/70 hover:bg-cyan-900 border-cyan-700/50 text-cyan-300'
-            }`}
-          >
-            <Sparkles size={13} className={isBright ? 'text-cyan-600' : 'text-cyan-400'} />
-            <span className="hidden sm:inline">AI Tutor</span>
-          </button>
-
-          <button
-            onClick={() => setIsQuizOpen(true)}
-            className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition border shadow-xs cursor-pointer ${
-              isBright
-                ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 text-emerald-800'
-                : 'bg-emerald-950/70 hover:bg-emerald-900 border-emerald-700/50 text-emerald-300'
-            }`}
-          >
-            <HelpCircle size={13} className={isBright ? 'text-emerald-600' : 'text-emerald-400'} />
-            <span className="hidden sm:inline">Quiz</span>
-          </button>
         </div>
       </div>
 
@@ -1033,6 +1039,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
                 isAtEnd={isAtEnd}
                 breakpoints={breakpoints}
                 onToggleBreakpoint={toggleBreakpoint}
+                onSelectLine={handleSelectLineFromEditor}
               />
             </EditorErrorBoundary>
           </div>
@@ -1135,6 +1142,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
                 cumulativeOutput={cumulativeOutput}
                 isFull3DView={isFull3DView}
                 onToggleFull3D={() => setIsFull3DView((prev) => !prev)}
+                onSelectElement={handleSelectElementFrom3D}
               >
                 <DsaSceneDispatcher
                   dataStructureState={currentStep?.dataStructureState}

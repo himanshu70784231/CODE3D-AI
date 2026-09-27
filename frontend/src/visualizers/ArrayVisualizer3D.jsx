@@ -125,6 +125,8 @@ function ArrayCell({
   isTargetFound = false,
   isLisActive = false,
   dpValue = null,
+  isXRayMode = false,
+  onSelectCell = null,
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const meshRef = useRef();
@@ -195,14 +197,21 @@ function ArrayCell({
             setIsHovered(false);
             document.body.style.cursor = 'default';
           }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onSelectCell) onSelectCell(index, value);
+          }}
         >
           <boxGeometry args={[1.45, baseHeight, 1.45]} />
           <meshStandardMaterial
-            color={boxColor}
-            metalness={0.55}
-            roughness={0.18}
-            emissive={emissiveColor}
+            color={isXRayMode ? '#0284c7' : boxColor}
+            metalness={isXRayMode ? 0.85 : 0.55}
+            roughness={isXRayMode ? 0.1 : 0.18}
+            emissive={isXRayMode ? '#38bdf8' : emissiveColor}
             emissiveIntensity={isHovered ? 1.8 : isTargetFound ? 1.5 : isActive ? 1.1 : isInWindow ? 0.6 : 0.25}
+            transparent={isXRayMode}
+            opacity={isXRayMode ? 0.55 : 1.0}
+            wireframe={isXRayMode && !isHovered}
           />
         </mesh>
 
@@ -410,6 +419,29 @@ function ArrayCell({
             {`DP: ${dpValue}`}
           </Text>
         )}
+        {isXRayMode && (
+          <group position={[0, dpValue !== null ? -1.02 : -0.68, 0]}>
+            <Text
+              position={[0, 0, 0]}
+              fontSize={0.16}
+              color="#38bdf8"
+              fontWeight="bold"
+              anchorX="center"
+              anchorY="middle"
+            >
+              {`0x${(0x7F00 + index * 4).toString(16).toUpperCase()}`}
+            </Text>
+            <Text
+              position={[0, -0.2, 0]}
+              fontSize={0.1}
+              color="#64748b"
+              anchorX="center"
+              anchorY="middle"
+            >
+              Conceptual Memory
+            </Text>
+          </group>
+        )}
       </group>
     </group>
   );
@@ -458,7 +490,8 @@ function SubarrayBoundingFrame({ startX, spacing, startIdx, endIdx, isMaxWindow 
  * ArrayVisualizer3D renders linear, subarray, Container With Most Water, Trapping Rain Water,
  * and Longest Increasing Subsequence structures in 3D WebGL space.
  */
-export default function ArrayVisualizer3D({ dataStructureState }) {
+export default function ArrayVisualizer3D({ dataStructureState, isXRayMode = false, onSelectElement = null }) {
+  const effectiveXRay = isXRayMode || !!dataStructureState?.isXRayMode;
   const {
     values = [],
     activeIndex = null,
@@ -606,6 +639,8 @@ export default function ArrayVisualizer3D({ dataStructureState }) {
             isTargetFound={isCellTargetFound}
             isLisActive={isCellLisActive}
             dpValue={cellDpValue}
+            isXRayMode={effectiveXRay}
+            onSelectCell={onSelectElement}
           />
         );
       })}
