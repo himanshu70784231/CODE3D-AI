@@ -226,20 +226,20 @@ export default function SettingsPage() {
             <div className={`border rounded-xl p-3.5 space-y-1 ${
               isBright ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
             }`}>
-              <div className={`uppercase text-[10px] ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>Java Compiler &amp; Runtime</div>
-              <div className={`font-bold ${isBright ? 'text-slate-900' : 'text-white'}`}>Java(TM) SE Runtime 21.0.12 LTS</div>
+              <div className={`uppercase text-[10px] ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>5-Language Polyglot Engine</div>
+              <div className={`font-bold ${isBright ? 'text-slate-900' : 'text-white'}`}>Java, C++, Python, JS &amp; C</div>
               <div className="text-emerald-600 dark:text-emerald-400 text-[11px] flex items-center gap-1 mt-1">
-                <CheckCircle2 size={12} /> JDK 21 Active
+                <CheckCircle2 size={12} /> Normalized Trace Pipeline
               </div>
             </div>
 
             <div className={`border rounded-xl p-3.5 space-y-1 ${
               isBright ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
             }`}>
-              <div className={`uppercase text-[10px] ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>Backend Server</div>
-              <div className={`font-bold ${isBright ? 'text-slate-900' : 'text-white'}`}>Spring Boot 3.2.4 (Apache Tomcat 10.1)</div>
+              <div className={`uppercase text-[10px] ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>Full-Stack Backend Server</div>
+              <div className={`font-bold ${isBright ? 'text-slate-900' : 'text-white'}`}>Node.js / Express + PostgreSQL (Neon) / Prisma</div>
               <div className="text-emerald-600 dark:text-emerald-400 text-[11px] flex items-center gap-1 mt-1">
-                <CheckCircle2 size={12} /> Port 8080 (REST + JPA)
+                <CheckCircle2 size={12} /> Port 5000 (Cookie Sessions + Sandbox)
               </div>
             </div>
 

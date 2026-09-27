@@ -8,6 +8,11 @@ import QuizArena from './pages/QuizArena';
 import HistoryPage from './pages/HistoryPage';
 import SettingsPage from './pages/SettingsPage';
 import AiTutorPage from './pages/AiTutorPage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import SheetsPage from './pages/SheetsPage';
+import DsaProblemPage from './pages/DsaProblemPage';
+import SavedVisualizationsPage from './pages/SavedVisualizationsPage';
 import LoginModal from './components/LoginModal';
 import CodeDoctorModal from './components/CodeDoctorModal';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -72,11 +77,19 @@ function MainAppContent() {
       <main className="flex-1 flex flex-col overflow-hidden pb-14 md:pb-0">
         <Routes>
           <Route path="/" element={<Dashboard onNavigate={(tab) => navigate(tab === 'dashboard' ? '/' : `/${tab}`)} />} />
+          <Route path="/dashboard" element={<Dashboard onNavigate={(tab) => navigate(tab === 'dashboard' ? '/' : `/${tab}`)} />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
           <Route path="/visualizer" element={<Visualizer initialConcept={selectedConcept} />} />
+          <Route path="/visualize" element={<Visualizer initialConcept={selectedConcept} />} />
           <Route path="/algorithms" element={<DsaHub initialTab="algorithms" onSelectConcept={handleLaunchConcept} />} />
           <Route path="/ai" element={<AiTutorPage onSendToVisualizer={handleLaunchConcept} />} />
           <Route path="/dsa" element={<DsaHub initialTab="curriculum" onSelectConcept={handleLaunchConcept} />} />
+          <Route path="/dsa/:problemSlug" element={<DsaProblemPage onVisualizeProblem={handleLaunchConcept} />} />
+          <Route path="/sheets" element={<SheetsPage onSelectProblem={handleLaunchConcept} />} />
+          <Route path="/sheets/:sheetSlug" element={<SheetsPage onSelectProblem={handleLaunchConcept} />} />
           <Route path="/striver" element={<DsaHub initialTab="striver" onSelectConcept={handleLaunchConcept} />} />
+          <Route path="/saved" element={<SavedVisualizationsPage onReplay={handleLaunchConcept} />} />
           <Route path="/quiz" element={<QuizArena />} />
           <Route path="/history" element={<HistoryPage onRerunProgram={handleRerunFromHistory} />} />
           <Route path="/settings" element={<SettingsPage />} />

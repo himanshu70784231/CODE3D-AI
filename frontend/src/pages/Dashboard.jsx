@@ -28,22 +28,49 @@ import { useTheme } from '../context/ThemeContext';
 import { SAMPLE_PROGRAMS } from '../utils/sampleCodes';
 import { STRIVER_PROBLEMS } from '../utils/striverCatalog';
 import { getExecutionHistory } from '../services/apiService';
+import { getDashboardStats } from '../services/dashboard.js';
 
 export default function Dashboard({ onNavigate }) {
   const { isBright } = useTheme();
   const [historyStats, setHistoryStats] = React.useState({ totalExecutionsCount: 0, successfulCount: 0, recentExecutions: [] });
 
   React.useEffect(() => {
-    getExecutionHistory().then((data) => {
-      if (data) {
-        const successful = (data.recentExecutions || []).filter(e => e.status === 'COMPLETED').length;
-        setHistoryStats({
-          totalExecutionsCount: data.totalExecutionsCount || (data.recentExecutions || []).length,
-          successfulCount: successful,
-          recentExecutions: (data.recentExecutions || []).slice(0, 3)
-        });
-      }
-    }).catch(() => {});
+    getDashboardStats()
+      .then((res) => {
+        if (res?.success && res.stats) {
+          const recent = (res.stats.recentExecutions || []).map((e) => ({
+            id: e.id,
+            programTitle: e.title || 'Simulation',
+            language: e.language,
+            totalSteps: e.stepCount,
+            status: e.status,
+            executedAt: new Date(e.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          }));
+          setHistoryStats({
+            totalExecutionsCount: res.stats.totalExecutions || 0,
+            successfulCount: res.stats.totalExecutions || 0,
+            recentExecutions: recent.slice(0, 3),
+          });
+        } else {
+          fallbackHistory();
+        }
+      })
+      .catch(() => {
+        fallbackHistory();
+      });
+
+    function fallbackHistory() {
+      getExecutionHistory().then((data) => {
+        if (data) {
+          const successful = (data.recentExecutions || []).filter(e => e.status === 'COMPLETED').length;
+          setHistoryStats({
+            totalExecutionsCount: data.totalExecutionsCount || (data.recentExecutions || []).length,
+            successfulCount: successful,
+            recentExecutions: (data.recentExecutions || []).slice(0, 3)
+          });
+        }
+      }).catch(() => {});
+    }
   }, []);
 
   const workflowSteps = [

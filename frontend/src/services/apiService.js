@@ -5,7 +5,7 @@
 import { solvePersonalProblem, correctPersonalCode } from './personalProblemSolver';
 
 const LIVE_RENDER_URL = 'https://code3d-ai.onrender.com/api';
-const LOCAL_URL = 'http://localhost:8080/api';
+const LOCAL_URL = 'http://localhost:5000/api';
 
 // When accessed from phone, GitHub Pages, or Vercel, always use the live Render backend!
 const isLocalhost = typeof window !== 'undefined' && 
@@ -15,15 +15,19 @@ const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_URL ||
   (isLocalhost ? LOCAL_URL : LIVE_RENDER_URL);
 
 async function smartFetch(endpoint, options = {}) {
+  const fetchOpts = {
+    ...options,
+    credentials: 'include',
+  };
   try {
-    const res = await fetch(`${BACKEND_BASE_URL}${endpoint}`, options);
+    const res = await fetch(`${BACKEND_BASE_URL}${endpoint}`, fetchOpts);
     return res;
   } catch (err) {
     // If local fetch failed, fallback to live Render cloud backend
     if (BACKEND_BASE_URL !== LIVE_RENDER_URL) {
       try {
         console.warn(`Local backend unreachable at ${BACKEND_BASE_URL}. Falling back to live cloud backend...`);
-        return await fetch(`${LIVE_RENDER_URL}${endpoint}`, options);
+        return await fetch(`${LIVE_RENDER_URL}${endpoint}`, fetchOpts);
       } catch (fallbackErr) {
         console.warn('Live backend also unreachable:', fallbackErr);
       }
@@ -34,7 +38,7 @@ async function smartFetch(endpoint, options = {}) {
 
 export async function checkBackendHealth() {
   try {
-    const res = await smartFetch('/dsa/concepts', { method: 'GET' });
+    const res = await smartFetch('/health', { method: 'GET' });
     return res.ok;
   } catch (err) {
     return false;
@@ -43,7 +47,7 @@ export async function checkBackendHealth() {
 
 export async function fetchDsaConcepts() {
   try {
-    const res = await smartFetch('/dsa/concepts');
+    const res = await smartFetch('/dsa/topics');
     if (!res.ok) throw new Error('Failed to fetch DSA concepts');
     return await res.json();
   } catch (err) {
@@ -54,10 +58,10 @@ export async function fetchDsaConcepts() {
 
 export async function executeProgram(code, conceptId = null, language = 'java', input = null) {
   try {
-    const res = await smartFetch('/execute', {
+    const res = await smartFetch('/execute/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, conceptId, language, input }),
+      body: JSON.stringify({ code, conceptId, language, input, title: conceptId || 'Custom Execution' }),
     });
     if (!res.ok) throw new Error('Execution failed on backend');
     return await res.json();

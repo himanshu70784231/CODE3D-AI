@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Box, Layers, HelpCircle, History, Settings, Play, Home, Code2, User, LogOut, Sparkles, ChevronDown, Sun, Moon, BookOpen, Terminal, Bot } from 'lucide-react';
+import { Box, Layers, HelpCircle, History, Settings, Play, Home, Code2, User, LogOut, Sparkles, ChevronDown, Sun, Moon, BookOpen, Terminal, Bot, Bookmark } from 'lucide-react';
 import { checkBackendHealth } from '../services/apiService';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -33,10 +33,9 @@ export default function Navbar({ activeTab, setActiveTab, onOpenCodeDoctor, onOp
   const navLinks = [
     { id: 'dashboard', path: '/', label: 'Home', icon: Home, enabled: true },
     { id: 'visualizer', path: '/visualizer', label: '3D Studio', icon: Code2, enabled: true },
-    { id: 'algorithms', path: '/algorithms', label: 'Algorithms', icon: Sparkles, enabled: true, badge: '10' },
     { id: 'dsa', path: '/dsa', label: 'DSA Hub', icon: Layers, enabled: true },
-    { id: 'striver', path: '/striver', label: 'Striver 📜', icon: BookOpen, enabled: true, badge: '182' },
-    { id: 'quiz', path: '/quiz', label: 'Quiz', icon: HelpCircle, enabled: true },
+    { id: 'sheets', path: '/sheets', label: 'Sheets', icon: BookOpen, enabled: true, badge: 'Striver' },
+    { id: 'saved', path: '/saved', label: 'Saved', icon: Bookmark, enabled: true },
     { id: 'history', path: '/history', label: 'History', icon: History, enabled: true },
     { id: 'settings', path: '/settings', label: 'Settings', icon: Settings, enabled: true },
   ];

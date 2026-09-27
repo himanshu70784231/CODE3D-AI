@@ -1,49 +1,64 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { loginUser, registerUser } from '../services/apiService';
+import { getCurrentUser, loginUser, registerUser, logoutUser } from '../services/auth.js';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem('code3d_user');
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  });
-
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
+  // Validate server-side session via HttpOnly cookie on mount
   useEffect(() => {
-    if (user) {
-      localStorage.setItem('code3d_user', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('code3d_user');
-    }
-  }, [user]);
+    let isMounted = true;
+    getCurrentUser()
+      .then((res) => {
+        if (isMounted && res?.success && res.user) {
+          setUser(res.user);
+        }
+      })
+      .catch(() => {
+        // Not authenticated
+        if (isMounted) setUser(null);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const login = async (credentials) => {
-    const res = await loginUser(credentials);
-    if (res && res.success) {
-      setUser(res);
-      return { success: true };
+    try {
+      const res = await loginUser(credentials);
+      if (res && res.success) {
+        setUser(res.user);
+        return { success: true };
+      }
+      return { success: false, message: res?.message || 'Login failed' };
+    } catch (err) {
+      return { success: false, message: err.message || 'Login failed' };
     }
-    return { success: false, message: res?.message || 'Login failed' };
   };
 
   const register = async (userData) => {
-    const res = await registerUser(userData);
-    if (res && res.success) {
-      setUser(res);
-      return { success: true };
+    try {
+      const res = await registerUser(userData);
+      if (res && res.success) {
+        setUser(res.user);
+        return { success: true };
+      }
+      return { success: false, message: res?.message || 'Registration failed' };
+    } catch (err) {
+      return { success: false, message: err.message || 'Registration failed' };
     }
-    return { success: false, message: res?.message || 'Registration failed' };
   };
 
-  const logout = () => {
+  const logout = async () => {
     try {
-      localStorage.removeItem('code3d_user');
+      await logoutUser();
     } catch {}
     setUser(null);
   };
@@ -52,6 +67,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user,
+        loading,
         isAuthenticated: !!user,
         login,
         register,
