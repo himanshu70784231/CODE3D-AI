@@ -19,6 +19,8 @@ import { validateSourceCode } from '../services/codeValidator';
 import { DEFAULT_JAVA_CODE, SAMPLE_PROGRAMS, LANGUAGE_DEFAULTS, CURRICULUM_CATEGORIES } from '../utils/sampleCodes';
 import { STRIVER_PROBLEMS } from '../utils/striverCatalog';
 import { executeProgram, analyzeCode, checkBackendHealth, recordExecutionHistory } from '../services/apiService';
+import { executionManager } from '../execution/index.js';
+import { VisualizerErrorBoundary, EditorErrorBoundary } from '../components/ErrorBoundaries';
 import { useTheme } from '../context/ThemeContext';
 import {
   Code2,
@@ -475,26 +477,22 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     setExecutionError(null);
 
     try {
-      let newSteps = null;
-      if (backendOnline) {
-        try {
-          const conceptId = activeStriverProblem ? `striver-${activeStriverProblem.striverId || activeStriverProblem.id}` : 'custom';
-          const [execRes, astRes] = await Promise.all([
-            executeProgram(code, conceptId, language, formInputValues),
-            analyzeCode(code, language),
-          ]);
-          if (execRes?.steps?.length > 0) newSteps = execRes.steps;
-          if (astRes?.timeComplexity) setTimeComplexity(astRes.timeComplexity);
-          if (astRes?.spaceComplexity) setSpaceComplexity(astRes.spaceComplexity);
-        } catch (backendErr) {
-          console.warn('Backend execution failed, falling back to simulator:', backendErr);
-        }
+      const runRes = await executionManager.run({
+        code,
+        language,
+        input: formInputValues,
+        archetype: activeStriverProblem?.archetype,
+        preferBackend: backendOnline,
+      });
+
+      if (!runRes.success) {
+        const err = runRes.error || {};
+        setSyntaxErrorLine(err.line || 1);
+        setExecutionError(err.message || 'Could not parse execution steps. Please check syntax.');
+        return;
       }
 
-      if (!newSteps || newSteps.length === 0) {
-        newSteps = getExecutionTrace(code, language, formInputValues, activeStriverProblem?.archetype);
-      }
-
+      const newSteps = runRes.steps;
       if (newSteps && newSteps.length > 0) {
         setTrace(newSteps);
         setLastExecutedCode(code);
@@ -510,7 +508,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
           code: code,
         });
       } else {
-        setExecutionError('Could not parse execution steps for this code. Please check for syntax errors or missing brackets.');
+        setExecutionError('Could not parse execution steps for this code. Please check for syntax errors.');
       }
     } catch (err) {
       console.error('Execution pipeline error:', err);
@@ -1004,37 +1002,39 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
             className={`${mobileTab === 'code' ? 'block w-full' : 'hidden'} md:block h-full overflow-hidden shrink-0 transition-all duration-75`}
             style={{ width: isFull3DView ? 0 : `${editorWidthPercent}%` }}
           >
-            <CodeEditor
-              code={code}
-              onChangeCode={(val) => {
-                setCode(val);
-                if (syntaxErrorLine) setSyntaxErrorLine(null);
-                if (executionError) setExecutionError(null);
-              }}
-              language={language}
-              onChangeLanguage={handleLanguageChange}
-              onOpenCustomCode={() => setIsCustomCodeOpen(true)}
-              onOpenCodeDoctor={() => setIsCodeDoctorOpen(true)}
-              onOpenPersonalProblem={() => setIsCodeDoctorOpen(true)}
-              onOpenStriverSheet={() => setIsStriverSheetOpen(true)}
-              onOpenLeetCode={() => setIsStriverSheetOpen(true)}
-              currentLineNumber={currentStep?.lineNumber || null}
-              syntaxErrorLine={syntaxErrorLine}
-              isPlaying={isPlaying}
-              onPlay={handleRunCode}
-              onRunCode={handleRunCode}
-              onResetCode={handleResetCode}
-              isExecuting={isExecuting}
-              isCodeDirty={isCodeDirty}
-              onPause={pause}
-              onNext={nextStep}
-              onPrev={prevStep}
-              onReset={reset}
-              isAtStart={isAtStart}
-              isAtEnd={isAtEnd}
-              breakpoints={breakpoints}
-              onToggleBreakpoint={toggleBreakpoint}
-            />
+            <EditorErrorBoundary>
+              <CodeEditor
+                code={code}
+                onChangeCode={(val) => {
+                  setCode(val);
+                  if (syntaxErrorLine) setSyntaxErrorLine(null);
+                  if (executionError) setExecutionError(null);
+                }}
+                language={language}
+                onChangeLanguage={handleLanguageChange}
+                onOpenCustomCode={() => setIsCustomCodeOpen(true)}
+                onOpenCodeDoctor={() => setIsCodeDoctorOpen(true)}
+                onOpenPersonalProblem={() => setIsCodeDoctorOpen(true)}
+                onOpenStriverSheet={() => setIsStriverSheetOpen(true)}
+                onOpenLeetCode={() => setIsStriverSheetOpen(true)}
+                currentLineNumber={currentStep?.lineNumber || null}
+                syntaxErrorLine={syntaxErrorLine}
+                isPlaying={isPlaying}
+                onPlay={handleRunCode}
+                onRunCode={handleRunCode}
+                onResetCode={handleResetCode}
+                isExecuting={isExecuting}
+                isCodeDirty={isCodeDirty}
+                onPause={pause}
+                onNext={nextStep}
+                onPrev={prevStep}
+                onReset={reset}
+                isAtStart={isAtStart}
+                isAtEnd={isAtEnd}
+                breakpoints={breakpoints}
+                onToggleBreakpoint={toggleBreakpoint}
+              />
+            </EditorErrorBoundary>
           </div>
         )}
 
@@ -1124,21 +1124,23 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
 
           {/* 3D Canvas Viewport Box */}
           <div className="flex-1 relative min-h-[220px]">
-            <SceneContainer
-              currentStep={currentStep}
-              code={code}
-              statusLabel={currentStep?.dataStructureState?.label || null}
-              activeDetails={currentStep?.dataStructureState?.focusInfo || null}
-              correctOutput={finalCorrectOutput}
-              isAtEnd={isAtEnd}
-              cumulativeOutput={cumulativeOutput}
-              isFull3DView={isFull3DView}
-              onToggleFull3D={() => setIsFull3DView((prev) => !prev)}
-            >
-              <DsaSceneDispatcher
-                dataStructureState={currentStep?.dataStructureState}
-              />
-            </SceneContainer>
+            <VisualizerErrorBoundary onReset={reset}>
+              <SceneContainer
+                currentStep={currentStep}
+                code={code}
+                statusLabel={currentStep?.dataStructureState?.label || null}
+                activeDetails={currentStep?.dataStructureState?.focusInfo || null}
+                correctOutput={finalCorrectOutput}
+                isAtEnd={isAtEnd}
+                cumulativeOutput={cumulativeOutput}
+                isFull3DView={isFull3DView}
+                onToggleFull3D={() => setIsFull3DView((prev) => !prev)}
+              >
+                <DsaSceneDispatcher
+                  dataStructureState={currentStep?.dataStructureState}
+                />
+              </SceneContainer>
+            </VisualizerErrorBoundary>
           </div>
 
           {/* Draggable & Hover Resizing Divider Bar between 3D Canvas and Console */}

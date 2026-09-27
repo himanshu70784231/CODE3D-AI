@@ -15,6 +15,7 @@ import DsaProblemPage from './pages/DsaProblemPage';
 import SavedVisualizationsPage from './pages/SavedVisualizationsPage';
 import LoginModal from './components/LoginModal';
 import CodeDoctorModal from './components/CodeDoctorModal';
+import { AppErrorBoundary } from './components/ErrorBoundaries';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 
@@ -187,12 +188,14 @@ function MainAppContent() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <HashRouter>
-          <MainAppContent />
-        </HashRouter>
-      </AuthProvider>
-    </ThemeProvider>
+    <AppErrorBoundary>
+      <ThemeProvider>
+        <AuthProvider>
+          <HashRouter>
+            <MainAppContent />
+          </HashRouter>
+        </AuthProvider>
+      </ThemeProvider>
+    </AppErrorBoundary>
   );
 }

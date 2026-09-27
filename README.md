@@ -3,13 +3,15 @@
 > *"Don't just read the code. See the code execute."*
 
 [![Live Demo](https://img.shields.io/badge/Demo-GitHub%20Pages-cyan?style=for-the-badge&logo=github)](https://himanshu70784231.github.io/CODE3D-AI/)
+[![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-yellow?style=for-the-badge&logo=javascript)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+[![Python](https://img.shields.io/badge/Python-3.x-blue?style=for-the-badge&logo=python)](https://python.org/)
 [![Java 21](https://img.shields.io/badge/Java-21%20LTS-orange?style=for-the-badge&logo=openjdk)](https://openjdk.org/)
-[![Spring Boot 3.2](https://img.shields.io/badge/Spring%20Boot-3.2.4-brightgreen?style=for-the-badge&logo=springboot)](https://spring.io/projects/spring-boot)
-[![React 18](https://img.shields.io/badge/React-18.3-blue?style=for-the-badge&logo=react)](https://react.dev/)
+[![C++](https://img.shields.io/badge/C%2B%2B-17%2F20-blue?style=for-the-badge&logo=c%2B%2B)](https://isocpp.org/)
+[![React 18](https://img.shields.io/badge/React-18.2-blue?style=for-the-badge&logo=react)](https://react.dev/)
 [![Three.js](https://img.shields.io/badge/Three.js-WebGL-purple?style=for-the-badge&logo=three.js)](https://threejs.org/)
 [![Vite](https://img.shields.io/badge/Vite-5.4-yellow?style=for-the-badge&logo=vite)](https://vitejs.dev/)
 
-**CODE3D-AI** is an advanced interactive computer science educational platform that compiles and interprets source code into understandable, physical, 3D WebGL data structure visualizations in real time. Designed for computer science students, educators, and software engineers preparing for technical interviews.
+**CODE3D-AI** is an advanced interactive computer science educational platform that compiles, interprets, and simulates source code into understandable, physical, 3D WebGL data structure visualizations in real time. Designed for computer science students, educators, and software engineers preparing for technical interviews.
 
 🌐 **Production GitHub Pages:** [https://himanshu70784231.github.io/CODE3D-AI/](https://himanshu70784231.github.io/CODE3D-AI/)
 
@@ -17,16 +19,27 @@
 
 ## 📸 Key Capabilities
 
-- **Interactive 3D WebGL Visualization**: 12 dedicated 3D visualizers powered by Three.js and React Three Fiber.
+- **Interactive 3D WebGL & 2D Accessible Visualization**: 12 dedicated 3D visualizers powered by Three.js and React Three Fiber, paired with instant 2D SVG/HTML accessible fallback with screen-reader narration and WebGL context restoration.
 - **Monaco Code Editor & Integrated Debugger**: Set breakpoints on the glyph margin, step through code, auto-pause at breakpoints, and inspect live memory state.
-- **Dual Execution Engine**:
-  - **Sandboxed Server-Side Java AST Engine**: Built with Spring Boot 3.2.4, Java 21, and JavaParser for complete AST code interpretation without insecure JVM `eval`.
-  - **Dynamic Client-Side Simulator**: Pure client-side AST simulator ensuring 100% of features work smoothly on static hosts like GitHub Pages.
-- **Real Trace Execution**: Never uses hardcoded or pre-rendered mock steps. Variables, outputs, memory indices, and line numbers correspond directly to source code statements.
-- **Variables & Memory Inspector**: Real-time stack frames, type inference badges (`int`, `int[]`, `double`, `boolean`, `String`), variable diff highlighting, and expandable array index breakdowns (`arr[i] = value`).
-- **Algorithm Benchmark Compare Mode**: Side-by-side comparative benchmarking for algorithms (e.g. Bubble Sort vs Quick Sort).
+- **Multi-Language Modular Execution Engine (`src/execution/`)**:
+  - **JavaScript**: Real sandboxed client & server execution with AST parsing, variable tracking, array mutation tracking, and loop/recursion tracing.
+  - **Python**: Real AST parsing and step-by-step trace generation for loops, conditionals, list operations, and recursion.
+  - **Java**: Sandboxed Java execution engine interpreting classes, methods, arrays, and standard control flow.
+  - **C++**: Sandboxed C++ execution engine tracing pointers, references, vectors, and sorting/searching routines.
+  - **C**: Direct procedural execution tracing structs, pointers, arrays, and standard functions.
+- **Automated DSA & Algorithm Detection Engine (`src/dsa/`)**:
+  - Automatically identifies data structures: `ARRAY`, `STRING`, `MATRIX`, `LINKED_LIST`, `STACK`, `QUEUE`, `HEAP`, `BINARY_TREE`, `GRAPH`, `DP_TABLE`.
+  - Automatically identifies algorithms: `Linear Search`, `Binary Search`, `Bubble Sort`, `Selection Sort`, `Insertion Sort`, `Merge Sort`, `Quick Sort`, `Two Pointers`, `Sliding Window`, `BFS`, `DFS`, `Dijkstra`, `Recursion`, `Dynamic Programming`.
+- **Deterministic Time Machine Scrubber**:
+  - Play, Pause, Next, Previous, First, Last, and Restart.
+  - Throttled playback speeds: `0.25x`, `0.5x`, `1x`, `1.5x`, `2x`, `4x`.
+  - Snapshots allow instant seeking between arbitrary steps (e.g., step 100 to step 20) with deterministic state reconstruction.
+- **Granular Error Boundaries**:
+  - `AppErrorBoundary`: Protects the entire application shell with restart recovery.
+  - `VisualizerErrorBoundary`: Recovers 3D/2D visualizer crashes without affecting editor state.
+  - `EditorErrorBoundary`: Isolates code editing syntax and formatting issues.
 - **Curated Educational Hubs**:
-  - **Striver SDE Sheet**: 182 curated problems across Arrays, Two-Pointer, Matrix, Linked Lists, Trees, Graphs, DP, and Backtracking.
+  - **Striver SDE Sheet**: 180+ curated problems across Arrays, Two-Pointer, Matrix, Linked Lists, Trees, Graphs, DP, and Backtracking.
   - **DSA Hub**: Categorized lessons and interactive challenges with difficulty filters.
   - **AI Algorithm Tutor (`/ai`)**: Big-O time and space complexity proofs, edge-case vulnerability detection, and interactive algorithmic chat.
   - **Quiz Arena (`/quiz`)**: Test algorithmic knowledge with timed quizzes and score tracking.
@@ -34,7 +47,7 @@
 
 ---
 
-## 🧊 The 12 Supported 3D Visualizers
+## 🧊 The Supported 3D Visualizers
 
 Every visualizer is implemented as a specialized React Three Fiber canvas component:
 
@@ -57,8 +70,6 @@ Every visualizer is implemented as a specialized React Three Fiber canvas compon
 
 ## ⌨️ Integrated Debugger & Keyboard Shortcuts
 
-The platform includes Monaco Editor with an interactive execution debugger:
-
 | Shortcut | Action | Description |
 |---|---|---|
 | `Ctrl + Enter` / `Cmd + Enter` | **Run / Execute** | Execute code, synthesize 3D trace, and begin animation |
@@ -77,36 +88,73 @@ The platform includes Monaco Editor with an interactive execution debugger:
 │                        CODE3D-AI ARCHITECTURE                         │
 ├────────────────────────────────────────────────────────────────────────┤
 │                                                                        │
-│   BROWSER / CLIENT-SIDE (Vite 5 + React 18 + Three.js + Monaco Editor) │
+│   USER INTERACTION LAYER                                               │
 │   ┌────────────────────────────────────────────────────────────────┐   │
-│   │ HashRouter (SPA navigation: /, /visualizer, /dsa, /ai, /quiz)   │   │
+│   │ Monaco Code Editor with Breakpoint Margin & Syntax Checking    │   │
 │   ├────────────────────────────────────────────────────────────────┤   │
-│   │ Monaco Code Editor with Glyph Margin Breakpoints               │   │
-│   ├────────────────────────────────────────────────────────────────┤   │
-│   │ 3D R3F Canvas (12 Specialized Procedural Shaders & Meshes)     │   │
-│   ├────────────────────────────────────────────────────────────────┤   │
-│   │ Time Machine Scrubber (0.25x - 4x speed throttling)            │   │
-│   ├────────────────────────────────────────────────────────────────┤   │
-│   │ Variables Inspector (Type badges, diffs, array breakdowns)     │   │
-│   ├────────────────────────────────────────────────────────────────┤   │
-│   │ Client AST Simulation Engine (Guaranteed zero-backend fallback)│   │
+│   │ Language Selector [ JavaScript | Python | Java | C++ | C ]     │   │
 │   └────────────────────────────────┬───────────────────────────────┘   │
-│                                    │ HTTP / REST                       │
 │                                    ▼                                   │
-│   BACKEND ENGINE (Java 21 + Spring Boot 3.2.4 + JavaParser 3.26)       │
+│   EXECUTION & TRACE ENGINE (src/execution/)                            │
 │   ┌────────────────────────────────────────────────────────────────┐   │
-│   │ JavaAstExecutionEngine (AST Interpreter & Step Trace Generator)│   │
-│   ├────────────────────────────────────────────────────────────────┤   │
-│   │ Sandboxing Gate (Loop limits: 1000 steps, Timeout: 3000ms)     │   │
-│   ├────────────────────────────────────────────────────────────────┤   │
-│   │ Exception Handler (ArrayIndexOutOfBounds, ArithmeticException) │   │
-│   ├────────────────────────────────────────────────────────────────┤   │
-│   │ Spring Security & CORS Configuration                           │   │
-│   ├────────────────────────────────────────────────────────────────┤   │
-│   │ H2 / Neon PostgreSQL Database Layer                            │   │
+│   │ ExecutionManager -> Orchestrates local & cloud runners        │   │
+│   │ LanguageAdapter: JavaScript | Python | Java | Cpp | C         │   │
+│   │ Limits: Timeout (5000ms), Max Steps (10k), Max Output (100KB) │   │
+│   │ TraceBuilder: Emits normalized ExecutionSteps & events        │   │
+│   │ TraceValidator: Enforces schema correctness                   │   │
+│   └────────────────────────────────┬───────────────────────────────┘   │
+│                                    ▼                                   │
+│   DSA DETECTION LAYER (src/dsa/)                                       │
+│   ┌────────────────────────────────────────────────────────────────┐   │
+│   │ dsaDetector: AST & state structure classification              │   │
+│   │ algorithmDetector: Pattern recognition (Binary Search, Sort)  │   │
+│   └────────────────────────────────┬───────────────────────────────┘   │
+│                                    ▼                                   │
+│   SYNCHRONIZED PRESENTATION LAYER                                      │
+│   ┌────────────────────────────────┬───────────────────────────────┐   │
+│   │ 3D WebGL Canvas                │ 2D Accessible SVG/HTML View   │   │
+│   │ (Three.js / React Three Fiber) │ (Screen-reader & ARIA labels) │   │
+│   ├────────────────────────────────┴───────────────────────────────┤   │
+│   │ Deterministic Timeline (0.25x - 4x speed scrubber)             │   │
+│   │ Live Variables Inspector & Call Stack                          │   │
+│   │ Interactive Console Output (stdout, stderr)                    │   │
 │   └────────────────────────────────────────────────────────────────┘   │
 └────────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 🔒 Security & Sandboxing Model
+
+- **No Dangerous `eval()`**: Arbitrary code is never directly evaluated in the global window context.
+- **Configurable Execution Limits**:
+  - `MAX_EXECUTION_TIME`: 5,000ms timeout
+  - `MAX_TRACE_STEPS`: 10,000 step cap against infinite loops
+  - `MAX_OUTPUT_LENGTH`: 100,000 character output cap
+  - `MAX_RECURSION_DEPTH`: 500 stack frame limit
+- **Boundary Isolation**: Client code runs within worker/isolated sandboxes; server code executes within non-root, isolated processes without filesystem or network access.
+- **Granular Exception Handling**: Compile errors, syntax errors, bounds exceptions, and timeout violations are isolated and mapped back to source editor line markers.
+
+---
+
+## 🛠 Adding New Components
+
+### 1. Adding a New Language Adapter
+1. Create `src/execution/languages/NewLangAdapter.js` extending `LanguageAdapter`.
+2. Implement:
+   - `detect(code)`: Returns `boolean` whether code belongs to the language.
+   - `validateSyntax(code)`: Validates syntax and returns error positions.
+   - `execute(code, options)`: Returns `{ trace, output, error, success }`.
+3. Register the adapter in `src/execution/languages/index.js`.
+
+### 2. Adding a New Data Structure Detector
+1. Define the structure enum in `src/dsa/models/types.js`.
+2. Add detection heuristics in `src/dsa/detector/dsaDetector.js`.
+3. Add 2D fallback renderer in `src/visualizers/Dsa2DFallback.jsx` and 3D mesh in `src/visualizers/`.
+
+### 3. Adding a New Algorithm
+1. Add algorithm metadata and generator in `src/algorithms/catalog.js`.
+2. Add algorithm pattern rules in `src/dsa/detector/algorithmDetector.js`.
 
 ---
 
@@ -115,8 +163,7 @@ The platform includes Monaco Editor with an interactive execution debugger:
 ### Prerequisites
 
 - **Node.js**: v18.x or v20.x LTS
-- **Java JDK**: 21 LTS
-- **Maven**: 3.8+ (or use included `mvnw.cmd` / `./mvnw`)
+- **npm**: v9.x or higher
 - **Git**
 
 ### 1. Clone the Repository
@@ -136,15 +183,22 @@ npm run dev
 
 The frontend will be live at `http://localhost:5173/`.
 
-### 3. Run Backend (Optional — Client fallback is active by default)
+### 3. Run Backend (Node.js API & Execution Server)
 
 ```bash
-cd backend
-./mvnw clean spring-boot:run
+cd ../server
+npm install
+npm run dev
 ```
-*(On Windows: `mvnw.cmd clean spring-boot:run`)*
 
-The backend server will start on `http://localhost:8080/`.
+The backend server will start on `http://localhost:5000/`.
+
+### 4. Run Backend Tests
+
+```bash
+cd server
+npm test
+```
 
 ---
 
@@ -161,18 +215,7 @@ npm run build
 
 This compiles optimized bundles into `frontend/dist/` with:
 - `base: '/CODE3D-AI/'` for proper asset resolution.
-- `frontend/dist/404.html` SPA redirection trick ensuring direct routing without 404 HTTP errors.
-
----
-
-## 🔒 Security & Sandboxing Model
-
-- **No Dangerous Runtime Eval**: Neither frontend nor backend uses `eval()`, `new Function()`, or unconstrained bytecode loaders.
-- **AST Interpretation**: Code is transformed into an Abstract Syntax Tree (AST) using JavaParser and validated before execution.
-- **Timeout Protection**: Server executions are strictly limited to `3000ms`.
-- **Step Limit Safeguards**: Maximum of `1000` execution steps to prevent infinite loop memory saturation.
-- **Memory Boundaries**: Array indexing bounds checks emit `ArrayIndexOutOfBoundsException` safely and halt execution before memory corruption.
-- **Input Sanitization**: User inputs are strictly parsed through tokenized scanners without shell or command injection exposure.
+- `HashRouter` ensuring routing works seamlessly across GitHub Pages without 404 HTTP errors.
 
 ---
 

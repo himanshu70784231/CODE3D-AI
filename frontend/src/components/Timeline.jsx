@@ -33,7 +33,7 @@ export default function Timeline({
   trace = [],
 }) {
   const { isBright } = useTheme();
-  const speeds = [0.25, 0.5, 1, 2, 4];
+  const speeds = [0.25, 0.5, 1, 1.5, 2, 4];
   const stepListRef = useRef(null);
 
   // Auto-scroll the active step node into view

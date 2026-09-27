@@ -5,6 +5,7 @@ import { Compass, RotateCw, ZoomIn, ZoomOut, Maximize2, Minimize2, Camera, Refre
 import { useTheme } from '../context/ThemeContext';
 import OutputHologram3D from './OutputHologram3D';
 import DryRunHologram3D from './DryRunHologram3D';
+import Dsa2DFallback from './Dsa2DFallback';
 import * as THREE from 'three';
 
 /**
@@ -108,7 +109,26 @@ export default function SceneContainer({
   const [showHologram, setShowHologram] = useState(true);
   const [showDryRunHologram, setShowDryRunHologram] = useState(false); // Default OFF so 3D objects are 100% visible and unobstructed
   const [isHudExpanded, setIsHudExpanded] = useState(false);
+  const [isFallback2D, setIsFallback2D] = useState(false);
+  const [webglContextLost, setWebglContextLost] = useState(false);
+  const [canvasKey, setCanvasKey] = useState(0);
   const controlsRef = useRef(null);
+
+  const handleContextLost = (e) => {
+    e.preventDefault();
+    setWebglContextLost(true);
+  };
+
+  const handleContextRestored = () => {
+    setWebglContextLost(false);
+    setCanvasKey((k) => k + 1);
+  };
+
+  const handleResetScene = () => {
+    setWebglContextLost(false);
+    setCanvasKey((k) => k + 1);
+    setCameraPreset('reset');
+  };
 
   // Compute data structure scale to dynamically auto-fit camera distance
   const dsState = currentStep?.dataStructureState;
@@ -305,6 +325,22 @@ export default function SceneContainer({
           </button>
         </div>
 
+        {/* 2D / 3D Fallback Mode Toggle */}
+        <button
+          onClick={() => setIsFallback2D((prev) => !prev)}
+          className={`h-7 px-2 rounded-lg text-xs font-semibold backdrop-blur-md border transition shadow-md cursor-pointer flex items-center gap-1 ${
+            isFallback2D
+              ? 'bg-amber-500/20 border-amber-500/40 text-amber-300 shadow-amber-950/30'
+              : isBright
+              ? 'bg-white/90 border-slate-200 text-slate-600 hover:text-slate-900'
+              : 'bg-slate-900/85 border-slate-800 text-slate-400 hover:text-slate-200'
+          }`}
+          title="Switch between 3D WebGL Scene and Accessible 2D View"
+        >
+          <Box size={12} className={isFallback2D ? 'text-amber-400' : 'text-slate-400'} />
+          <span className="hidden md:inline">{isFallback2D ? '3D View' : '2D View'}</span>
+        </button>
+
         {/* 3D Billboard Toggle Button */}
         <button
           onClick={() => setShowDryRunHologram((prev) => !prev)}
@@ -340,134 +376,169 @@ export default function SceneContainer({
         )}
       </div>
 
-      {/* 3D Canvas Viewport */}
-      <Canvas
-        camera={{ position: [0, 3.4, 8.5], fov: 38 }}
-        className="w-full h-full cursor-grab active:cursor-grabbing"
-      >
-        <color attach="background" args={[isBright ? '#f8fafc' : '#070b14']} />
-        
-        {/* Dynamic Studio Lighting */}
-        <ambientLight intensity={isBright ? 1.3 : 0.85} />
-        <directionalLight
-          position={[12, 18, 12]}
-          intensity={isBright ? 2.0 : 1.6}
-          castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
-        />
-        <pointLight position={[-12, 10, -6]} intensity={0.7} color={isBright ? '#0284c7' : '#00f2fe'} />
-        <pointLight position={[12, 8, 6]} intensity={0.5} color={isBright ? '#6366f1' : '#818cf8'} />
-        <pointLight position={[0, 6, 2]} intensity={0.4} color="#ffffff" />
-
-        <Suspense fallback={null}>
-          <CameraPresetHandler
-            preset={cameraPreset}
-            onApplied={() => setCameraPreset(null)}
-            controlsRef={controlsRef}
-          />
-
-          <DynamicBoundingCamera
-            count={elementCount}
-            controlsRef={controlsRef}
-          />
-
-          <Center top position={[0, -0.3, 0]}>
-            {children}
-          </Center>
-
-          {/* 3D Full-Code Dynamic Dry Run Hologram (Positioned comfortably behind stage) */}
-          <DryRunHologram3D
-            currentStep={currentStep}
-            activeCodeLine={activeCodeLine}
-            visible={showDryRunHologram}
-            position={[0, 4.8, -3.2]}
-          />
-
-          {/* 3D Correct Output Hologram Banner & Victory Beam (Appears on completion) */}
-          {showHologram && isAtEnd && correctOutput && (
-            <OutputHologram3D
-              correctOutput={correctOutput}
-              isAtEnd={isAtEnd}
-              totalOutputs={cumulativeOutput?.length || 0}
-              recentLine={cumulativeOutput?.[cumulativeOutput.length - 1]}
-            />
+      {/* Empty State / 2D Fallback / 3D Canvas Viewport */}
+      {!currentStep ? (
+        <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-8 text-center select-none">
+          <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-4 shadow-lg shadow-cyan-500/20">
+            <Cpu size={32} />
+          </div>
+          <h3 className={`text-base font-bold mb-1 ${isBright ? 'text-slate-800' : 'text-slate-200'}`}>
+            No Active Simulation
+          </h3>
+          <p className="text-xs text-slate-400 max-w-sm font-sans mb-4">
+            Click Run (F5) or Step Forward (F10) in the code editor to execute and visualize in 3D WebGL space.
+          </p>
+          <div className="flex items-center gap-2 text-[11px] font-mono text-cyan-400 bg-cyan-950/40 border border-cyan-800/60 rounded-lg px-3 py-1.5">
+            <SparklesIcon size={13} />
+            <span>Interactive 3D Stage Ready</span>
+          </div>
+        </div>
+      ) : isFallback2D || webglContextLost ? (
+        <div className="w-full h-full relative">
+          {webglContextLost && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 px-3 py-1.5 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
+              <span>WebGL context was lost. Showing 2D fallback.</span>
+              <button onClick={handleResetScene} className="px-2 py-0.5 rounded bg-rose-500 text-white font-bold hover:bg-rose-400">
+                Retry 3D
+              </button>
+            </div>
           )}
-
-          {/* Realistic Cyber Pedestal Stage */}
-          <group position={[0, -0.04, 0]}>
-            <mesh receiveShadow>
-              <cylinderGeometry args={[10.2, 10.8, 0.1, 64]} />
-              <meshStandardMaterial
-                color={isBright ? '#e2e8f0' : '#080d1a'}
-                roughness={0.2}
-                metalness={0.85}
-              />
-            </mesh>
-            {/* Primary Glowing Perimeter Ring */}
-            <mesh position={[0, 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <ringGeometry args={[10.0, 10.18, 64]} />
-              <meshBasicMaterial
-                color={isBright ? '#0284c7' : '#00f2fe'}
-                transparent
-                opacity={0.85}
-              />
-            </mesh>
-            {/* Secondary Inner Cyan Pulsing Ring */}
-            <mesh position={[0, 0.061, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <ringGeometry args={[7.2, 7.28, 64]} />
-              <meshBasicMaterial
-                color={isBright ? '#6366f1' : '#38bdf8'}
-                transparent
-                opacity={0.4}
-              />
-            </mesh>
-          </group>
-
-          {/* Cinematic Ambient Particle Sparkles */}
-          <Sparkles
-            count={65}
-            scale={18}
-            size={3.2}
-            speed={0.4}
-            opacity={isBright ? 0.3 : 0.7}
-            color={isBright ? '#0284c7' : '#38bdf8'}
+          <Dsa2DFallback currentStep={currentStep} />
+        </div>
+      ) : (
+        <Canvas
+          key={canvasKey}
+          onCreated={({ gl }) => {
+            gl.domElement.addEventListener('webglcontextlost', handleContextLost, false);
+            gl.domElement.addEventListener('webglcontextrestored', handleContextRestored, false);
+          }}
+          camera={{ position: [0, 3.4, 8.5], fov: 38 }}
+          className="w-full h-full cursor-grab active:cursor-grabbing"
+        >
+          <color attach="background" args={[isBright ? '#f8fafc' : '#070b14']} />
+          
+          {/* Dynamic Studio Lighting */}
+          <ambientLight intensity={isBright ? 1.3 : 0.85} />
+          <directionalLight
+            position={[12, 18, 12]}
+            intensity={isBright ? 2.0 : 1.6}
+            castShadow
+            shadow-mapSize-width={1024}
+            shadow-mapSize-height={1024}
           />
+          <pointLight position={[-12, 10, -6]} intensity={0.7} color={isBright ? '#0284c7' : '#00f2fe'} />
+          <pointLight position={[12, 8, 6]} intensity={0.5} color={isBright ? '#6366f1' : '#818cf8'} />
+          <pointLight position={[0, 6, 2]} intensity={0.4} color="#ffffff" />
 
-          {/* Soft Grounding Contact Shadows */}
-          <ContactShadows
-            position={[0, -0.02, 0]}
-            opacity={isBright ? 0.5 : 0.85}
-            scale={26}
-            blur={2.5}
-            far={4.8}
-            color={isBright ? '#64748b' : '#000000'}
+          <Suspense fallback={null}>
+            <CameraPresetHandler
+              preset={cameraPreset}
+              onApplied={() => setCameraPreset(null)}
+              controlsRef={controlsRef}
+            />
+
+            <DynamicBoundingCamera
+              count={elementCount}
+              controlsRef={controlsRef}
+            />
+
+            <Center top position={[0, -0.3, 0]}>
+              {children}
+            </Center>
+
+            {/* 3D Full-Code Dynamic Dry Run Hologram (Positioned comfortably behind stage) */}
+            <DryRunHologram3D
+              currentStep={currentStep}
+              activeCodeLine={activeCodeLine}
+              visible={showDryRunHologram}
+              position={[0, 4.8, -3.2]}
+            />
+
+            {/* 3D Correct Output Hologram Banner & Victory Beam (Appears on completion) */}
+            {showHologram && isAtEnd && correctOutput && (
+              <OutputHologram3D
+                correctOutput={correctOutput}
+                isAtEnd={isAtEnd}
+                totalOutputs={cumulativeOutput?.length || 0}
+                recentLine={cumulativeOutput?.[cumulativeOutput.length - 1]}
+              />
+            )}
+
+            {/* Realistic Cyber Pedestal Stage */}
+            <group position={[0, -0.04, 0]}>
+              <mesh receiveShadow>
+                <cylinderGeometry args={[10.2, 10.8, 0.1, 64]} />
+                <meshStandardMaterial
+                  color={isBright ? '#e2e8f0' : '#080d1a'}
+                  roughness={0.2}
+                  metalness={0.85}
+                />
+              </mesh>
+              {/* Primary Glowing Perimeter Ring */}
+              <mesh position={[0, 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[10.0, 10.18, 64]} />
+                <meshBasicMaterial
+                  color={isBright ? '#0284c7' : '#00f2fe'}
+                  transparent
+                  opacity={0.85}
+                />
+              </mesh>
+              {/* Secondary Inner Cyan Pulsing Ring */}
+              <mesh position={[0, 0.061, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[7.2, 7.28, 64]} />
+                <meshBasicMaterial
+                  color={isBright ? '#6366f1' : '#38bdf8'}
+                  transparent
+                  opacity={0.4}
+                />
+              </mesh>
+            </group>
+
+            {/* Cinematic Ambient Particle Sparkles */}
+            <Sparkles
+              count={65}
+              scale={18}
+              size={3.2}
+              speed={0.4}
+              opacity={isBright ? 0.3 : 0.7}
+              color={isBright ? '#0284c7' : '#38bdf8'}
+            />
+
+            {/* Soft Grounding Contact Shadows */}
+            <ContactShadows
+              position={[0, -0.02, 0]}
+              opacity={isBright ? 0.5 : 0.85}
+              scale={26}
+              blur={2.5}
+              far={4.8}
+              color={isBright ? '#64748b' : '#000000'}
+            />
+
+            {/* Floor Depth Grid */}
+            <Grid
+              position={[0, -0.01, 0]}
+              args={[32, 32]}
+              cellSize={0.75}
+              cellThickness={0.7}
+              cellColor={isBright ? '#cbd5e1' : '#1e293b'}
+              sectionSize={2.25}
+              sectionThickness={1.2}
+              sectionColor={isBright ? '#94a3b8' : '#334155'}
+              fadeDistance={20}
+              fadeStrength={1.5}
+            />
+          </Suspense>
+
+          <OrbitControls
+            ref={controlsRef}
+            enableDamping
+            dampingFactor={0.08}
+            minDistance={1.8}
+            maxDistance={45}
+            maxPolarAngle={Math.PI / 2 - 0.02}
           />
-
-          {/* Floor Depth Grid */}
-          <Grid
-            position={[0, -0.01, 0]}
-            args={[32, 32]}
-            cellSize={0.75}
-            cellThickness={0.7}
-            cellColor={isBright ? '#cbd5e1' : '#1e293b'}
-            sectionSize={2.25}
-            sectionThickness={1.2}
-            sectionColor={isBright ? '#94a3b8' : '#334155'}
-            fadeDistance={20}
-            fadeStrength={1.5}
-          />
-        </Suspense>
-
-        <OrbitControls
-          ref={controlsRef}
-          enableDamping
-          dampingFactor={0.08}
-          minDistance={1.8}
-          maxDistance={45}
-          maxPolarAngle={Math.PI / 2 - 0.02}
-        />
-      </Canvas>
+        </Canvas>
+      )}
 
       {/* Camera interaction tips */}
       <div className={`absolute bottom-3 left-3 z-10 flex items-center gap-3 text-[11px] backdrop-blur-sm border rounded px-2.5 py-1 transition-colors ${

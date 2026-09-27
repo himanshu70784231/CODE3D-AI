@@ -10,7 +10,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
  * Implements: Run, Play, Pause, Next, Previous, First, Last, Reset.
  * Race-condition safe with proper interval cleanup.
  */
-export const SPEED_PRESETS = [0.25, 0.5, 1, 2, 4];
+export const SPEED_PRESETS = [0.25, 0.5, 1, 1.5, 2, 4];
 
 export function useExecutionTimeline(trace = [], isLoading = false, hasError = false) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
