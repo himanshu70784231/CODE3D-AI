@@ -123,6 +123,10 @@ export class TraceBuilder {
     return null;
   }
 
+  getSteps() {
+    return this.steps;
+  }
+
   build() {
     return {
       program: { language: this.language },
