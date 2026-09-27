@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { HelpCircle, CheckCircle, XCircle, Award, RotateCcw, Sparkles, BookOpen } from 'lucide-react';
 import { fetchQuizQuestions, recordQuizHistory } from '../services/apiService';
-import { SAMPLE_PROGRAMS } from '../utils/sampleCodes';
+import { QUIZ_BANK, getQuizForConcept } from '../utils/quizBank';
 import { useTheme } from '../context/ThemeContext';
 
 export default function QuizArena() {
   const { isBright } = useTheme();
-  const [selectedConcept, setSelectedConcept] = useState('array-loop');
+  const [selectedConcept, setSelectedConcept] = useState('bubble-sort');
   const [questions, setQuestions] = useState([]);
   const [currentQIndex, setCurrentQIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
@@ -21,23 +21,12 @@ export default function QuizArena() {
       if (data && data.length > 0) {
         setQuestions(data);
       } else {
-        setQuestions([
-          {
-            id: 'q1',
-            question: "What will be the value of 'i' when the loop condition 'i < arr.length' first evaluates to FALSE for an array of length 4?",
-            options: ["3", "4", "5", "0"],
-            correctIndex: 1,
-            explanation: "The loop terminates when i reaches 4 because 4 < 4 evaluates to FALSE."
-          },
-          {
-            id: 'q2',
-            question: "What is the time complexity of accessing an element in an array by index in Java?",
-            options: ["O(1)", "O(n)", "O(log n)", "O(n²)"],
-            correctIndex: 0,
-            explanation: "Arrays allow random access via memory address calculation in O(1) constant time."
-          }
-        ]);
+        setQuestions(getQuizForConcept(selectedConcept));
       }
+      setLoading(false);
+      resetQuiz();
+    }).catch(() => {
+      setQuestions(getQuizForConcept(selectedConcept));
       setLoading(false);
       resetQuiz();
     });

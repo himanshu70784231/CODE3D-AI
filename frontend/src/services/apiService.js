@@ -146,34 +146,58 @@ export async function registerUser(userData) {
 const STORAGE_KEY_EXECUTIONS = 'code3d_db_executions_v2';
 const STORAGE_KEY_QUIZZES = 'code3d_db_quizzes_v2';
 
+function isStorageAvailable() {
+  try {
+    return typeof window !== 'undefined' && !!window.localStorage;
+  } catch (e) {
+    return false;
+  }
+}
+
 function getLocalExecutions() {
+  if (!isStorageAvailable()) return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY_EXECUTIONS);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
+    console.warn('Recovered from corrupted execution history in localStorage:', e);
     return [];
   }
 }
 
 function saveLocalExecutions(list) {
+  if (!isStorageAvailable()) return;
   try {
-    localStorage.setItem(STORAGE_KEY_EXECUTIONS, JSON.stringify(list.slice(0, 100)));
-  } catch (e) {}
+    const safeList = Array.isArray(list) ? list.slice(0, 100) : [];
+    localStorage.setItem(STORAGE_KEY_EXECUTIONS, JSON.stringify(safeList));
+  } catch (e) {
+    console.warn('Storage quota exceeded or error writing executions to localStorage:', e);
+  }
 }
 
 function getLocalQuizzes() {
+  if (!isStorageAvailable()) return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY_QUIZZES);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
+    console.warn('Recovered from corrupted quiz history in localStorage:', e);
     return [];
   }
 }
 
 function saveLocalQuizzes(list) {
+  if (!isStorageAvailable()) return;
   try {
-    localStorage.setItem(STORAGE_KEY_QUIZZES, JSON.stringify(list.slice(0, 50)));
-  } catch (e) {}
+    const safeList = Array.isArray(list) ? list.slice(0, 50) : [];
+    localStorage.setItem(STORAGE_KEY_QUIZZES, JSON.stringify(safeList));
+  } catch (e) {
+    console.warn('Storage quota exceeded or error writing quizzes to localStorage:', e);
+  }
 }
 
 /**
@@ -300,19 +324,7 @@ export async function getExecutionHistory() {
     }
   }
 
-  // Fallback defaults if empty
-  if (combinedExecutions.length === 0) {
-    combinedExecutions.push(
-      { id: 1, programTitle: '1D Array Traversal & Print', conceptId: 'array-loop', language: 'java', totalSteps: 16, status: 'COMPLETED', executedAt: 'Earlier today' },
-      { id: 2, programTitle: 'Bubble Sort Algorithm', conceptId: 'bubble-sort', language: 'java', totalSteps: 14, status: 'COMPLETED', executedAt: 'Earlier today' }
-    );
-  }
-
-  if (combinedQuizzes.length === 0) {
-    combinedQuizzes.push(
-      { id: 1, conceptId: 'array-loop', score: 2, totalQuestions: 2, accuracy: 100, completedAt: 'Today' }
-    );
-  }
+  // Return real historical records (empty if no simulations have been run yet)
 
   return {
     totalExecutionsCount: (backendData?.totalExecutionsCount || 0) + localExecutions.length,

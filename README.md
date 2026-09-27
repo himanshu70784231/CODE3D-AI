@@ -28,7 +28,6 @@
 - **Curated Educational Hubs**:
   - **Striver SDE Sheet**: 182 curated problems across Arrays, Two-Pointer, Matrix, Linked Lists, Trees, Graphs, DP, and Backtracking.
   - **DSA Hub**: Categorized lessons and interactive challenges with difficulty filters.
-  - **Interactive Playground (`/playground`)**: Multi-language sandbox supporting Java, Python, C++, and JavaScript with template selection and custom input testing.
   - **AI Algorithm Tutor (`/ai`)**: Big-O time and space complexity proofs, edge-case vulnerability detection, and interactive algorithmic chat.
   - **Quiz Arena (`/quiz`)**: Test algorithmic knowledge with timed quizzes and score tracking.
   - **Execution History (`/history`)**: Persistent record of previous simulation sessions with one-click replay.
@@ -80,7 +79,7 @@ The platform includes Monaco Editor with an interactive execution debugger:
 │                                                                        │
 │   BROWSER / CLIENT-SIDE (Vite 5 + React 18 + Three.js + Monaco Editor) │
 │   ┌────────────────────────────────────────────────────────────────┐   │
-│   │ HashRouter (SPA navigation: /, /visualizer, /playground, /ai)  │   │
+│   │ HashRouter (SPA navigation: /, /visualizer, /dsa, /ai, /quiz)   │   │
 │   ├────────────────────────────────────────────────────────────────┤   │
 │   │ Monaco Code Editor with Glyph Margin Breakpoints               │   │
 │   ├────────────────────────────────────────────────────────────────┤   │

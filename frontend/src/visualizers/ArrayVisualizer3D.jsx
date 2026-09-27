@@ -475,8 +475,8 @@ export default function ArrayVisualizer3D({ dataStructureState }) {
 
   const isTrappingRainWater = type === 'trapping-rain-water' || (trappedWater && trappedWater.length > 0);
   const isContainerWater = type === 'container-water' || type === 'most-water' || (waterVolume !== null && !isTrappingRainWater);
-  const spacing = 2.1;
-  const totalWidth = (values.length - 1) * spacing;
+  const spacing = values.length > 25 ? 1.6 : 2.1;
+  const totalWidth = values.length > 0 ? (values.length - 1) * spacing : 0;
   const startX = -totalWidth / 2;
 
   // Compute pointers per index
@@ -507,7 +507,7 @@ export default function ArrayVisualizer3D({ dataStructureState }) {
   return (
     <group position={[0, 0.8, 0]}>
       {/* Base Foundation Rail */}
-      {values.length > 0 && (
+      {values.length > 0 ? (
         <mesh position={[0, -0.75, 0]} receiveShadow>
           <boxGeometry args={[totalWidth + 2.5, 0.12, 1.8]} />
           <meshStandardMaterial
@@ -516,6 +516,16 @@ export default function ArrayVisualizer3D({ dataStructureState }) {
             metalness={0.3}
           />
         </mesh>
+      ) : (
+        <group position={[0, 0, 0]}>
+          <mesh position={[0, -0.2, 0]}>
+            <boxGeometry args={[4.2, 0.14, 1.8]} />
+            <meshStandardMaterial color="#0f172a" roughness={0.6} />
+          </mesh>
+          <Text position={[0, 0.4, 0]} fontSize={0.32} color="#94a3b8" fontWeight="bold">
+            [EMPTY ARRAY: length = 0]
+          </Text>
+        </group>
       )}
 
       {/* Floating HUD for Trapping Rain Water */}

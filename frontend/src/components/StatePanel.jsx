@@ -1,8 +1,10 @@
 import React from 'react';
 import { Variable, CheckCircle2, XCircle, Sparkles, Layers, Cpu, ArrowRight } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import StepInspector from './StepInspector';
+import ComplexityPanel from './ComplexityPanel';
 
-export default function StatePanel({ currentStep, totalSteps, correctOutput = null, isAtEnd = false }) {
+export default function StatePanel({ currentStep, totalSteps, correctOutput = null, isAtEnd = false, complexity = null, algorithmName = 'Algorithm' }) {
   const { isBright } = useTheme();
 
   if (!currentStep) return null;
@@ -45,38 +47,13 @@ export default function StatePanel({ currentStep, totalSteps, correctOutput = nu
       </div>
 
       <div className="p-3.5 space-y-3.5 flex-1 text-xs">
-        {/* Step & Line Metric Cards */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className={`border rounded-lg p-2.5 transition-colors ${
-            isBright
-              ? 'bg-slate-50/90 border-slate-200'
-              : 'bg-slate-900/70 border-slate-800'
-          }`}>
-            <span className={`text-[10px] uppercase font-medium ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>
-              Current Line
-            </span>
-            <div className={`text-base font-mono font-bold mt-0.5 flex items-center gap-1.5 ${
-              isBright ? 'text-cyan-700' : 'text-cyan-400'
-            }`}>
-              <span>Line {lineNumber}</span>
-            </div>
-          </div>
+        {/* Step Inspector Component */}
+        <StepInspector currentStep={currentStep} totalSteps={totalSteps} />
 
-          <div className={`border rounded-lg p-2.5 transition-colors ${
-            isBright
-              ? 'bg-slate-50/90 border-slate-200'
-              : 'bg-slate-900/70 border-slate-800'
-          }`}>
-            <span className={`text-[10px] uppercase font-medium ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>
-              Event Type
-            </span>
-            <div className={`text-[11px] font-mono font-semibold mt-1 truncate ${
-              isBright ? 'text-slate-800' : 'text-slate-300'
-            }`}>
-              {currentStep.eventType || 'EXECUTION'}
-            </div>
-          </div>
-        </div>
+        {/* Complexity & Big-O Curves Panel */}
+        {complexity && (
+          <ComplexityPanel complexity={complexity} algorithmName={algorithmName} />
+        )}
 
         {/* Verified Correct Output Card */}
         {correctOutput && (

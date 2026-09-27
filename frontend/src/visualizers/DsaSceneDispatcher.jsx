@@ -1,117 +1,22 @@
 import React from 'react';
-import ArrayVisualizer3D from './ArrayVisualizer3D';
-import MatrixVisualizer3D from './MatrixVisualizer3D';
-import LinkedListVisualizer3D from './LinkedListVisualizer3D';
-import StackVisualizer3D from './StackVisualizer3D';
-import QueueVisualizer3D from './QueueVisualizer3D';
-import TreeVisualizer3D from './TreeVisualizer3D';
-import SortingVisualizer3D from './SortingVisualizer3D';
-import RecursionVisualizer3D from './RecursionVisualizer3D';
-import GraphVisualizer3D from './GraphVisualizer3D';
-import HashTableVisualizer3D from './HashTableVisualizer3D';
-import HeapVisualizer3D from './HeapVisualizer3D';
-import UniversalExecutionVisualizer3D from './UniversalExecutionVisualizer3D';
+import { getVisualizerComponent, visualizerRegistry } from './visualizerRegistry';
 
 export default function DsaSceneDispatcher({ dataStructureState }) {
   if (!dataStructureState) return null;
 
-  const type = dataStructureState.type ? dataStructureState.type.toLowerCase() : 'array';
+  const rawType = dataStructureState.type ? dataStructureState.type.toLowerCase() : 'array';
 
-  switch (type) {
-    case 'universal-execution':
-    case 'universal':
-    case 'memory':
-    case 'variables':
-    case 'procedural':
-    case 'scanner':
-    case 'execution':
-    case 'program':
-    case 'registers':
-      return <UniversalExecutionVisualizer3D dataStructureState={dataStructureState} />;
-    case 'heap':
-    case 'priority-queue':
-    case 'min-heap':
-    case 'max-heap':
-    case 'binary-heap':
-      return <HeapVisualizer3D dataStructureState={dataStructureState} />;
-    case 'hash-table':
-    case 'hashtable':
-    case 'hashmap':
-    case 'hashing':
-    case 'two-sum':
-    case 'map':
-    case 'lru':
-    case 'lru-cache':
-      return <HashTableVisualizer3D dataStructureState={dataStructureState} />;
-    case 'graph':
-    case 'graphs':
-    case 'graph-bfs':
-    case 'graph-dfs':
-    case 'dijkstra':
-    case 'topological-sort':
-    case 'topological':
-    case 'kahn':
-    case 'dsu':
-    case 'disjoint-set':
-    case 'disjoint-set-union':
-    case 'union-find':
-      return <GraphVisualizer3D dataStructureState={dataStructureState} />;
-    case 'matrix':
-    case '2d-array':
-    case 'dp-table':
-    case 'lcs':
-      return <MatrixVisualizer3D dataStructureState={dataStructureState} />;
-    case 'linkedlist':
-    case 'linked-list':
-    case 'doubly-linked-list':
-    case 'circular-linked-list':
-    case 'cycle-detection':
-      return <LinkedListVisualizer3D dataStructureState={dataStructureState} />;
-    case 'stack':
-    case 'parentheses-stack':
-    case 'monotonic-stack':
-    case 'next-greater':
-      return <StackVisualizer3D dataStructureState={dataStructureState} />;
-    case 'queue':
-    case 'circular-queue':
-    case 'deque':
-      return <QueueVisualizer3D dataStructureState={dataStructureState} />;
-    case 'tree':
-    case 'bst':
-    case 'avl':
-    case 'avl-tree':
-    case 'trie':
-    case 'prefix-tree':
-    case 'trie-prefix-tree':
-      return <TreeVisualizer3D dataStructureState={dataStructureState} />;
-    case 'sorting':
-    case 'searching':
-    case 'bubble-sort':
-    case 'insertion-sort':
-    case 'merge-sort':
-    case 'quick-sort':
-    case 'binary-search':
-      return <SortingVisualizer3D dataStructureState={dataStructureState} />;
-    case 'recursion':
-    case 'callstack':
-    case 'call-stack':
-    case 'factorial':
-      return <RecursionVisualizer3D dataStructureState={dataStructureState} />;
-    case 'trapping-water':
-    case 'trapping-rain-water':
-    case 'lis':
-    case 'longest-increasing-subsequence':
-    case 'container-water':
-    case 'most-water':
-    case 'kadane':
-    case 'subarray':
-    case 'array':
-    case 'sliding-window':
-    case 'two-pointer':
-    default:
-      if (dataStructureState.variables && Object.keys(dataStructureState.variables).length > 0 && (!dataStructureState.values || dataStructureState.name === 'Registers')) {
-        return <UniversalExecutionVisualizer3D dataStructureState={dataStructureState} />;
-      }
-      return <ArrayVisualizer3D dataStructureState={dataStructureState} />;
+  // Check for registers / universal procedural state fallback
+  if (
+    (rawType === 'universal-execution' || rawType === 'registers' || rawType === 'universal') ||
+    (dataStructureState.variables && Object.keys(dataStructureState.variables).length > 0 && (!dataStructureState.values || dataStructureState.values.length === 0))
+  ) {
+    const UniversalVis = visualizerRegistry.universal;
+    return <UniversalVis dataStructureState={dataStructureState} />;
   }
+
+  const VisualizerComponent = getVisualizerComponent(rawType);
+  return <VisualizerComponent dataStructureState={dataStructureState} />;
 }
+
+export { visualizerRegistry };

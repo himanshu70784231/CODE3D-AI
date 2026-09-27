@@ -11,6 +11,8 @@ import CustomCodeModal from '../components/CustomCodeModal';
 import CodeDoctorModal from '../components/CodeDoctorModal';
 import StriverSheetDrawer from '../components/StriverSheetDrawer';
 import CompareModeModal from '../components/CompareModeModal';
+import InputGenerator from '../components/InputGenerator';
+import { ALGORITHM_CATALOG, generateAlgorithmSteps } from '../algorithms/index';
 import { useExecutionTimeline } from '../hooks/useExecutionTimeline';
 import { getExecutionTrace, extractNumbersFromCode } from '../services/executionSimulator';
 import { validateSourceCode } from '../services/codeValidator';
@@ -241,6 +243,44 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
       totalSteps: finalSteps.length,
       status: 'COMPLETED',
       code: prog.code,
+    });
+  };
+
+  // Handle selecting an algorithm from the 3D algorithm engine
+  const handleSelectAlgorithm = (algo) => {
+    const input = Array.isArray(algo.defaultInput) ? algo.defaultInput : [45, 12, 89, 23, 7, 64, 31];
+    const target = algo.defaultTarget !== undefined ? algo.defaultTarget : 23;
+    const res = algo.generator(input, target);
+
+    setSelectedSample({
+      id: algo.id,
+      title: algo.name,
+      category: algo.category,
+      description: algo.description,
+      difficulty: 'Standard',
+      timeComplexity: algo.complexity?.time?.average || 'O(n)',
+      spaceComplexity: algo.complexity?.space || 'O(1)',
+      code: algo.code?.java || '',
+      language: 'java',
+      complexity: algo.complexity,
+    });
+    setCode(algo.code?.java || '');
+    setLastExecutedCode(algo.code?.java || '');
+    setLanguage('java');
+    setTimeComplexity(algo.complexity?.time?.average || 'O(n)');
+    setSpaceComplexity(algo.complexity?.space || 'O(1)');
+    setFormInputValues(Array.isArray(input) ? input.join(', ') : String(input));
+    setTrace(res.steps);
+    reset();
+    setTimeout(() => play(), 100);
+
+    recordExecutionHistory({
+      programTitle: algo.name,
+      conceptId: algo.id,
+      language: 'java',
+      totalSteps: res.steps.length,
+      status: 'COMPLETED',
+      code: algo.code?.java || '',
     });
   };
 
@@ -670,7 +710,11 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
             value={selectedSample.id}
             onChange={(e) => {
               const val = e.target.value;
-              if (val.startsWith('striver-')) {
+              if (val.startsWith('algo-')) {
+                const id = val.replace('algo-', '');
+                const algo = ALGORITHM_CATALOG.find((a) => a.id === id);
+                if (algo) handleSelectAlgorithm(algo);
+              } else if (val.startsWith('striver-')) {
                 const id = parseInt(val.replace('striver-', ''), 10);
                 const p = STRIVER_PROBLEMS.find((prob) => prob.id === id);
                 if (p) {
@@ -708,6 +752,13 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
                 {selectedSample.title || '⚡ Custom Execution'}
               </option>
             )}
+            <optgroup label="⚡ 3D Algorithm Engine">
+              {ALGORITHM_CATALOG.map((algo) => (
+                <option key={`algo-${algo.id}`} value={`algo-${algo.id}`}>
+                  {algo.name} ({algo.category})
+                </option>
+              ))}
+            </optgroup>
             <optgroup label="📜 Striver SDE Sheet (Top Flagships)">
               {STRIVER_PROBLEMS.slice(0, 40).map((p) => (
                 <option key={`striver-${p.id}`} value={`striver-${p.id}`}>
@@ -1045,96 +1096,30 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
           ${mobileTab === '3d' ? 'flex' : 'hidden'} 
           md:flex flex-1 h-full flex-col overflow-hidden transition-all duration-75 border-r border-slate-800/80
         `}>
-          {/* Direct Interactive Form User Input Bar */}
-          <div className={`px-3 py-1.5 border-b flex flex-wrap items-center justify-between gap-2 text-xs transition-colors shrink-0 ${
-            isBright ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-[#0b0f19] border-slate-800 text-slate-200'
-          }`}>
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className={`font-semibold text-[11px] shrink-0 flex items-center gap-1 ${
-                isBright ? 'text-cyan-700' : 'text-cyan-400'
-              }`}>
-                <Sparkles size={13} />
-                <span className="hidden sm:inline">Input Data:</span>
-              </span>
-              {activeStriverProblem && (
-                <span className="hidden md:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
-                  <BookOpen size={10} className="text-amber-400" />
-                  <span>#{activeStriverProblem.striverId || activeStriverProblem.id}</span>
-                </span>
-              )}
-              <input
-                type="text"
-                value={formInputValues}
-                onChange={(e) => setFormInputValues(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleApplyFormInput()}
-                placeholder="e.g. 15, 42, 8, 99, 23, 67"
-                className={`flex-1 min-w-0 px-2.5 py-0.5 rounded text-xs font-mono border focus:outline-none focus:ring-1 focus:ring-cyan-500 transition ${
-                  isBright
-                    ? 'bg-white border-slate-300 text-slate-900'
-                    : 'bg-slate-950 border-slate-700 text-cyan-300 placeholder:text-slate-600'
-                }`}
-              />
-              <button
-                onClick={handleApplyFormInput}
-                className={`px-2.5 py-0.5 rounded font-semibold text-xs transition shadow-sm shrink-0 cursor-pointer ${
-                  isBright
-                    ? 'bg-cyan-600 hover:bg-cyan-700 text-white shadow-cyan-600/20'
-                    : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow-cyan-500/20'
-                }`}
-                title="Apply these values directly into code and visualize in 3D"
-              >
-                Apply & Run ⚡
-              </button>
-            </div>
+          {/* Direct Interactive Input Generator Bar */}
+          <div className="shrink-0 border-b">
+            <InputGenerator
+              currentValues={extractNumbersFromCode(formInputValues) || [45, 12, 89, 23, 7, 64, 31]}
+              currentTarget={23}
+              showTarget={selectedSample?.category === 'Searching' || selectedSample?.id?.includes('search')}
+              onGenerate={({ values, target }) => {
+                const inputStr = values.join(', ');
+                setFormInputValues(inputStr);
 
-            {/* Quick Data Presets */}
-            <div className="flex items-center gap-1 shrink-0 text-[11px]">
-              <span className="text-slate-500 hidden xl:inline">Presets:</span>
-              <button
-                onClick={() => handleApplyPresetValues([14, 52, 8, 91, 33, 47])}
-                className={`px-1.5 py-0.5 rounded transition ${
-                  isBright
-                    ? 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
-                }`}
-                title="Random custom numbers"
-              >
-                🎲 Random
-              </button>
-              <button
-                onClick={() => handleApplyPresetValues([5, 12, 19, 28, 35, 42])}
-                className={`px-1.5 py-0.5 rounded transition ${
-                  isBright
-                    ? 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
-                }`}
-                title="Sorted ascending numbers"
-              >
-                📈 Sorted
-              </button>
-              <button
-                onClick={() => handleApplyPresetValues([50, 40, 30, 20, 10])}
-                className={`px-1.5 py-0.5 rounded transition ${
-                  isBright
-                    ? 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
-                }`}
-                title="Reverse descending numbers"
-              >
-                📉 Reverse
-              </button>
-              <button
-                onClick={() => handleApplyPresetValues([1, 8, 6, 2, 5, 4, 8, 3, 7])}
-                className={`px-1.5 py-0.5 rounded transition ${
-                  isBright
-                    ? 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
-                }`}
-                title="Peaks and water walls"
-              >
-                🌊 Waves
-              </button>
-            </div>
+                // If this is one of our registered 3D algorithms
+                const algo = ALGORITHM_CATALOG.find((a) => a.id === selectedSample.id || `algo-${a.id}` === selectedSample.id);
+                if (algo) {
+                  const res = algo.generator(values, target);
+                  setTrace(res.steps);
+                  reset();
+                  setTimeout(() => play(), 80);
+                  return;
+                }
+
+                // Otherwise apply into code & simulator
+                applyNewValuesToCode(values);
+              }}
+            />
           </div>
 
           {/* 3D Canvas Viewport Box */}
@@ -1229,6 +1214,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
               totalSteps={totalSteps}
               correctOutput={finalCorrectOutput}
               isAtEnd={isAtEnd}
+              complexity={selectedSample?.complexity}
             />
           </div>
         )}

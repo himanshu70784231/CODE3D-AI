@@ -46,6 +46,47 @@ function CameraPresetHandler({ preset, onApplied, controlsRef }) {
 }
 
 /**
+ * Auto-fits camera distance and OrbitControls target dynamically based on data structure scale
+ * Algorithm:
+ * - calculate visual dimensions from element count
+ * - calculate camera distance based on vertical FOV and horizontal aspect ratio
+ * - position camera smoothly without clipping
+ * - update OrbitControls limits
+ */
+function DynamicBoundingCamera({ count = 4, controlsRef }) {
+  const { camera, size } = useThree();
+  const prevCountRef = useRef(null);
+
+  useEffect(() => {
+    if (count === prevCountRef.current) return;
+    prevCountRef.current = count;
+
+    const n = Math.max(1, count || 4);
+    const spacing = n > 25 ? 1.6 : 2.1;
+    const estWidth = Math.max(5.5, (n - 1) * spacing + 3.0);
+    const estHeight = 3.8;
+
+    const fovRad = (camera.fov * Math.PI) / 180;
+    const aspect = size.width / Math.max(size.height, 1);
+
+    const distV = estHeight / (2 * Math.tan(fovRad / 2));
+    const distH = (estWidth / 2) / Math.tan((fovRad * aspect) / 2);
+    const targetDist = Math.max(distV, distH, 6.8) * 1.28;
+
+    camera.position.set(0, Math.max(2.8, targetDist * 0.35), Math.max(7.5, targetDist * 0.92));
+    camera.lookAt(0, 0, 0);
+
+    if (controlsRef?.current) {
+      controlsRef.current.target.set(0, 0, 0);
+      controlsRef.current.maxDistance = Math.max(70, targetDist * 3.5);
+      controlsRef.current.update();
+    }
+  }, [count, camera, size, controlsRef]);
+
+  return null;
+}
+
+/**
  * SceneContainer provides the 3D viewport canvas, lighting, camera controls,
  * realistic studio cyber-pedestal stage, and 3D verified output hologram.
  */
@@ -68,6 +109,10 @@ export default function SceneContainer({
   const [showDryRunHologram, setShowDryRunHologram] = useState(false); // Default OFF so 3D objects are 100% visible and unobstructed
   const [isHudExpanded, setIsHudExpanded] = useState(false);
   const controlsRef = useRef(null);
+
+  // Compute data structure scale to dynamically auto-fit camera distance
+  const dsState = currentStep?.dataStructureState;
+  const elementCount = dsState?.values?.length ?? dsState?.nodes?.length ?? (dsState?.matrix ? dsState.matrix.length * (dsState.matrix[0]?.length || 1) : 4);
 
   // Extract the exact line of code currently being executed for the 3D dry run
   const codeLines = code ? code.split('\n') : [];
@@ -319,6 +364,11 @@ export default function SceneContainer({
           <CameraPresetHandler
             preset={cameraPreset}
             onApplied={() => setCameraPreset(null)}
+            controlsRef={controlsRef}
+          />
+
+          <DynamicBoundingCamera
+            count={elementCount}
             controlsRef={controlsRef}
           />
 

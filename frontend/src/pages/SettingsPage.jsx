@@ -1,9 +1,43 @@
-import React from 'react';
-import { Settings, Cpu, HardDrive, CheckCircle2, ShieldCheck, Terminal, Layers, Sun, Moon, Palette } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Settings, Cpu, HardDrive, CheckCircle2, ShieldCheck, Terminal, Layers, Sun, Moon, Palette, Gauge } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 export default function SettingsPage() {
   const { theme, setTheme, isBright } = useTheme();
+
+  const [speed, setSpeed] = useState(() => {
+    try {
+      const saved = localStorage.getItem('code3d_default_speed');
+      return saved ? Number(saved) : 1;
+    } catch (e) {
+      return 1;
+    }
+  });
+
+  const [reducedMotion, setReducedMotion] = useState(() => {
+    try {
+      return localStorage.getItem('code3d_reduced_motion') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const handleSpeedChange = (newSpeed) => {
+    setSpeed(newSpeed);
+    try {
+      localStorage.setItem('code3d_default_speed', String(newSpeed));
+    } catch (e) {}
+  };
+
+  const handleReducedMotionToggle = () => {
+    setReducedMotion((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('code3d_reduced_motion', String(next));
+      } catch (e) {}
+      return next;
+    });
+  };
 
   return (
     <div className={`flex-1 overflow-y-auto p-6 md:p-10 select-none transition-colors duration-200 ${
@@ -100,6 +134,82 @@ export default function SettingsPage() {
                 </p>
               </div>
             </button>
+          </div>
+        </div>
+
+        {/* Animation Speed & Motion Accessibility Card */}
+        <div className={`border rounded-2xl p-6 space-y-4 transition-colors ${
+          isBright ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900/60 border-slate-800'
+        }`}>
+          <h2 className={`text-sm font-bold flex items-center gap-2 ${isBright ? 'text-slate-900' : 'text-white'}`}>
+            <Gauge size={16} className="text-cyan-500" />
+            <span>3D Playback &amp; Motion Preferences</span>
+          </h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Default Playback Speed */}
+            <div className={`p-4 rounded-xl border space-y-2 ${
+              isBright ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+            }`}>
+              <div className="flex items-center justify-between">
+                <span className={`text-xs font-bold ${isBright ? 'text-slate-800' : 'text-slate-200'}`}>
+                  Default Playback Speed
+                </span>
+                <span className="text-[10px] font-mono text-cyan-400 font-bold">{speed}x</span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Speed used when launching new algorithm visualizations.
+              </p>
+              <div className="flex items-center gap-1.5 pt-1">
+                {[0.25, 0.5, 1, 2, 4].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => handleSpeedChange(s)}
+                    className={`flex-1 py-1 rounded text-xs font-mono font-bold border transition cursor-pointer ${
+                      speed === s
+                        ? 'bg-cyan-500 text-slate-950 border-cyan-400'
+                        : isBright ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100' : 'bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800'
+                    }`}
+                  >
+                    {s}x
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Reduced Motion Toggle */}
+            <div className={`p-4 rounded-xl border flex flex-col justify-between space-y-2 ${
+              isBright ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+            }`}>
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs font-bold ${isBright ? 'text-slate-800' : 'text-slate-200'}`}>
+                    Reduced Motion
+                  </span>
+                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
+                    reducedMotion
+                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                      : 'bg-slate-800 text-slate-400 border-slate-700'
+                  }`}>
+                    {reducedMotion ? 'ENABLED' : 'DISABLED'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Disables rapid 3D camera sweeps and pulsating lighting effects.
+                </p>
+              </div>
+
+              <button
+                onClick={handleReducedMotionToggle}
+                className={`py-1.5 px-3 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+                  reducedMotion
+                    ? 'bg-amber-500 text-slate-950 font-bold border-amber-400'
+                    : isBright ? 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700' : 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-300'
+                }`}
+              >
+                {reducedMotion ? 'Disable Reduced Motion' : 'Enable Reduced Motion'}
+              </button>
+            </div>
           </div>
         </div>
 

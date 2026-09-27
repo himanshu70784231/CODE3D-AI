@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   Play,
   Pause,
@@ -7,6 +7,8 @@ import {
   RotateCcw,
   Clock,
   Gauge,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -22,56 +24,76 @@ export default function Timeline({
   onNext,
   onReset,
   onGoToStep,
+  onGoToFirst,
+  onGoToLast,
   isAtStart,
   isAtEnd,
   isCodeDirty = false,
+  currentStep = null,
+  trace = [],
 }) {
   const { isBright } = useTheme();
-  const speeds = [0.5, 1, 1.5, 2];
+  const speeds = [0.25, 0.5, 1, 2, 4];
+  const stepListRef = useRef(null);
+
+  // Auto-scroll the active step node into view
+  useEffect(() => {
+    if (!stepListRef.current) return;
+    const activeNode = stepListRef.current.querySelector(`[data-step-index="${currentStepIndex}"]`);
+    if (activeNode) {
+      activeNode.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      });
+    }
+  }, [currentStepIndex]);
 
   return (
-    <div className={`border-t px-4 py-2.5 select-none flex flex-col gap-2 transition-colors ${
+    <div className={`border-t px-4 py-2 select-none flex flex-col gap-1.5 transition-colors ${
       isBright
         ? 'bg-white border-slate-200 text-slate-800 shadow-sm'
         : 'bg-[#070b14]/95 border-slate-800/90 text-slate-200'
     }`}>
-      {/* Top Bar: Controls & Status */}
+      {/* Top Bar: Playback Controls, Active Step Info & Speed Switcher */}
       <div className="flex items-center justify-between gap-3 overflow-x-auto no-scrollbar">
-        {/* Playback Buttons */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={onReset}
-            className={`p-1.5 rounded-lg transition ${
-              isBright
-                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-            title="Reset to Step 1"
-          >
-            <RotateCcw size={15} />
-          </button>
+        {/* Playback Buttons Group (First, Prev, Play/Pause, Next, Last, Reset) */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* First Step */}
+          {onGoToFirst && (
+            <button
+              onClick={onGoToFirst}
+              disabled={isAtStart || totalSteps <= 1}
+              className={`p-1.5 rounded-lg border transition ${
+                isAtStart || totalSteps <= 1
+                  ? isBright ? 'border-slate-200 text-slate-300 cursor-not-allowed' : 'border-slate-800 text-slate-700 cursor-not-allowed'
+                  : isBright ? 'border-slate-300 text-slate-700 hover:bg-slate-100 cursor-pointer' : 'border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white cursor-pointer'
+              }`}
+              title="First Step (Step 1)"
+            >
+              <ChevronsLeft size={14} />
+            </button>
+          )}
 
+          {/* Previous Step */}
           <button
             onClick={onPrev}
-            disabled={isAtStart}
+            disabled={isAtStart || totalSteps <= 1}
             className={`p-1.5 rounded-lg border transition ${
-              isAtStart
-                ? isBright
-                  ? 'border-slate-200 text-slate-300 cursor-not-allowed'
-                  : 'border-slate-800 text-slate-600 cursor-not-allowed'
-                : isBright
-                ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
-                : 'border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white'
+              isAtStart || totalSteps <= 1
+                ? isBright ? 'border-slate-200 text-slate-300 cursor-not-allowed' : 'border-slate-800 text-slate-700 cursor-not-allowed'
+                : isBright ? 'border-slate-300 text-slate-700 hover:bg-slate-100 cursor-pointer' : 'border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white cursor-pointer'
             }`}
             title="Step Back"
           >
-            <SkipBack size={15} />
+            <SkipBack size={14} />
           </button>
 
+          {/* Play / Pause */}
           {isPlaying ? (
             <button
               onClick={onPause}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition border ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition border cursor-pointer ${
                 isBright
                   ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
                   : 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
@@ -84,58 +106,98 @@ export default function Timeline({
           ) : (
             <button
               onClick={onPlay}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition shadow-md ${
-                isCodeDirty
+              disabled={totalSteps <= 1}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition shadow-md cursor-pointer ${
+                totalSteps <= 1
+                  ? 'opacity-40 cursor-not-allowed bg-slate-700 text-slate-400'
+                  : isCodeDirty
                   ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 ring-2 ring-cyan-400 shadow-lg shadow-cyan-500/40 animate-pulse'
                   : isBright
-                    ? 'bg-cyan-600 text-white hover:bg-cyan-500 shadow-cyan-600/30'
-                    : 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-cyan-500/20'
+                  ? 'bg-cyan-600 text-white hover:bg-cyan-500 shadow-cyan-600/30'
+                  : 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-cyan-500/20'
               }`}
-              title={isCodeDirty ? 'Execute newly modified code in 3D (Ctrl+Enter)' : 'Play Simulation'}
+              title={isCodeDirty ? 'Execute modified code in 3D (Ctrl+Enter)' : isAtEnd ? 'Replay Simulation' : 'Play Simulation'}
             >
               <Play size={14} className="fill-current" />
               <span>{isCodeDirty ? 'Run ⚡' : isAtEnd ? 'Replay' : 'Play'}</span>
             </button>
           )}
 
+          {/* Next Step */}
           <button
             onClick={onNext}
-            disabled={isAtEnd}
+            disabled={isAtEnd || totalSteps <= 1}
             className={`p-1.5 rounded-lg border transition ${
-              isAtEnd
-                ? isBright
-                  ? 'border-slate-200 text-slate-300 cursor-not-allowed'
-                  : 'border-slate-800 text-slate-600 cursor-not-allowed'
-                : isBright
-                ? 'border-cyan-500 bg-cyan-50 text-cyan-700 hover:bg-cyan-100'
-                : 'border-cyan-600/70 bg-cyan-950/40 text-cyan-300 hover:bg-cyan-900/60'
+              isAtEnd || totalSteps <= 1
+                ? isBright ? 'border-slate-200 text-slate-300 cursor-not-allowed' : 'border-slate-800 text-slate-700 cursor-not-allowed'
+                : isBright ? 'border-cyan-500 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 cursor-pointer' : 'border-cyan-600/70 bg-cyan-950/40 text-cyan-300 hover:bg-cyan-900/60 cursor-pointer'
             }`}
             title="Step Forward"
           >
-            <SkipForward size={15} />
+            <SkipForward size={14} />
+          </button>
+
+          {/* Last Step */}
+          {onGoToLast && (
+            <button
+              onClick={onGoToLast}
+              disabled={isAtEnd || totalSteps <= 1}
+              className={`p-1.5 rounded-lg border transition ${
+                isAtEnd || totalSteps <= 1
+                  ? isBright ? 'border-slate-200 text-slate-300 cursor-not-allowed' : 'border-slate-800 text-slate-700 cursor-not-allowed'
+                  : isBright ? 'border-slate-300 text-slate-700 hover:bg-slate-100 cursor-pointer' : 'border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white cursor-pointer'
+              }`}
+              title="Last Step"
+            >
+              <ChevronsRight size={14} />
+            </button>
+          )}
+
+          {/* Reset */}
+          <button
+            onClick={onReset}
+            className={`p-1.5 rounded-lg transition cursor-pointer ${
+              isBright
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+            title="Reset to Step 1"
+          >
+            <RotateCcw size={14} />
           </button>
         </div>
 
-        {/* Time Machine Label */}
+        {/* Current Step Status Badge */}
         <div className="flex items-center gap-2 shrink-0">
-          <Clock size={14} className={isBright ? 'text-cyan-600' : 'text-cyan-400'} />
+          <Clock size={13} className={isBright ? 'text-cyan-600' : 'text-cyan-400'} />
           <span className={`text-xs font-semibold tracking-wider uppercase ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
-            Time Machine
+            Step
           </span>
-          <span className={`text-xs font-mono font-medium ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>
-            [Step {currentStepIndex + 1} / {totalSteps}]
+          <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded border ${
+            isBright
+              ? 'bg-cyan-50 border-cyan-300 text-cyan-800'
+              : 'bg-cyan-950/70 border-cyan-800 text-cyan-300'
+          }`}>
+            {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}
           </span>
+          {currentStep?.eventType && (
+            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border hidden sm:inline ${
+              isBright ? 'bg-slate-100 border-slate-300 text-slate-700' : 'bg-slate-900 border-slate-800 text-slate-400'
+            }`}>
+              {currentStep.eventType}
+            </span>
+          )}
         </div>
 
         {/* Playback Speed Switcher */}
         <div className="flex items-center gap-1.5 shrink-0">
           <Gauge size={13} className={isBright ? 'text-slate-400' : 'text-slate-500'} />
-          <span className={`text-[11px] mr-1 ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>Speed:</span>
+          <span className={`text-[11px] mr-0.5 ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>Speed:</span>
           {speeds.map((s) => (
             <button
               key={s}
               onClick={() => setPlaybackSpeed(s)}
-              className={`px-2 py-0.5 rounded text-[11px] font-mono transition ${
+              className={`px-1.5 py-0.5 rounded text-[11px] font-mono transition cursor-pointer ${
                 playbackSpeed === s
                   ? isBright
                     ? 'bg-cyan-100 text-cyan-800 border border-cyan-400 font-bold'
@@ -151,78 +213,58 @@ export default function Timeline({
         </div>
       </div>
 
-      {/* Interactive Step Timeline Scrubber */}
-      <div className="relative pt-1.5 pb-1 flex items-center">
-        {/* Background track line */}
-        <div className={`absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 rounded-full ${
-          isBright ? 'bg-slate-200' : 'bg-slate-800'
-        }`}></div>
+      {/* Scrubber Progress Slider */}
+      <div className="relative flex items-center w-full px-1">
+        <input
+          type="range"
+          min={0}
+          max={Math.max(0, totalSteps - 1)}
+          value={currentStepIndex}
+          onChange={(e) => onGoToStep(parseInt(e.target.value, 10))}
+          className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-400 focus:outline-none"
+        />
+      </div>
 
-        {/* Progress track line */}
+      {/* Horizontally Scrollable Step Badges List for High-Density Traces */}
+      {totalSteps > 0 && (
         <div
-          className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-200"
-          style={{
-            width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%`,
-          }}
-        ></div>
-
-        {/* Step Nodes / Dots */}
-        <div className="relative w-full flex justify-between items-center z-10">
+          ref={stepListRef}
+          className="flex items-center gap-1.5 overflow-x-auto py-1 scroll-smooth no-scrollbar"
+        >
           {Array.from({ length: totalSteps }).map((_, idx) => {
             const isActive = idx === currentStepIndex;
             const isCompleted = idx < currentStepIndex;
+            const stepObj = trace && trace[idx];
 
             return (
               <button
                 key={idx}
+                data-step-index={idx}
                 onClick={() => onGoToStep(idx)}
-                className={`group relative flex flex-col items-center focus:outline-none transition-transform ${
-                  isActive ? 'scale-125' : 'hover:scale-110'
+                className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono shrink-0 border transition-all cursor-pointer ${
+                  isActive
+                    ? isBright
+                      ? 'bg-cyan-600 text-white border-cyan-500 font-bold shadow-sm scale-105'
+                      : 'bg-cyan-500 text-slate-950 border-cyan-400 font-bold shadow-lg shadow-cyan-500/30 scale-105'
+                    : isCompleted
+                    ? isBright
+                      ? 'bg-cyan-50 text-cyan-800 border-cyan-200 hover:bg-cyan-100'
+                      : 'bg-slate-900/90 text-cyan-400 border-cyan-900/50 hover:bg-slate-800'
+                    : isBright
+                    ? 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
+                    : 'bg-slate-950 text-slate-500 border-slate-800 hover:bg-slate-900 hover:text-slate-300'
                 }`}
-                title={`Jump to Step ${idx + 1}`}
+                title={`Jump to Step ${idx + 1}${stepObj?.explanation ? `: ${stepObj.explanation}` : ''}`}
               >
-                {/* Outer halo / dot */}
-                <div
-                  className={`w-3.5 h-3.5 rounded-full flex items-center justify-center transition-all ${
-                    isActive
-                      ? isBright
-                        ? 'bg-cyan-600 ring-4 ring-cyan-400/40 shadow-md'
-                        : 'bg-cyan-400 ring-4 ring-cyan-500/30 shadow-lg shadow-cyan-400/50'
-                      : isCompleted
-                      ? isBright
-                        ? 'bg-cyan-500 border border-cyan-400'
-                        : 'bg-cyan-600 border border-cyan-400/50'
-                      : isBright
-                      ? 'bg-slate-300 border border-slate-400 group-hover:border-slate-500'
-                      : 'bg-slate-800 border border-slate-700 group-hover:border-slate-500'
-                  }`}
-                >
-                  {isActive && <div className={`w-1.5 h-1.5 rounded-full ${isBright ? 'bg-white' : 'bg-slate-950'}`} />}
-                </div>
-
-                {/* Step number label under dot */}
-                <span
-                  className={`text-[10px] font-mono mt-1 transition-colors ${
-                    isActive
-                      ? isBright
-                        ? 'text-cyan-800 font-bold'
-                        : 'text-cyan-300 font-bold'
-                      : isCompleted
-                      ? isBright
-                        ? 'text-slate-600'
-                        : 'text-slate-400'
-                      : isBright
-                      ? 'text-slate-400'
-                      : 'text-slate-600'
-                  }`}
-                >
-                  {idx + 1}
-                </span>
+                <span>{idx + 1}</span>
+                {stepObj?.lineNumber && (
+                  <span className="opacity-70 text-[9px]">L{stepObj.lineNumber}</span>
+                )}
               </button>
             );
           })}
         </div>
-      </div>
+      )}
     </div>
   );
 }

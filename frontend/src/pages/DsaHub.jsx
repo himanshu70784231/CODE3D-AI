@@ -1,6 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { SAMPLE_PROGRAMS, CURRICULUM_CATEGORIES } from '../utils/sampleCodes';
 import { STRIVER_DAYS, STRIVER_PROBLEMS } from '../utils/striverCatalog';
+import { ALGORITHM_CATALOG, generateAlgorithmSteps } from '../algorithms/index';
+import AlgorithmCard from '../components/AlgorithmCard';
+import AlgorithmDetailModal from '../components/AlgorithmDetailModal';
 import { useTheme } from '../context/ThemeContext';
 import {
   Layers,
@@ -16,16 +19,22 @@ import {
   Sparkles,
   Trophy,
   Filter,
-  Zap
+  Zap,
+  Code2
 } from 'lucide-react';
 
 const STORAGE_KEY = 'code3d_striver_solved_v1';
 
-export default function DsaHub({ onSelectConcept, initialTab = 'curriculum' }) {
+export default function DsaHub({ onSelectConcept, initialTab = 'algorithms' }) {
   const { isBright } = useTheme();
 
-  // Top-level View Switcher: 'curriculum' | 'striver'
-  const [activeMainTab, setActiveMainTab] = useState(initialTab === 'striver' ? 'striver' : 'curriculum');
+  // Top-level View Switcher: 'algorithms' | 'curriculum' | 'striver'
+  const [activeMainTab, setActiveMainTab] = useState(initialTab || 'algorithms');
+
+  // Algorithms 3D Engine state
+  const [algoCategory, setAlgoCategory] = useState('All');
+  const [algoSearch, setAlgoSearch] = useState('');
+  const [selectedAlgoModal, setSelectedAlgoModal] = useState(null);
 
   // Curriculum state
   const categories = ['All', ...CURRICULUM_CATEGORIES];
@@ -74,6 +83,37 @@ export default function DsaHub({ onSelectConcept, initialTab = 'curriculum' }) {
 
   const totalStriverCount = STRIVER_PROBLEMS.length;
   const progressPercent = Math.round((solvedCount / totalStriverCount) * 100) || 0;
+
+  // Filtered algorithms catalog
+  const filteredAlgorithms = useMemo(() => {
+    return ALGORITHM_CATALOG.filter((a) => {
+      const matchesCategory = algoCategory === 'All' || a.category === algoCategory;
+      const matchesSearch =
+        algoSearch.trim() === '' ||
+        a.name.toLowerCase().includes(algoSearch.toLowerCase()) ||
+        a.description.toLowerCase().includes(algoSearch.toLowerCase()) ||
+        a.category.toLowerCase().includes(algoSearch.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [algoCategory, algoSearch]);
+
+  const handleLaunchAlgorithm = (algo) => {
+    const res = algo.generator(algo.defaultInput, algo.defaultTarget);
+    onSelectConcept({
+      id: algo.id,
+      title: algo.name,
+      category: algo.category,
+      description: algo.description,
+      difficulty: 'Standard',
+      timeComplexity: algo.complexity?.time?.average || 'O(n)',
+      spaceComplexity: algo.complexity?.space || 'O(1)',
+      code: algo.code?.java || '',
+      language: 'java',
+      defaultInput: Array.isArray(algo.defaultInput) ? algo.defaultInput.join(', ') : String(algo.defaultInput),
+      trace: res.steps,
+      complexity: algo.complexity,
+    });
+  };
 
   // Filtered standard curriculum
   const filteredCurriculum = useMemo(() => {
@@ -192,6 +232,23 @@ export default function DsaHub({ onSelectConcept, initialTab = 'curriculum' }) {
             isBright ? 'bg-slate-200/80 border-slate-300' : 'bg-slate-900/90 border-slate-800'
           }`}>
             <button
+              onClick={() => setActiveMainTab('algorithms')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                activeMainTab === 'algorithms'
+                  ? isBright
+                    ? 'bg-purple-600 text-white shadow-md font-bold'
+                    : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30'
+                  : isBright ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Zap size={14} />
+              <span>3D Algorithms</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-purple-500/20 text-purple-300">
+                {ALGORITHM_CATALOG.length}
+              </span>
+            </button>
+
+            <button
               onClick={() => setActiveMainTab('curriculum')}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
                 activeMainTab === 'curriculum'
@@ -226,6 +283,80 @@ export default function DsaHub({ onSelectConcept, initialTab = 'curriculum' }) {
             </button>
           </div>
         </div>
+
+        {/* ========================================================================= */}
+        {/* VIEW 0: 3D ALGORITHM ENGINE (SORTING, SEARCHING, DATA STRUCTURES) */}
+        {/* ========================================================================= */}
+        {activeMainTab === 'algorithms' && (
+          <div className="space-y-6">
+            {/* Filter & Search Bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+              {/* Category Pills */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 w-full sm:w-auto">
+                {['All', 'Sorting', 'Searching', 'Data Structures'].map((cat) => {
+                  const count = cat === 'All' ? ALGORITHM_CATALOG.length : ALGORITHM_CATALOG.filter((a) => a.category === cat).length;
+                  const isActive = algoCategory === cat;
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => setAlgoCategory(cat)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition shrink-0 flex items-center gap-1.5 cursor-pointer ${
+                        isActive
+                          ? isBright
+                            ? 'bg-purple-600 text-white font-bold shadow-md'
+                            : 'bg-purple-500 text-slate-950 font-bold shadow-md shadow-purple-500/20'
+                          : isBright
+                            ? 'bg-white border border-slate-200 text-slate-600 hover:text-slate-900 shadow-sm'
+                            : 'bg-slate-900/80 border border-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <span>{cat}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                        isActive
+                          ? isBright ? 'bg-purple-700 text-white' : 'bg-slate-950/40 text-slate-950'
+                          : isBright ? 'bg-slate-100 text-slate-500' : 'bg-slate-800 text-slate-400'
+                      }`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Search Box */}
+              <div className="relative w-full sm:w-64 shrink-0">
+                <Search size={14} className={`absolute left-3 top-2.5 ${isBright ? 'text-slate-400' : 'text-slate-500'}`} />
+                <input
+                  type="text"
+                  placeholder="Search algorithms (e.g. bubble, binary)..."
+                  value={algoSearch}
+                  onChange={(e) => setAlgoSearch(e.target.value)}
+                  className={`w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border focus:outline-none focus:ring-1 focus:ring-purple-500 ${
+                    isBright ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+                  }`}
+                />
+              </div>
+            </div>
+
+            {/* Grid of Algorithm Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredAlgorithms.map((algo) => (
+                <AlgorithmCard
+                  key={algo.id}
+                  algorithm={algo}
+                  onVisualize={handleLaunchAlgorithm}
+                  onViewDetails={(a) => setSelectedAlgoModal(a)}
+                />
+              ))}
+            </div>
+
+            {filteredAlgorithms.length === 0 && (
+              <div className={`text-center py-12 border rounded-xl ${isBright ? 'border-slate-200 bg-white' : 'border-slate-800 bg-slate-900/40'}`}>
+                <p className="text-slate-400 text-sm">No algorithms found matching your search criteria.</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ========================================================================= */}
         {/* VIEW 1: STRIVER SDE SHEET (182 PROBLEMS ACROSS DAYS 1–27) */}
@@ -542,6 +673,18 @@ export default function DsaHub({ onSelectConcept, initialTab = 'curriculum' }) {
               ))}
             </div>
           </div>
+        )}
+
+        {/* Algorithm Detail Modal */}
+        {selectedAlgoModal && (
+          <AlgorithmDetailModal
+            algorithm={selectedAlgoModal}
+            onClose={() => setSelectedAlgoModal(null)}
+            onVisualize={(algo) => {
+              setSelectedAlgoModal(null);
+              handleLaunchAlgorithm(algo);
+            }}
+          />
         )}
       </div>
     </div>

@@ -7,7 +7,6 @@ import DsaHub from './pages/DsaHub';
 import QuizArena from './pages/QuizArena';
 import HistoryPage from './pages/HistoryPage';
 import SettingsPage from './pages/SettingsPage';
-import PlaygroundPage from './pages/PlaygroundPage';
 import AiTutorPage from './pages/AiTutorPage';
 import LoginModal from './components/LoginModal';
 import CodeDoctorModal from './components/CodeDoctorModal';
@@ -74,7 +73,7 @@ function MainAppContent() {
         <Routes>
           <Route path="/" element={<Dashboard onNavigate={(tab) => navigate(tab === 'dashboard' ? '/' : `/${tab}`)} />} />
           <Route path="/visualizer" element={<Visualizer initialConcept={selectedConcept} />} />
-          <Route path="/playground" element={<PlaygroundPage onSendToVisualizer={handleLaunchConcept} />} />
+          <Route path="/algorithms" element={<DsaHub initialTab="algorithms" onSelectConcept={handleLaunchConcept} />} />
           <Route path="/ai" element={<AiTutorPage onSendToVisualizer={handleLaunchConcept} />} />
           <Route path="/dsa" element={<DsaHub initialTab="curriculum" onSelectConcept={handleLaunchConcept} />} />
           <Route path="/striver" element={<DsaHub initialTab="striver" onSelectConcept={handleLaunchConcept} />} />
@@ -116,15 +115,15 @@ function MainAppContent() {
         </button>
 
         <button
-          onClick={() => navigate('/playground')}
+          onClick={() => navigate('/quiz')}
           className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition ${
-            location.pathname === '/playground'
+            location.pathname === '/quiz'
               ? 'text-cyan-600 font-bold dark:text-cyan-400'
               : isBright ? 'text-slate-500 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <span className="text-lg">⚡</span>
-          <span className="text-[9px] font-medium">Playground</span>
+          <span className="text-lg">🎯</span>
+          <span className="text-[9px] font-medium">Quiz</span>
         </button>
 
         <button

@@ -1,19 +1,31 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 /**
- * Custom hook for Time Machine execution controls
+ * CODE3D-AI - Time Machine Execution Controls & Playback State Machine
+ * 
+ * Strict state transitions:
+ * IDLE -> READY -> PLAYING <-> PAUSED -> COMPLETED
+ * ERROR state handled gracefully.
+ * 
+ * Implements: Run, Play, Pause, Next, Previous, First, Last, Reset.
+ * Race-condition safe with proper interval cleanup.
  */
-export function useExecutionTimeline(trace = []) {
+export const SPEED_PRESETS = [0.25, 0.5, 1, 2, 4];
+
+export function useExecutionTimeline(trace = [], isLoading = false, hasError = false) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1); // 0.5, 1, 1.5, 2
+  const [playbackSpeed, setPlaybackSpeed] = useState(1); // 0.25, 0.5, 1, 2, 4
   const [breakpoints, setBreakpoints] = useState(new Set());
   const timerRef = useRef(null);
 
-  const totalSteps = trace ? trace.length : 0;
-  const currentStep = (trace && trace[currentStepIndex]) || null;
-  const isAtStart = currentStepIndex === 0;
-  const isAtEnd = currentStepIndex >= totalSteps - 1;
+  const totalSteps = Array.isArray(trace) ? trace.length : 0;
+  
+  // Strict bound maintenance: 0 <= currentStepIndex < totalSteps
+  const safeIndex = totalSteps === 0 ? 0 : Math.min(Math.max(0, currentStepIndex), totalSteps - 1);
+  const currentStep = (Array.isArray(trace) && trace[safeIndex]) || null;
+  const isAtStart = safeIndex === 0;
+  const isAtEnd = totalSteps > 0 && safeIndex >= totalSteps - 1;
 
   // Toggle breakpoint on specific line
   const toggleBreakpoint = useCallback((lineNumber) => {
@@ -33,56 +45,43 @@ export function useExecutionTimeline(trace = []) {
     setBreakpoints(new Set());
   }, []);
 
-  // Execution State Machine (IDLE, READY, RUNNING, PAUSED, COMPLETED, STOPPED)
+  // Execution State Machine: IDLE, LOADING, READY, PLAYING, PAUSED, COMPLETED, ERROR
   const executionState = (() => {
+    if (hasError) return 'ERROR';
+    if (isLoading) return 'LOADING';
     if (totalSteps === 0) return 'IDLE';
-    if (isPlaying) return 'RUNNING';
+    if (isPlaying) return 'PLAYING';
     if (isAtEnd) return 'COMPLETED';
-    if (currentStepIndex > 0) return 'PAUSED';
+    if (safeIndex > 0) return 'PAUSED';
     return 'READY';
   })();
 
-  // Auto-reset index whenever a new execution trace is loaded
-  useEffect(() => {
-    setCurrentStepIndex(0);
-  }, [trace]);
-
-  const pause = useCallback(() => {
-    setIsPlaying(false);
+  // Clear timer safely
+  const clearPlaybackTimer = useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
   }, []);
 
-  const nextStep = useCallback(() => {
-    setCurrentStepIndex((prev) => {
-      if (prev < totalSteps - 1) {
-        return prev + 1;
-      }
-      pause();
-      return prev;
-    });
-  }, [totalSteps, pause]);
+  // Reset index safely whenever a new execution trace is loaded
+  useEffect(() => {
+    clearPlaybackTimer();
+    setIsPlaying(false);
+    setCurrentStepIndex(0);
+  }, [trace, clearPlaybackTimer]);
 
-  const prevStep = useCallback(() => {
-    setCurrentStepIndex((prev) => {
-      if (prev > 0) {
-        return prev - 1;
-      }
-      return prev;
-    });
-  }, []);
-
-  const goToStep = useCallback((index) => {
-    const clamped = Math.max(0, Math.min(index, totalSteps - 1));
-    setCurrentStepIndex(clamped);
-  }, [totalSteps]);
+  const pause = useCallback(() => {
+    setIsPlaying(false);
+    clearPlaybackTimer();
+  }, [clearPlaybackTimer]);
 
   const play = useCallback(() => {
+    if (totalSteps <= 1) return;
+    clearPlaybackTimer();
     setCurrentStepIndex((prev) => (prev >= totalSteps - 1 ? 0 : prev));
     setIsPlaying(true);
-  }, [totalSteps]);
+  }, [totalSteps, clearPlaybackTimer]);
 
   const togglePlay = useCallback(() => {
     if (isPlaying) {
@@ -92,10 +91,52 @@ export function useExecutionTimeline(trace = []) {
     }
   }, [isPlaying, pause, play]);
 
+  const nextStep = useCallback(() => {
+    pause(); // Manual step pauses auto-playback
+    setCurrentStepIndex((prev) => (prev < totalSteps - 1 ? prev + 1 : prev));
+  }, [totalSteps, pause]);
+
+  const prevStep = useCallback(() => {
+    pause(); // Manual step pauses auto-playback
+    setCurrentStepIndex((prev) => (prev > 0 ? prev - 1 : 0));
+  }, [pause]);
+
+  const goToFirst = useCallback(() => {
+    pause();
+    setCurrentStepIndex(0);
+  }, [pause]);
+
+  const goToLast = useCallback(() => {
+    pause();
+    setCurrentStepIndex(Math.max(0, totalSteps - 1));
+  }, [totalSteps, pause]);
+
+  const goToStep = useCallback((index) => {
+    pause();
+    const clamped = Math.max(0, Math.min(index, totalSteps - 1));
+    setCurrentStepIndex(clamped);
+  }, [totalSteps, pause]);
+
   const reset = useCallback(() => {
     pause();
     setCurrentStepIndex(0);
   }, [pause]);
+
+  const increaseSpeed = useCallback(() => {
+    setPlaybackSpeed((curr) => {
+      const idx = SPEED_PRESETS.indexOf(curr);
+      if (idx === -1) return 1;
+      return idx < SPEED_PRESETS.length - 1 ? SPEED_PRESETS[idx + 1] : curr;
+    });
+  }, []);
+
+  const decreaseSpeed = useCallback(() => {
+    setPlaybackSpeed((curr) => {
+      const idx = SPEED_PRESETS.indexOf(curr);
+      if (idx === -1) return 1;
+      return idx > 0 ? SPEED_PRESETS[idx - 1] : curr;
+    });
+  }, []);
 
   // Interval timer for playback with breakpoint checking
   useEffect(() => {
@@ -104,7 +145,7 @@ export function useExecutionTimeline(trace = []) {
         setIsPlaying(false);
         return;
       }
-      const intervalMs = Math.max(250, Math.round(1400 / playbackSpeed));
+      const intervalMs = Math.max(100, Math.round(1000 / playbackSpeed));
       timerRef.current = setInterval(() => {
         setCurrentStepIndex((prev) => {
           if (prev >= totalSteps - 1) {
@@ -113,7 +154,7 @@ export function useExecutionTimeline(trace = []) {
           }
           const nextIdx = prev + 1;
           const nextStepObj = trace && trace[nextIdx];
-          // If next step hits a set breakpoint, pause on that line!
+          // Pause if next step hits a set breakpoint
           if (nextStepObj && breakpoints.has(nextStepObj.lineNumber)) {
             setIsPlaying(false);
             return nextIdx;
@@ -124,44 +165,65 @@ export function useExecutionTimeline(trace = []) {
     }
 
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
+      clearPlaybackTimer();
+    };
+  }, [isPlaying, playbackSpeed, totalSteps, trace, breakpoints, clearPlaybackTimer]);
+
+  // Standardized keyboard shortcuts (Space, ArrowLeft, ArrowRight, R, +, -)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const target = e.target;
+      const isInput = target && (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable ||
+        target.closest?.('.monaco-editor')
+      );
+      if (isInput) return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        prevStep();
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        nextStep();
+      } else if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        reset();
+      } else if (e.key === '+' || e.key === '=') {
+        e.preventDefault();
+        increaseSpeed();
+      } else if (e.key === '-' || e.key === '_') {
+        e.preventDefault();
+        decreaseSpeed();
       }
     };
-  }, [isPlaying, playbackSpeed, totalSteps, trace, breakpoints]);
 
-  // Accumulate stdout output from step 0 up to currentStepIndex
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [togglePlay, prevStep, nextStep, reset, increaseSpeed, decreaseSpeed]);
+
+  // Accumulate stdout output from step 0 up to safeIndex (WITHOUT incorrect Set deduplication)
   const cumulativeOutput = (() => {
     if (!trace || trace.length === 0) return [];
-    const seen = new Set();
-    const result = [];
-
-    // First check if currentStep already has an accumulated array
-    const currOut = currentStep?.output;
-    if (Array.isArray(currOut) && currOut.length > 0) {
-      // Check if previous steps also had outputs
-      for (let i = 0; i <= currentStepIndex && i < trace.length; i++) {
-        const stepOut = trace[i]?.output;
-        if (Array.isArray(stepOut)) {
-          for (const line of stepOut) {
-            if (line && !seen.has(line)) {
-              seen.add(line);
-              result.push(line);
-            }
-          }
-        }
-      }
-      return result.length > 0 ? result : currOut;
+    
+    // In our standardized trace model, each step's output is the cumulative list of lines
+    if (currentStep && Array.isArray(currentStep.output)) {
+      return currentStep.output;
     }
 
-    // Otherwise gather from all steps up to now
-    for (let i = 0; i <= currentStepIndex && i < trace.length; i++) {
+    // Fallback: gather sequentially from step 0 to safeIndex
+    const result = [];
+    for (let i = 0; i <= safeIndex && i < trace.length; i++) {
       const stepOut = trace[i]?.output;
       if (Array.isArray(stepOut)) {
         for (const line of stepOut) {
-          if (line && !seen.has(line)) {
-            seen.add(line);
+          if (typeof line === 'string' && line.trim()) {
             result.push(line);
           }
         }
@@ -176,7 +238,7 @@ export function useExecutionTimeline(trace = []) {
     const lastStep = trace[trace.length - 1];
     if (!lastStep) return null;
 
-    // 1. Check variables for direct results
+    // Check variables for direct results
     const vars = lastStep.variables || {};
     if (vars.result !== undefined) return String(vars.result);
     if (vars.ans !== undefined) return String(vars.ans);
@@ -190,22 +252,21 @@ export function useExecutionTimeline(trace = []) {
     if (vars.total !== undefined) return `Total: ${vars.total}`;
     if (vars.sum !== undefined) return `Sum: ${vars.sum}`;
 
-    // 2. Check last step output lines
+    // Check last step output lines
     if (Array.isArray(lastStep.output) && lastStep.output.length > 0) {
       return lastStep.output[lastStep.output.length - 1];
     }
 
-    // 3. Check dataStructureState label
+    // Check dataStructureState label
     if (lastStep.dataStructureState?.label) {
       return lastStep.dataStructureState.label;
     }
 
-    // 4. Return explanation or focusInfo
     return lastStep.dataStructureState?.focusInfo || 'Execution Completed Successfully';
   })();
 
   return {
-    currentStepIndex,
+    currentStepIndex: safeIndex,
     currentStep,
     totalSteps,
     isPlaying,
@@ -215,6 +276,8 @@ export function useExecutionTimeline(trace = []) {
     isAtEnd,
     nextStep,
     prevStep,
+    goToFirst,
+    goToLast,
     goToStep,
     play,
     pause,
@@ -226,5 +289,7 @@ export function useExecutionTimeline(trace = []) {
     executionState,
     cumulativeOutput,
     finalCorrectOutput,
+    increaseSpeed,
+    decreaseSpeed,
   };
 }

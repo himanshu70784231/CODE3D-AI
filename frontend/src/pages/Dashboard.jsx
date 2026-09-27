@@ -26,9 +26,25 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { SAMPLE_PROGRAMS } from '../utils/sampleCodes';
+import { STRIVER_PROBLEMS } from '../utils/striverCatalog';
+import { getExecutionHistory } from '../services/apiService';
 
 export default function Dashboard({ onNavigate }) {
   const { isBright } = useTheme();
+  const [historyStats, setHistoryStats] = React.useState({ totalExecutionsCount: 0, successfulCount: 0, recentExecutions: [] });
+
+  React.useEffect(() => {
+    getExecutionHistory().then((data) => {
+      if (data) {
+        const successful = (data.recentExecutions || []).filter(e => e.status === 'COMPLETED').length;
+        setHistoryStats({
+          totalExecutionsCount: data.totalExecutionsCount || (data.recentExecutions || []).length,
+          successfulCount: successful,
+          recentExecutions: (data.recentExecutions || []).slice(0, 3)
+        });
+      }
+    }).catch(() => {});
+  }, []);
 
   const workflowSteps = [
     {
@@ -116,6 +132,14 @@ export default function Dashboard({ onNavigate }) {
       action: () => onNavigate('striver'),
       primary: true,
       badge: '182 Problems (Days 1–27)',
+    },
+    {
+      title: '3D Algorithm Engine ⚡',
+      desc: 'Step-by-step 3D simulation for Bubble, Merge, Quick, Binary Search, BST, Graphs, and Heaps.',
+      icon: Zap,
+      action: () => onNavigate('algorithms'),
+      primary: true,
+      badge: '14 Core Algorithms',
     },
     {
       title: 'Learn DSA Catalog',
