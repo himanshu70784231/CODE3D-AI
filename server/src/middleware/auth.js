@@ -6,7 +6,10 @@ export const memoryUsers = new Map();
 
 export async function requireAuth(req, res, next) {
   const cookieName = process.env.COOKIE_NAME || 'code3d_session';
-  const sessionToken = req.cookies?.[cookieName] || req.headers['x-session-token'];
+  let sessionToken = req.cookies?.[cookieName] || req.headers['x-session-token'];
+  if (!sessionToken && req.headers.authorization) {
+    sessionToken = req.headers.authorization.replace(/^Bearer\s+/i, '');
+  }
 
   if (!sessionToken) {
     return res.status(401).json({
@@ -76,7 +79,10 @@ export async function requireAuth(req, res, next) {
 
 export async function optionalAuth(req, res, next) {
   const cookieName = process.env.COOKIE_NAME || 'code3d_session';
-  const sessionToken = req.cookies?.[cookieName] || req.headers['x-session-token'];
+  let sessionToken = req.cookies?.[cookieName] || req.headers['x-session-token'];
+  if (!sessionToken && req.headers.authorization) {
+    sessionToken = req.headers.authorization.replace(/^Bearer\s+/i, '');
+  }
 
   if (!sessionToken) {
     req.user = null;

@@ -64,6 +64,149 @@ test('API Endpoints Test Suite', async (t) => {
     assert.strictEqual(res.data.finalVariables.sum, 15);
   });
 
+  await t.test('POST /api/auth/register rejects duplicate email', async () => {
+    const res = await request('/api/auth/register', {
+      method: 'POST',
+      body: {
+        username: `duplicate_${Date.now()}`,
+        email: `tester_${Date.now()}@code3d.io`, // might collide or use fixed
+        password: 'password123',
+      },
+    });
+    // First create a fixed user
+    const u1 = await request('/api/auth/register', {
+      method: 'POST',
+      body: {
+        username: 'user_unique_1',
+        email: 'unique1@code3d.io',
+        password: 'password123',
+      },
+    });
+    // Duplicate email
+    const u2 = await request('/api/auth/register', {
+      method: 'POST',
+      body: {
+        username: 'user_unique_2',
+        email: 'unique1@code3d.io',
+        password: 'password123',
+      },
+    });
+    assert.strictEqual(u2.status, 409);
+    assert.strictEqual(u2.data.error, 'USER_EXISTS');
+  });
+
+  await t.test('POST /api/auth/login validates credentials', async () => {
+    // Correct login
+    const valid = await request('/api/auth/login', {
+      method: 'POST',
+      body: {
+        email: 'unique1@code3d.io',
+        password: 'password123',
+      },
+    });
+    assert.strictEqual(valid.status, 200);
+    assert.strictEqual(valid.data.success, true);
+    assert.ok(valid.data.sessionToken);
+
+    // Invalid password
+    const invalid = await request('/api/auth/login', {
+      method: 'POST',
+      body: {
+        email: 'unique1@code3d.io',
+        password: 'wrongpassword',
+      },
+    });
+    assert.strictEqual(invalid.status, 401);
+    assert.strictEqual(invalid.data.error, 'INVALID_CREDENTIALS');
+  });
+
+  let userAToken = '';
+  let userBToken = '';
+  let userAProjectId = '';
+
+  await t.test('POST /api/projects creates user-scoped project and validates ownership', async () => {
+    // Register User A
+    const resA = await request('/api/auth/register', {
+      method: 'POST',
+      body: {
+        username: 'owner_user_a',
+        email: 'owner_a@code3d.io',
+        password: 'password123',
+      },
+    });
+    userAToken = resA.data.sessionToken;
+
+    // Register User B
+    const resB = await request('/api/auth/register', {
+      method: 'POST',
+      body: {
+        username: 'owner_user_b',
+        email: 'owner_b@code3d.io',
+        password: 'password123',
+      },
+    });
+    userBToken = resB.data.sessionToken;
+
+    // User A creates project
+    const projRes = await request('/api/projects', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${userAToken}` },
+      body: {
+        name: 'Binary Search Tree 3D',
+        code: 'class BST {}',
+        language: 'java',
+        visualization_type: 'tree',
+      },
+    });
+    assert.strictEqual(projRes.status, 201);
+    assert.strictEqual(projRes.data.success, true);
+    userAProjectId = projRes.data.project.id;
+
+    // User A can access project
+    const getResA = await request(`/api/projects/${userAProjectId}`, {
+      headers: { Authorization: `Bearer ${userAToken}` },
+    });
+    assert.strictEqual(getResA.status, 200);
+    assert.strictEqual(getResA.data.project.name, 'Binary Search Tree 3D');
+
+    // User B CANNOT access User A's project (Ownership Isolation)
+    const getResB = await request(`/api/projects/${userAProjectId}`, {
+      headers: { Authorization: `Bearer ${userBToken}` },
+    });
+    assert.strictEqual(getResB.status, 404); // returns 404 or 403
+  });
+
+  await t.test('POST /api/quiz/attempts saves and retrieves user attempts', async () => {
+    const saveRes = await request('/api/quiz/attempts', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${userAToken}` },
+      body: {
+        quizMode: 'find_bug',
+        category: 'arrays',
+        score: 4,
+        totalQuestions: 5,
+        percentage: 80.0,
+      },
+    });
+    assert.strictEqual(saveRes.status, 201);
+    assert.strictEqual(saveRes.data.success, true);
+
+    const getRes = await request('/api/quiz/attempts', {
+      headers: { Authorization: `Bearer ${userAToken}` },
+    });
+    assert.strictEqual(getRes.status, 200);
+    assert.ok(getRes.data.attempts.length >= 1);
+  });
+
+  await t.test('POST /api/auth/logout invalidates session', async () => {
+    const logoutRes = await request('/api/auth/logout', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${userAToken}` },
+    });
+    assert.strictEqual(logoutRes.status, 200);
+    assert.strictEqual(logoutRes.data.success, true);
+  });
+
   await t.test('GET /api/dsa/topics returns topics list', async () => {
     const res = await request('/api/dsa/topics');
     assert.strictEqual(res.status, 200);
