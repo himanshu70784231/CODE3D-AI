@@ -4,14 +4,23 @@
  * Supports HttpOnly cookie credentials and resilient fallbacks.
  */
 
-const LOCAL_BACKEND_URL = 'http://localhost:5000/api';
 const LIVE_RENDER_URL = 'https://code3d-ai.onrender.com/api';
+const DEFAULT_LOCAL_URL = 'http://localhost:5000/api';
+const SPRING_LOCAL_URL = 'http://localhost:8080/api';
 
 const isLocalhost = typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL ||
-  (isLocalhost ? LOCAL_BACKEND_URL : LIVE_RENDER_URL);
+export let API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  (isLocalhost ? DEFAULT_LOCAL_URL : LIVE_RENDER_URL);
+
+// Auto-detect local active port between 5000 and 8080
+if (isLocalhost && !import.meta.env.VITE_API_URL) {
+  fetch('http://localhost:8080/api/health', { method: 'GET' })
+    .then((r) => { if (r.ok) API_BASE_URL = SPRING_LOCAL_URL; })
+    .catch(() => {});
+}
 
 /**
  * Standardized HTTP request function

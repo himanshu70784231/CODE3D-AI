@@ -15,16 +15,12 @@ export default function SavedVisualizationsPage({ onReplay }) {
   const [error, setError] = useState(null);
 
   const fetchSaved = async () => {
-    if (!isAuthenticated) {
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     setError(null);
     try {
       const res = await getSavedList();
       if (res?.success) {
-        setSavedItems(res.saved || []);
+        setSavedItems(res.saved || res.data || []);
       }
     } catch (err) {
       setError(err.message || 'Could not fetch saved items.');
@@ -96,52 +92,52 @@ export default function SavedVisualizationsPage({ onReplay }) {
         </div>
 
         {/* Not Logged In Notice */}
+        {/* Not Logged In Notice */}
         {!isAuthenticated && (
-          <div className={`p-8 rounded-2xl border text-center space-y-3 ${
-            isBright ? 'bg-white border-slate-200' : 'bg-slate-900/60 border-slate-800'
+          <div className={`p-4 rounded-xl border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs ${
+            isBright ? 'bg-cyan-50/60 border-cyan-200 text-cyan-900' : 'bg-cyan-950/30 border-cyan-800/40 text-cyan-200'
           }`}>
-            <Bookmark size={32} className="mx-auto text-cyan-400 opacity-60" />
-            <h3 className="text-base font-bold">Sign in to sync your saved visualizations</h3>
-            <p className={`text-xs max-w-md mx-auto ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>
-              Save your favorite algorithms, dry-run traces, and custom problems to PostgreSQL cloud storage.
-            </p>
+            <div className="flex items-center gap-2">
+              <Bookmark size={16} className="text-cyan-400 shrink-0" />
+              <span>Sign in to sync your saved programs to PostgreSQL / Neon cloud database.</span>
+            </div>
             <button
               onClick={openLoginModal}
-              className="px-4 py-2 rounded-lg text-xs font-bold bg-cyan-500 hover:bg-cyan-400 text-slate-950 cursor-pointer"
+              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-cyan-500 hover:bg-cyan-400 text-slate-950 shrink-0 cursor-pointer"
             >
-              Sign In to View Saved
+              Sign In
             </button>
           </div>
         )}
 
         {/* Loading & Error States */}
-        {isAuthenticated && loading && (
+        {loading && (
           <div className="text-center py-12 text-slate-400 text-xs">
-            Loading saved visualizations from database...
+            Loading saved visualizations...
           </div>
         )}
 
-        {isAuthenticated && error && (
+        {error && (
           <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
             {error}
           </div>
         )}
 
         {/* Empty State */}
-        {isAuthenticated && !loading && savedItems.length === 0 && (
+        {!loading && savedItems.length === 0 && (
           <div className={`p-12 rounded-2xl border text-center space-y-3 ${
             isBright ? 'bg-white border-slate-200' : 'bg-slate-900/40 border-slate-800'
           }`}>
             <Sparkles size={32} className="mx-auto text-amber-400 opacity-60" />
             <h3 className="text-base font-bold">No saved visualizations yet</h3>
             <p className={`text-xs max-w-md mx-auto ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>
-              Click "Save Visualization" inside the 3D Studio while visualizing any custom code.
+              Click "Save" inside the Visualizer while inspecting any custom code to add it here.
             </p>
           </div>
         )}
 
         {/* Cards Grid */}
-        {isAuthenticated && savedItems.length > 0 && (
+        {savedItems.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {savedItems.map((item) => (
               <div

@@ -5,14 +5,22 @@
 import { solvePersonalProblem, correctPersonalCode } from './personalProblemSolver';
 
 const LIVE_RENDER_URL = 'https://code3d-ai.onrender.com/api';
-const LOCAL_URL = 'http://localhost:5000/api';
+const LOCAL_URL_5000 = 'http://localhost:5000/api';
+const LOCAL_URL_8080 = 'http://localhost:8080/api';
 
 // When accessed from phone, GitHub Pages, or Vercel, always use the live Render backend!
 const isLocalhost = typeof window !== 'undefined' && 
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_URL || 
-  (isLocalhost ? LOCAL_URL : LIVE_RENDER_URL);
+let BACKEND_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_BACKEND_URL || 
+  (isLocalhost ? LOCAL_URL_5000 : LIVE_RENDER_URL);
+
+if (isLocalhost && !import.meta.env.VITE_BACKEND_URL) {
+  fetch('http://localhost:8080/api/health', { method: 'GET' })
+    .then((r) => { if (r.ok) BACKEND_BASE_URL = LOCAL_URL_8080; })
+    .catch(() => {});
+}
 
 async function smartFetch(endpoint, options = {}) {
   const fetchOpts = {
@@ -102,6 +110,70 @@ export async function deleteProject(id) {
   } catch (err) {
     return { success: false, message: 'Failed to delete project.' };
   }
+}
+
+// Saved Programs API (Section 29 & Section 39)
+export async function saveProgram(programData) {
+  try {
+    const res = await smartFetch('/programs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(programData),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {}
+
+  // Fallback to local storage persistence
+  try {
+    const existing = JSON.parse(localStorage.getItem('code3d_saved_programs') || '[]');
+    const newEntry = {
+      id: Date.now(),
+      title: programData.title || 'Untitled Program',
+      description: programData.description || '',
+      code: programData.code,
+      language: programData.language || 'java',
+      timeComplexity: programData.timeComplexity || 'O(n)',
+      spaceComplexity: programData.spaceComplexity || 'O(1)',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    existing.unshift(newEntry);
+    localStorage.setItem('code3d_saved_programs', JSON.stringify(existing));
+    return { success: true, data: newEntry };
+  } catch (e) {
+    return { success: false, message: 'Failed to save program' };
+  }
+}
+
+export async function fetchSavedPrograms() {
+  try {
+    const res = await smartFetch('/programs');
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.data && Array.isArray(data.data) && data.data.length > 0) {
+        return data;
+      }
+    }
+  } catch (err) {}
+
+  const localSaved = JSON.parse(localStorage.getItem('code3d_saved_programs') || '[]');
+  return { success: true, data: localSaved, saved: localSaved };
+}
+
+export async function deleteSavedProgram(id) {
+  try {
+    await smartFetch(`/programs/${id}`, { method: 'DELETE' });
+  } catch (err) {}
+
+  try {
+    const localSaved = JSON.parse(localStorage.getItem('code3d_saved_programs') || '[]');
+    const filtered = localSaved.filter((p) => p.id !== id);
+    localStorage.setItem('code3d_saved_programs', JSON.stringify(filtered));
+  } catch (e) {}
+
+  return { success: true };
 }
 
 // Quiz Attempts API (Section 48)

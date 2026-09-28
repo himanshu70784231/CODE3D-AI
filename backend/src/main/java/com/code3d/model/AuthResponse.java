@@ -1,5 +1,8 @@
 package com.code3d.model;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class AuthResponse {
     private boolean success;
     private String message;
@@ -10,6 +13,8 @@ public class AuthResponse {
     private String fullName;
     private String role;
     private String avatarUrl;
+    private Map<String, Object> user;
+    private Map<String, Object> data;
 
     public AuthResponse() {}
 
@@ -24,6 +29,21 @@ public class AuthResponse {
         res.fullName = fullName;
         res.role = role;
         res.avatarUrl = avatarUrl;
+
+        Map<String, Object> userMap = new HashMap<>();
+        userMap.put("id", userId);
+        userMap.put("username", username);
+        userMap.put("email", email);
+        userMap.put("fullName", fullName);
+        userMap.put("role", role);
+        userMap.put("avatarUrl", avatarUrl);
+        res.user = userMap;
+
+        Map<String, Object> dataMap = new HashMap<>(userMap);
+        dataMap.put("token", res.token);
+        dataMap.put("user", userMap);
+        res.data = dataMap;
+
         return res;
     }
 
@@ -60,4 +80,10 @@ public class AuthResponse {
 
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+
+    public Map<String, Object> getUser() { return user; }
+    public void setUser(Map<String, Object> user) { this.user = user; }
+
+    public Map<String, Object> getData() { return data; }
+    public void setData(Map<String, Object> data) { this.data = data; }
 }

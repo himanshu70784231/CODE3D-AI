@@ -16,7 +16,7 @@ public class AiExplanationController {
         this.explanationService = explanationService;
     }
 
-    @PostMapping("/explain")
+    @PostMapping({"/explain", "/ai/explain"})
     public ResponseEntity<ExplainResponse> explain(@RequestBody ExplainRequest request) {
         ExplainResponse response = explanationService.explain(request);
         return ResponseEntity.ok(response);

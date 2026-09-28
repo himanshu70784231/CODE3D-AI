@@ -69,7 +69,7 @@ export default function AccountMenu({ onClose }) {
       <div className="py-1 space-y-0.5">
         {isAuthenticated && (
           <button
-            onClick={() => handleAction(() => navigate('/settings'))}
+            onClick={() => handleAction(() => navigate('/profile'))}
             className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2 cursor-pointer transition ${
               isBright ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-slate-800 text-slate-300'
             }`}

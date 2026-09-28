@@ -917,8 +917,29 @@ public class DsaCatalogController {
                     """)
     );
 
-    @GetMapping("/concepts")
-    public ResponseEntity<List<DsaConcept>> getConcepts() {
-        return ResponseEntity.ok(concepts);
+    @GetMapping({"", "/", "/concepts"})
+    public ResponseEntity<java.util.Map<String, Object>> getAllDsaConcepts() {
+        java.util.Map<String, Object> res = new java.util.HashMap<>();
+        res.put("success", true);
+        res.put("data", concepts);
+        res.put("concepts", concepts);
+        return ResponseEntity.ok(res);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<java.util.Map<String, Object>> getDsaConceptById(@PathVariable String id) {
+        java.util.Optional<DsaConcept> match = concepts.stream()
+                .filter(c -> c.getId() != null && c.getId().equalsIgnoreCase(id))
+                .findFirst();
+        java.util.Map<String, Object> res = new java.util.HashMap<>();
+        if (match.isPresent()) {
+            res.put("success", true);
+            res.put("data", match.get());
+            return ResponseEntity.ok(res);
+        } else {
+            res.put("success", false);
+            res.put("error", java.util.Map.of("code", "NOT_FOUND", "message", "DSA concept not found: " + id));
+            return ResponseEntity.status(org.springframework.http.HttpStatus.NOT_FOUND).body(res);
+        }
     }
 }

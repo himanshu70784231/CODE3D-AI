@@ -23,6 +23,14 @@ public class ExecuteResponse {
         return response;
     }
 
+    public boolean isSuccess() {
+        return "SUCCESS".equalsIgnoreCase(status);
+    }
+
+    public boolean getSuccess() {
+        return isSuccess();
+    }
+
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 

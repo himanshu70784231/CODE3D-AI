@@ -5,6 +5,7 @@ import com.code3d.model.AuthRequest;
 import com.code3d.model.AuthResponse;
 import com.code3d.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -13,6 +14,7 @@ import java.util.Optional;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public AuthService(UserRepository userRepository) {
         this.userRepository = userRepository;
@@ -24,7 +26,7 @@ public class AuthService {
             userRepository.save(new UserRecord(
                     "himanshu",
                     "himanshu@code3d.edu",
-                    "admin123",
+                    passwordEncoder.encode("admin123"),
                     "Himanshu (Lead Architect)",
                     "Lead Architect",
                     "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
@@ -33,19 +35,10 @@ public class AuthService {
             userRepository.save(new UserRecord(
                     "student.alex",
                     "alex@college.edu",
-                    "student123",
+                    passwordEncoder.encode("student123"),
                     "Alex Rivera",
                     "Student Developer",
                     "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80"
-            ));
-
-            userRepository.save(new UserRecord(
-                    "judge.exhibition",
-                    "judge@techfest.org",
-                    "judge123",
-                    "Dr. Elena Vance (Judge)",
-                    "Exhibition Evaluator",
-                    "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80"
             ));
         }
     }
@@ -60,29 +53,30 @@ public class AuthService {
             return AuthResponse.error("Username or email is required");
         }
 
+        String rawPassword = request.getPassword();
+        if (rawPassword == null || rawPassword.isBlank()) {
+            return AuthResponse.error("Password is required");
+        }
+
         Optional<UserRecord> userOpt = userRepository.findByUsername(identifier);
         if (userOpt.isEmpty()) {
             userOpt = userRepository.findByEmail(identifier);
         }
 
         if (userOpt.isEmpty()) {
-            // For convenience in live student demos, if not found, allow quick auto-registration
-            UserRecord newUser = new UserRecord(
-                    identifier,
-                    identifier.contains("@") ? identifier : identifier + "@code3d.edu",
-                    request.getPassword() != null ? request.getPassword() : "demo123",
-                    identifier.substring(0, 1).toUpperCase() + identifier.substring(1),
-                    "Student Developer",
-                    "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80"
-            );
-            UserRecord saved = userRepository.save(newUser);
-            return AuthResponse.success(saved.getId(), saved.getUsername(), saved.getEmail(), saved.getFullName(), saved.getRole(), saved.getAvatarUrl());
+            return AuthResponse.error("Invalid credentials provided");
         }
 
         UserRecord user = userOpt.get();
-        // Check password if provided, or allow demo pass
-        if (request.getPassword() != null && !request.getPassword().isBlank() &&
-            !request.getPassword().equals(user.getPassword()) && !request.getPassword().equals("demo123")) {
+        boolean matches = passwordEncoder.matches(rawPassword, user.getPassword());
+        if (!matches && rawPassword.equals(user.getPassword())) {
+            matches = true;
+            // Upgrade legacy plain password to BCrypt hash
+            user.setPassword(passwordEncoder.encode(rawPassword));
+            userRepository.save(user);
+        }
+
+        if (!matches) {
             return AuthResponse.error("Invalid credentials provided");
         }
 
@@ -96,9 +90,15 @@ public class AuthService {
         if (request.getEmail() == null || request.getEmail().isBlank()) {
             return AuthResponse.error("Email is required");
         }
+        if (request.getPassword() == null || request.getPassword().length() < 6) {
+            return AuthResponse.error("Password must be at least 6 characters long");
+        }
 
         if (userRepository.existsByUsername(request.getUsername())) {
             return AuthResponse.error("Username is already taken");
+        }
+        if (userRepository.existsByEmail(request.getEmail())) {
+            return AuthResponse.error("Email is already registered");
         }
 
         String role = request.getRole() != null && !request.getRole().isBlank() ? request.getRole() : "Student Developer";
@@ -110,7 +110,7 @@ public class AuthService {
         UserRecord user = new UserRecord(
                 request.getUsername(),
                 request.getEmail(),
-                request.getPassword() != null ? request.getPassword() : "demo123",
+                passwordEncoder.encode(request.getPassword()),
                 fullName,
                 role,
                 avatar
@@ -120,12 +120,12 @@ public class AuthService {
         return AuthResponse.success(saved.getId(), saved.getUsername(), saved.getEmail(), saved.getFullName(), saved.getRole(), saved.getAvatarUrl());
     }
 
-    public AuthResponse demoLogin() {
-        Optional<UserRecord> user = userRepository.findByUsername("himanshu");
-        if (user.isPresent()) {
-            UserRecord u = user.get();
-            return AuthResponse.success(u.getId(), u.getUsername(), u.getEmail(), u.getFullName(), u.getRole(), u.getAvatarUrl());
+    public Optional<UserRecord> getCurrentUser(String usernameOrEmail) {
+        if (usernameOrEmail == null || usernameOrEmail.isBlank()) {
+            return userRepository.findAll().stream().findFirst();
         }
-        return AuthResponse.success(1L, "himanshu", "himanshu@code3d.edu", "Himanshu (Lead Architect)", "Lead Architect", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80");
+        Optional<UserRecord> opt = userRepository.findByUsername(usernameOrEmail);
+        if (opt.isPresent()) return opt;
+        return userRepository.findByEmail(usernameOrEmail);
     }
 }

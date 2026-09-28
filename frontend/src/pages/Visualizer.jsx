@@ -18,7 +18,7 @@ import { getExecutionTrace, extractNumbersFromCode } from '../services/execution
 import { validateSourceCode } from '../services/codeValidator';
 import { DEFAULT_JAVA_CODE, SAMPLE_PROGRAMS, LANGUAGE_DEFAULTS, CURRICULUM_CATEGORIES } from '../utils/sampleCodes';
 import { STRIVER_PROBLEMS } from '../utils/striverCatalog';
-import { executeProgram, analyzeCode, checkBackendHealth, recordExecutionHistory } from '../services/apiService';
+import { executeProgram, analyzeCode, checkBackendHealth, recordExecutionHistory, saveProgram } from '../services/apiService';
 import { executionManager } from '../execution/index.js';
 import { VisualizerErrorBoundary, EditorErrorBoundary } from '../components/ErrorBoundaries';
 import { useTheme } from '../context/ThemeContext';
@@ -26,6 +26,7 @@ import {
   Code2,
   Sparkles,
   HelpCircle,
+  Bookmark,
   Layers,
   Cpu,
   Server,
@@ -82,6 +83,26 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [activeStriverProblem, setActiveStriverProblem] = useState(null);
   const [mobileTab, setMobileTab] = useState('3d'); // '3d' | 'code' | 'state'
+  const [saveStatus, setSaveStatus] = useState(null); // null | 'SAVING' | 'SAVED' | 'ERROR'
+
+  const handleSaveProgram = async () => {
+    setSaveStatus('SAVING');
+    try {
+      await saveProgram({
+        title: selectedSample?.title || 'Custom Algorithm',
+        description: selectedSample?.description || 'Saved from Visualizer',
+        code,
+        language,
+        timeComplexity,
+        spaceComplexity,
+      });
+      setSaveStatus('SAVED');
+      setTimeout(() => setSaveStatus(null), 2500);
+    } catch (e) {
+      setSaveStatus('ERROR');
+      setTimeout(() => setSaveStatus(null), 2500);
+    }
+  };
 
   const {
     currentStepIndex,
@@ -895,8 +916,54 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
           </div>
         </div>
 
-        {/* Right Controls: State Panel Toggle, Full 3D Theater Mode, AI Tutor & Quiz */}
+        {/* Right Controls: AI Tutor, Quiz, Save, State Panel Toggle, Full 3D Theater Mode */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* AI Tutor Assistant Button */}
+          <button
+            onClick={() => setIsAiOpen(true)}
+            className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition border shadow-xs cursor-pointer ${
+              isBright
+                ? 'bg-purple-50 text-purple-900 border-purple-300 hover:bg-purple-100'
+                : 'bg-purple-950/70 hover:bg-purple-900 border-purple-700/60 text-purple-300'
+            }`}
+            title="AI Tutor: Step-by-step code explanation, hints and guidance"
+          >
+            <Sparkles size={13} className="text-purple-400" />
+            <span className="hidden sm:inline">AI Tutor</span>
+            <span className="sm:hidden">AI</span>
+          </button>
+
+          {/* Interactive Quiz Button */}
+          <button
+            onClick={() => setIsQuizOpen(true)}
+            className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition border shadow-xs cursor-pointer ${
+              isBright
+                ? 'bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100'
+                : 'bg-emerald-950/70 hover:bg-emerald-900 border-emerald-700/60 text-emerald-300'
+            }`}
+            title="Quiz: Test your understanding of this algorithm"
+          >
+            <HelpCircle size={13} className="text-emerald-400" />
+            <span>Quiz</span>
+          </button>
+
+          {/* Save Program Button */}
+          <button
+            onClick={handleSaveProgram}
+            disabled={saveStatus === 'SAVING'}
+            className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition border shadow-xs cursor-pointer ${
+              saveStatus === 'SAVED'
+                ? 'bg-emerald-600 text-white border-emerald-500'
+                : isBright
+                ? 'bg-blue-50 text-blue-900 border-blue-300 hover:bg-blue-100'
+                : 'bg-blue-950/70 hover:bg-blue-900 border-blue-700/60 text-blue-300'
+            }`}
+            title="Save this program to your collection"
+          >
+            <Bookmark size={13} className={saveStatus === 'SAVED' ? 'text-white' : 'text-blue-400'} />
+            <span className="hidden sm:inline">{saveStatus === 'SAVED' ? 'Saved! ✓' : saveStatus === 'SAVING' ? 'Saving...' : 'Save'}</span>
+          </button>
+
           {/* Toggle Program State Panel Button */}
           <button
             onClick={() => setShowStatePanel((prev) => !prev)}

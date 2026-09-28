@@ -146,23 +146,59 @@ export default function StatePanel({ currentStep, totalSteps, correctOutput = nu
             ? 'bg-slate-50/80 border-slate-200'
             : 'bg-slate-900/60 border-slate-800/80'
         }`}>
-          <div className="flex items-center gap-1.5 mb-2">
-            <Layers size={13} className={isBright ? 'text-cyan-600' : 'text-cyan-400'} />
-            <span className={`font-semibold text-xs ${isBright ? 'text-slate-800' : 'text-slate-300'}`}>
-              Call Stack
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <Layers size={13} className={isBright ? 'text-cyan-600' : 'text-cyan-400'} />
+              <span className={`font-semibold text-xs ${isBright ? 'text-slate-800' : 'text-slate-300'}`}>
+                Call Stack
+              </span>
+            </div>
+            <span className={`text-[10px] font-mono ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>
+              Depth: {(currentStep.callStack && currentStep.callStack.length) || 1}
             </span>
           </div>
-          <div className={`border rounded p-2 font-mono text-[11px] flex items-center justify-between ${
-            isBright
-              ? 'bg-white border-slate-200 text-slate-700'
-              : 'bg-slate-950/50 border-slate-800 text-slate-300'
-          }`}>
-            <span className={isBright ? 'text-cyan-700 font-semibold' : 'text-cyan-400'}>
-              Main.execute()
-            </span>
-            <span className={`text-[10px] ${isBright ? 'text-slate-500' : 'text-slate-500'}`}>
-              line {lineNumber}
-            </span>
+
+          <div className="space-y-1.5">
+            {currentStep.callStack && Array.isArray(currentStep.callStack) && currentStep.callStack.length > 0 ? (
+              currentStep.callStack.map((frame, idx) => {
+                const isTop = idx === currentStep.callStack.length - 1;
+                return (
+                  <div
+                    key={idx}
+                    className={`border rounded p-2 font-mono text-[11px] flex items-center justify-between transition-colors ${
+                      isTop
+                        ? isBright
+                          ? 'bg-cyan-50/80 border-cyan-300 text-cyan-900 shadow-2xs font-semibold'
+                          : 'bg-cyan-950/40 border-cyan-500/40 text-cyan-200 font-semibold'
+                        : isBright
+                        ? 'bg-white border-slate-200 text-slate-700'
+                        : 'bg-slate-950/50 border-slate-800 text-slate-400'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-[10px] opacity-60">#{idx + 1}</span>
+                      <span>{typeof frame === 'string' ? (frame.includes('(') ? frame : `${frame}()`) : (frame?.name || 'anonymous()')}</span>
+                    </span>
+                    <span className={`text-[10px] ${isTop ? (isBright ? 'text-cyan-700 font-bold' : 'text-cyan-400 font-bold') : 'opacity-60'}`}>
+                      {isTop ? `line ${lineNumber}` : (frame?.line ? `line ${frame.line}` : '')}
+                    </span>
+                  </div>
+                );
+              })
+            ) : (
+              <div className={`border rounded p-2 font-mono text-[11px] flex items-center justify-between ${
+                isBright
+                  ? 'bg-white border-slate-200 text-slate-700'
+                  : 'bg-slate-950/50 border-slate-800 text-slate-300'
+              }`}>
+                <span className={isBright ? 'text-cyan-700 font-semibold' : 'text-cyan-400'}>
+                  {currentStep?.scope ? (currentStep.scope.includes('(') ? currentStep.scope : `${currentStep.scope}()`) : 'main()'}
+                </span>
+                <span className={`text-[10px] ${isBright ? 'text-slate-500' : 'text-slate-500'}`}>
+                  line {lineNumber}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

@@ -13,6 +13,8 @@ import RegisterPage from './pages/RegisterPage';
 import SheetsPage from './pages/SheetsPage';
 import DsaProblemPage from './pages/DsaProblemPage';
 import SavedVisualizationsPage from './pages/SavedVisualizationsPage';
+import ProfilePage from './pages/ProfilePage';
+import NotFoundPage from './pages/NotFoundPage';
 import LoginModal from './components/LoginModal';
 import CodeDoctorModal from './components/CodeDoctorModal';
 import { AppErrorBoundary } from './components/ErrorBoundaries';
@@ -81,6 +83,7 @@ function MainAppContent() {
           <Route path="/dashboard" element={<Dashboard onNavigate={(tab) => navigate(tab === 'dashboard' ? '/' : `/${tab}`)} />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/signup" element={<RegisterPage />} />
           <Route path="/visualizer" element={<Visualizer initialConcept={selectedConcept} />} />
           <Route path="/visualize" element={<Visualizer initialConcept={selectedConcept} />} />
           <Route path="/algorithms" element={<DsaHub initialTab="algorithms" onSelectConcept={handleLaunchConcept} />} />
@@ -93,8 +96,9 @@ function MainAppContent() {
           <Route path="/saved" element={<SavedVisualizationsPage onReplay={handleLaunchConcept} />} />
           <Route path="/quiz" element={<QuizArena />} />
           <Route path="/history" element={<HistoryPage onRerunProgram={handleRerunFromHistory} />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
 

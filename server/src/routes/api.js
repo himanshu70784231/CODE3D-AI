@@ -28,9 +28,12 @@ router.get('/health', (req, res) => {
 
 // Authentication Routes (Section 8)
 router.post('/auth/register', authController.register);
+router.post('/auth/signup', authController.register);
 router.post('/auth/login', authController.login);
 router.post('/auth/logout', authController.logout);
 router.get('/auth/me', requireAuth, authController.getMe);
+router.get('/profile', requireAuth, authController.getMe);
+router.put('/profile', requireAuth, authController.getMe);
 
 // Execution Routes (Section 17)
 router.post('/execute', optionalAuth, executionController.runExecution);
@@ -44,18 +47,26 @@ router.get('/execute/languages', (req, res) => {
   });
 });
 
-// History Routes (Section 15)
+// History & Executions Routes (Section 15 & Section 39)
 router.get('/history', optionalAuth, historyController.getHistory);
 router.get('/history/:id', optionalAuth, historyController.getHistoryItem);
 router.delete('/history/:id', optionalAuth, historyController.deleteHistoryItem);
 router.delete('/history', optionalAuth, historyController.clearHistory);
+router.get('/executions', optionalAuth, historyController.getHistory);
+router.get('/executions/:id', optionalAuth, historyController.getHistoryItem);
+router.delete('/executions/:id', optionalAuth, historyController.deleteHistoryItem);
 
-// Saved Visualizations Routes (Section 14)
+// Saved Visualizations & Programs Routes (Section 14 & Section 39)
 router.get('/saved', requireAuth, savedController.getSavedList);
 router.get('/saved/:id', requireAuth, savedController.getSavedItem);
 router.post('/saved', requireAuth, savedController.createSaved);
 router.put('/saved/:id', requireAuth, savedController.updateSaved);
 router.delete('/saved/:id', requireAuth, savedController.deleteSaved);
+router.get('/programs', requireAuth, savedController.getSavedList);
+router.get('/programs/:id', requireAuth, savedController.getSavedItem);
+router.post('/programs', requireAuth, savedController.createSaved);
+router.put('/programs/:id', requireAuth, savedController.updateSaved);
+router.delete('/programs/:id', requireAuth, savedController.deleteSaved);
 
 // Projects Routes (Section 13)
 router.get('/projects', requireAuth, projectController.getProjects);
@@ -64,12 +75,15 @@ router.post('/projects', requireAuth, projectController.createProject);
 router.put('/projects/:id', requireAuth, projectController.updateProject);
 router.delete('/projects/:id', requireAuth, projectController.deleteProject);
 
-// Quiz Attempts Routes (Section 48)
+// Quiz Attempts Routes (Section 48 & Section 39)
 router.get('/quiz/attempts', requireAuth, quizController.getQuizAttempts);
 router.post('/quiz/attempts', requireAuth, quizController.recordQuizAttempt);
+router.get('/quiz', requireAuth, quizController.getQuizAttempts);
+router.post('/quiz/submit', requireAuth, quizController.recordQuizAttempt);
 
 // AI Contextual Explanation Routes (Section 47)
 router.post('/ai/explain', aiController.explainContext);
+router.post('/explain', aiController.explainContext);
 
 // Settings Routes
 router.get('/settings', requireAuth, settingsController.getSettings);

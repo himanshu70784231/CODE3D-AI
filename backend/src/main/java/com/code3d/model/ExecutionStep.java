@@ -14,10 +14,14 @@ public class ExecutionStep {
     private ConditionInfo condition;
     private List<String> output;
     private DataStructureState dataStructureState;
+    private List<String> callStack;
     private String explanation;
     private String aiHint;
 
     public ExecutionStep() {}
+
+    public List<String> getCallStack() { return callStack; }
+    public void setCallStack(List<String> callStack) { this.callStack = callStack; }
 
     public Integer getStepNumber() { return stepNumber; }
     public void setStepNumber(Integer stepNumber) { this.stepNumber = stepNumber; }

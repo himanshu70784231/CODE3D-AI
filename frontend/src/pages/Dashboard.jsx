@@ -206,7 +206,7 @@ export default function Dashboard({ onNavigate }) {
     { name: 'Three.js / R3F', role: '3D WebGL Rendering', color: 'text-purple-400' },
     { name: 'Monaco Editor', role: 'VS Code Editor Engine', color: 'text-sky-400' },
     { name: 'Tailwind CSS', role: 'Obsidian UI Styling', color: 'text-teal-400' },
-    { name: 'Aiven / H2', role: 'Cloud SQL Database', color: 'text-rose-400' },
+    { name: 'PostgreSQL (Neon) / H2', role: 'Relational Database', color: 'text-rose-400' },
   ];
 
   return (
@@ -244,51 +244,67 @@ export default function Dashboard({ onNavigate }) {
               </h1>
 
               <p className={`text-xl sm:text-2xl font-light italic ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
-                "Don't just read the code. Step inside its memory space."
+                "Write code → Analyze → Execute → Understand → Visualize in 3D"
               </p>
             </div>
 
             <p className={`text-sm sm:text-base md:text-lg leading-relaxed max-w-3xl ${
               isBright ? 'text-slate-600' : 'text-slate-300'
             }`}>
-              Execute Java, Python, C, C++, and JavaScript programs with real AST interpretation.
+              Execute custom Java, Python, C, C++, and JavaScript programs with real AST interpretation.
               Watch variables update, loop branches evaluate, arrays swap, and call stacks push in an interactive
               3D WebGL environment with atomic time-travel debugging.
             </p>
 
-            {/* CTAs */}
-            <div className="pt-2 flex flex-wrap items-center gap-4">
+            {/* CTAs: Visualizer | DSA Hub | AI Tutor | Quiz */}
+            <div className="pt-2 flex flex-wrap items-center gap-3 sm:gap-4">
               <button
+                id="home-btn-start-visualizer"
                 onClick={() => onNavigate('visualizer')}
-                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold px-7 py-3.5 rounded-xl text-sm flex items-center gap-3 transition shadow-lg shadow-cyan-500/30 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold px-6 py-3 rounded-xl text-sm flex items-center gap-2.5 transition shadow-lg shadow-cyan-500/30 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
               >
-                <Play size={18} className="fill-current" />
-                <span>Launch 3D Studio</span>
-                <ArrowRight size={16} />
+                <Play size={16} className="fill-current" />
+                <span>Start Visualizer</span>
+                <ArrowRight size={15} />
               </button>
 
               <button
-                onClick={() => onNavigate('striver')}
-                className={`border font-bold px-6 py-3.5 rounded-xl text-sm flex items-center gap-2.5 transition cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
-                  isBright
-                    ? 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900 shadow-sm'
-                    : 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/40 text-amber-300 shadow-amber-950/20'
-                }`}
-              >
-                <BookOpen size={17} className="text-amber-400" />
-                <span>Striver SDE Sheet (182)</span>
-              </button>
-
-              <button
+                id="home-btn-dsa-hub"
                 onClick={() => onNavigate('dsa')}
-                className={`border font-semibold px-5 py-3.5 rounded-xl text-sm flex items-center gap-2 transition cursor-pointer ${
+                className={`border font-semibold px-5 py-3 rounded-xl text-sm flex items-center gap-2 transition cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
                   isBright
                     ? 'bg-white hover:bg-slate-100 border-slate-300 text-slate-800 shadow-sm'
                     : 'bg-slate-900/90 hover:bg-slate-800 border-slate-700 text-slate-200'
                 }`}
               >
-                <Layers size={17} className={isBright ? 'text-cyan-600' : 'text-cyan-400'} />
-                <span>DSA Catalog</span>
+                <Layers size={16} className={isBright ? 'text-cyan-600' : 'text-cyan-400'} />
+                <span>DSA Hub</span>
+              </button>
+
+              <button
+                id="home-btn-ai-tutor"
+                onClick={() => onNavigate('ai')}
+                className={`border font-semibold px-5 py-3 rounded-xl text-sm flex items-center gap-2 transition cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
+                  isBright
+                    ? 'bg-purple-50 hover:bg-purple-100 border-purple-300 text-purple-900 shadow-sm'
+                    : 'bg-purple-950/40 hover:bg-purple-900/50 border-purple-500/40 text-purple-300'
+                }`}
+              >
+                <Sparkles size={16} className="text-purple-400" />
+                <span>AI Tutor</span>
+              </button>
+
+              <button
+                id="home-btn-quiz"
+                onClick={() => onNavigate('quiz')}
+                className={`border font-semibold px-5 py-3 rounded-xl text-sm flex items-center gap-2 transition cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
+                  isBright
+                    ? 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900 shadow-sm'
+                    : 'bg-amber-950/40 hover:bg-amber-900/50 border-amber-500/40 text-amber-300'
+                }`}
+              >
+                <HelpCircle size={16} className="text-amber-400" />
+                <span>Quiz</span>
               </button>
             </div>
           </div>

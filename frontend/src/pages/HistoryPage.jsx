@@ -7,6 +7,16 @@ export default function HistoryPage({ onRerunProgram }) {
   const { isBright } = useTheme();
   const [historyData, setHistoryData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState('ALL');
+
+  const filteredExecutions = (historyData?.recentExecutions || []).filter((rec) => {
+    const matchesLang = selectedLanguage === 'ALL' || (rec.language || 'java').toLowerCase() === selectedLanguage.toLowerCase();
+    const matchesQuery = !searchQuery ||
+      (rec.programTitle && rec.programTitle.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (rec.conceptId && rec.conceptId.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesLang && matchesQuery;
+  });
 
   const loadHistory = async () => {
     setLoading(true);
@@ -111,10 +121,10 @@ export default function HistoryPage({ onRerunProgram }) {
             isBright ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900/60 border-slate-800'
           }`}>
             <span className={`text-xs uppercase font-medium ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>
-              Database Mode
+              Database Engine
             </span>
             <div className={`text-lg font-bold font-mono mt-1 ${isBright ? 'text-slate-900' : 'text-white'}`}>
-              H2 / MySQL
+              PostgreSQL / Neon
             </div>
             <span className={`text-[10px] font-medium ${isBright ? 'text-emerald-700' : 'text-emerald-400'}`}>Active &amp; connected</span>
           </div>
@@ -136,9 +146,38 @@ export default function HistoryPage({ onRerunProgram }) {
         <div className={`border rounded-2xl p-6 space-y-4 shadow-xl transition-colors ${
           isBright ? 'bg-white border-slate-200 shadow-slate-200' : 'bg-slate-900/50 border-slate-800/90'
         }`}>
-          <div className="flex items-center gap-2 text-sm font-bold">
-            <Clock size={16} className={isBright ? 'text-cyan-600' : 'text-cyan-400'} />
-            <span className={isBright ? 'text-slate-900' : 'text-white'}>Recent Code Executions</span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm font-bold">
+              <Clock size={16} className={isBright ? 'text-cyan-600' : 'text-cyan-400'} />
+              <span className={isBright ? 'text-slate-900' : 'text-white'}>Recent Code Executions</span>
+            </div>
+
+            {/* Search and Language Filter */}
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Search executions..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={`text-xs px-2.5 py-1.5 rounded-lg border outline-none ${
+                  isBright ? 'bg-white border-slate-300 text-slate-800 focus:border-cyan-500' : 'bg-slate-950 border-slate-700 text-slate-200 focus:border-cyan-400'
+                }`}
+              />
+              <select
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+                className={`text-xs px-2.5 py-1.5 rounded-lg border outline-none cursor-pointer ${
+                  isBright ? 'bg-white border-slate-300 text-slate-800 focus:border-cyan-500' : 'bg-slate-950 border-slate-700 text-slate-200 focus:border-cyan-400'
+                }`}
+              >
+                <option value="ALL">All Languages</option>
+                <option value="java">Java</option>
+                <option value="python">Python</option>
+                <option value="javascript">JavaScript</option>
+                <option value="cpp">C++</option>
+                <option value="c">C</option>
+              </select>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -159,7 +198,7 @@ export default function HistoryPage({ onRerunProgram }) {
                 </tr>
               </thead>
               <tbody className={`divide-y ${isBright ? 'divide-slate-200' : 'divide-slate-800/60'}`}>
-                {historyData?.recentExecutions?.map((rec, idx) => (
+                {filteredExecutions.map((rec, idx) => (
                   <tr key={idx} className={`transition ${isBright ? 'hover:bg-slate-50' : 'hover:bg-slate-800/30'}`}>
                     <td className={`py-2.5 px-3 font-bold ${isBright ? 'text-cyan-700' : 'text-cyan-400'}`}>#{String(rec.id).slice(-6)}</td>
                     <td className={`py-2.5 px-3 font-sans font-medium ${isBright ? 'text-slate-900' : 'text-white'}`}>

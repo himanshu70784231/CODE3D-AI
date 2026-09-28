@@ -20,22 +20,31 @@ import UniversalExecutionVisualizer3D from './UniversalExecutionVisualizer3D';
 
 export const visualizerRegistry = {
   array: ArrayVisualizer3D,
+  ArrayVisualizer: ArrayVisualizer3D,
   sorting: SortingVisualizer3D,
+  SortingVisualizer: SortingVisualizer3D,
   searching: SortingVisualizer3D,
   linkedList: LinkedListVisualizer3D,
+  LinkedListVisualizer: LinkedListVisualizer3D,
   'linked-list': LinkedListVisualizer3D,
   'doubly-linked-list': LinkedListVisualizer3D,
   stack: StackVisualizer3D,
+  StackVisualizer: StackVisualizer3D,
   queue: QueueVisualizer3D,
+  QueueVisualizer: QueueVisualizer3D,
   deque: QueueVisualizer3D,
   tree: TreeVisualizer3D,
+  TreeVisualizer: TreeVisualizer3D,
   bst: TreeVisualizer3D,
+  BSTVisualizer: TreeVisualizer3D,
   avl: TreeVisualizer3D,
   'avl-tree': TreeVisualizer3D,
   'red-black-tree': TreeVisualizer3D,
   trie: TreeVisualizer3D,
   heap: HeapVisualizer3D,
+  HeapVisualizer: HeapVisualizer3D,
   graph: GraphVisualizer3D,
+  GraphVisualizer: GraphVisualizer3D,
   hashTable: HashTableVisualizer3D,
   'hash-table': HashTableVisualizer3D,
   'hash-map': HashTableVisualizer3D,
@@ -44,6 +53,11 @@ export const visualizerRegistry = {
   'dp-table': MatrixVisualizer3D,
   'dynamic-programming': MatrixVisualizer3D,
   recursion: RecursionVisualizer3D,
+  RecursionVisualizer: RecursionVisualizer3D,
+  callStack: RecursionVisualizer3D,
+  CallStackVisualizer: RecursionVisualizer3D,
+  variable: UniversalExecutionVisualizer3D,
+  VariableVisualizer: UniversalExecutionVisualizer3D,
   universal: UniversalExecutionVisualizer3D,
   'universal-execution': UniversalExecutionVisualizer3D,
 };
@@ -51,5 +65,5 @@ export const visualizerRegistry = {
 export function getVisualizerComponent(type) {
   if (!type) return ArrayVisualizer3D;
   const normalized = type.toLowerCase().trim().replace(/_/g, '-');
-  return visualizerRegistry[normalized] || visualizerRegistry[type.toLowerCase().trim()] || ArrayVisualizer3D;
+  return visualizerRegistry[type] || visualizerRegistry[normalized] || visualizerRegistry[type.toLowerCase().trim()] || ArrayVisualizer3D;
 }
