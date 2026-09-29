@@ -48,12 +48,23 @@ public class AuthService {
         if (identifier == null || identifier.isBlank()) {
             identifier = request.getEmail();
         }
+        if (identifier == null || identifier.isBlank()) {
+            identifier = request.getUsernameOrEmail();
+        }
+
+        if (identifier != null) {
+            identifier = identifier.trim();
+        }
 
         if (identifier == null || identifier.isBlank()) {
             return AuthResponse.error("Username or email is required");
         }
 
         String rawPassword = request.getPassword();
+        if (rawPassword != null) {
+            rawPassword = rawPassword.trim();
+        }
+
         if (rawPassword == null || rawPassword.isBlank()) {
             return AuthResponse.error("Password is required");
         }

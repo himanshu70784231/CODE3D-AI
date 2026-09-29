@@ -127,8 +127,13 @@ export default function AccountMenu({ onClose }) {
 
         {isAuthenticated && (
           <button
-            onClick={() => handleAction(() => logout())}
-            className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-rose-500/10 text-rose-500 flex items-center gap-2 cursor-pointer transition"
+            onClick={() =>
+              handleAction(async () => {
+                await logout();
+                navigate('/');
+              })
+            }
+            className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-rose-500/10 text-rose-500 flex items-center gap-2 cursor-pointer transition font-medium"
           >
             <LogOut size={13} />
             <span>Sign Out</span>

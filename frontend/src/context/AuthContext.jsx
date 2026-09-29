@@ -1,25 +1,37 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getCurrentUser, loginUser, registerUser, logoutUser } from '../services/auth.js';
+import {
+  login as apiLogin,
+  register as apiRegister,
+  logout as apiLogout,
+  getCurrentUser,
+  getStoredUser,
+} from '../services/authService.js';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  // Initialize from safe local session to avoid screen flicker on refresh
+  const [user, setUser] = useState(() => getStoredUser());
   const [loading, setLoading] = useState(true);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState('login'); // 'login' | 'register'
 
-  // Validate server-side session via HttpOnly cookie on mount
+  // Validate session on mount
   useEffect(() => {
     let isMounted = true;
     getCurrentUser()
       .then((res) => {
-        if (isMounted && res?.success && res.user) {
+        if (!isMounted) return;
+        if (res && res.success && res.user) {
           setUser(res.user);
+        } else if (!getStoredUser()) {
+          setUser(null);
         }
       })
       .catch(() => {
-        // Not authenticated
-        if (isMounted) setUser(null);
+        if (isMounted && !getStoredUser()) {
+          setUser(null);
+        }
       })
       .finally(() => {
         if (isMounted) setLoading(false);
@@ -32,10 +44,10 @@ export function AuthProvider({ children }) {
 
   const login = async (credentials) => {
     try {
-      const res = await loginUser(credentials);
+      const res = await apiLogin(credentials);
       if (res && res.success) {
         setUser(res.user);
-        return { success: true };
+        return { success: true, user: res.user };
       }
       return { success: false, message: res?.message || 'Login failed' };
     } catch (err) {
@@ -45,10 +57,10 @@ export function AuthProvider({ children }) {
 
   const register = async (userData) => {
     try {
-      const res = await registerUser(userData);
+      const res = await apiRegister(userData);
       if (res && res.success) {
         setUser(res.user);
-        return { success: true };
+        return { success: true, user: res.user };
       }
       return { success: false, message: res?.message || 'Registration failed' };
     } catch (err) {
@@ -58,12 +70,25 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await logoutUser();
-    } catch {}
-    setUser(null);
+      await apiLogout();
+    } finally {
+      setUser(null);
+    }
   };
 
-  const [authModalMode, setAuthModalMode] = useState('login'); // 'login' | 'register'
+  const openLoginModal = (mode = 'login') => {
+    setAuthModalMode(mode);
+    setIsLoginModalOpen(true);
+  };
+
+  const openRegisterModal = () => {
+    setAuthModalMode('register');
+    setIsLoginModalOpen(true);
+  };
+
+  const closeLoginModal = () => {
+    setIsLoginModalOpen(false);
+  };
 
   return (
     <AuthContext.Provider
@@ -77,15 +102,9 @@ export function AuthProvider({ children }) {
         isLoginModalOpen,
         authModalMode,
         setAuthModalMode,
-        openLoginModal: (mode = 'login') => {
-          setAuthModalMode(mode);
-          setIsLoginModalOpen(true);
-        },
-        openRegisterModal: () => {
-          setAuthModalMode('register');
-          setIsLoginModalOpen(true);
-        },
-        closeLoginModal: () => setIsLoginModalOpen(false),
+        openLoginModal,
+        openRegisterModal,
+        closeLoginModal,
       }}
     >
       {children}

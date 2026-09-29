@@ -2,19 +2,20 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Box, Lock, Mail, User, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Box, Lock, User, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export default function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const { isBright } = useTheme();
   const navigate = useNavigate();
 
-  const [usernameOrEmail, setUsernameOrEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // If already authenticated, redirect to dashboard or visualize
+  // If already authenticated, redirect to dashboard
   React.useEffect(() => {
     if (isAuthenticated) {
       navigate('/dashboard');
@@ -24,20 +25,34 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
 
-    if (!usernameOrEmail || !password) {
-      setError('Please enter your email or username and password.');
+    const cleanIdentifier = identifier.trim();
+    const cleanPassword = password.trim();
+
+    if (!cleanIdentifier) {
+      setError('Username or email is required');
+      return;
+    }
+
+    if (!cleanPassword) {
+      setError('Password is required');
       return;
     }
 
     setIsSubmitting(true);
-    const res = await login({ usernameOrEmail, password });
-    setIsSubmitting(false);
-
-    if (res.success) {
-      navigate('/dashboard');
-    } else {
-      setError(res.message || 'Login failed. Please check your credentials.');
+    try {
+      const res = await login({ identifier: cleanIdentifier, password: cleanPassword });
+      if (res && res.success) {
+        setSuccess('Signed in successfully! Redirecting...');
+        setTimeout(() => navigate('/dashboard'), 400);
+      } else {
+        setError(res?.message || 'Invalid username or password');
+      }
+    } catch (err) {
+      setError(err.message || 'Login failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -57,16 +72,23 @@ export default function LoginPage() {
           <div className="inline-flex p-3 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 text-slate-950 shadow-lg shadow-cyan-500/30 mb-2">
             <Box size={24} className="stroke-[2.5]" />
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Welcome Back</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight">Sign In to CODE3D AI</h1>
           <p className={`text-xs ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>
-            Log in to access your saved 3D visualizations, cloud progress, and execution history.
+            Log in to view saved 3D visualizations, cloud progress, and execution history.
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+          <div role="alert" className="mb-6 p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
             <AlertCircle size={15} className="shrink-0" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {success && (
+          <div role="status" className="mb-6 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
+            <CheckCircle2 size={15} className="shrink-0 text-emerald-400" />
+            <span>{success}</span>
           </div>
         )}
 
@@ -79,15 +101,17 @@ export default function LoginPage() {
               <User size={16} className={`absolute left-3 top-3 ${isBright ? 'text-slate-400' : 'text-slate-500'}`} />
               <input
                 type="text"
-                value={usernameOrEmail}
-                onChange={(e) => setUsernameOrEmail(e.target.value)}
-                placeholder="developer@example.com"
+                value={identifier}
+                onChange={(e) => {
+                  setIdentifier(e.target.value);
+                  if (error) setError('');
+                }}
+                placeholder="e.g. himanshu or himanshu@code3d.edu"
                 className={`w-full pl-9 pr-3 py-2.5 rounded-lg text-xs border focus:outline-none focus:ring-2 focus:ring-cyan-500 transition ${
                   isBright
                     ? 'bg-slate-50 border-slate-300 text-slate-900'
                     : 'bg-slate-950 border-slate-800 text-white'
                 }`}
-                required
               />
             </div>
           </div>
@@ -101,14 +125,16 @@ export default function LoginPage() {
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (error) setError('');
+                }}
                 placeholder="••••••••"
                 className={`w-full pl-9 pr-3 py-2.5 rounded-lg text-xs border focus:outline-none focus:ring-2 focus:ring-cyan-500 transition ${
                   isBright
                     ? 'bg-slate-50 border-slate-300 text-slate-900'
                     : 'bg-slate-950 border-slate-800 text-white'
                 }`}
-                required
               />
             </div>
           </div>

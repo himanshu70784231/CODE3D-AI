@@ -21,8 +21,11 @@ export let API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
 export async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
 
+  const token = typeof window !== 'undefined' ? localStorage.getItem('code3d_auth_token') : null;
+
   const headers = {
     'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...(options.headers || {}),
   };
 
@@ -37,7 +40,15 @@ export async function apiRequest(endpoint, options = {}) {
     const data = await res.json().catch(() => null);
 
     if (!res.ok) {
-      const errorMsg = data?.message || data?.error || `HTTP ${res.status}: ${res.statusText}`;
+      let errorMsg = data?.message || data?.error;
+      if (!errorMsg) {
+        if (res.status === 401) errorMsg = 'Invalid username or password.';
+        else if (res.status === 403) errorMsg = 'Access denied. Please log in.';
+        else if (res.status === 409) errorMsg = 'An account with these details already exists.';
+        else if (res.status === 400) errorMsg = 'Invalid request parameters.';
+        else if (res.status >= 500) errorMsg = 'Server is currently experiencing issues. Please try again shortly.';
+        else errorMsg = `Request failed (HTTP ${res.status})`;
+      }
       const error = new Error(errorMsg);
       error.status = res.status;
       error.data = data;
@@ -46,10 +57,9 @@ export async function apiRequest(endpoint, options = {}) {
 
     return data;
   } catch (err) {
-    // If local backend is unreachable in dev, log clear notice
     if (err.status) throw err;
-
-    console.warn(`API call to ${url} failed network connection:`, err.message);
-    throw new Error(`Cannot connect to CODE3D backend server at ${API_BASE_URL}. Ensure server is running on port 5000.`);
+    // Network / offline failure
+    throw new Error('Unable to connect to CODE3D backend server. Please verify the service is running.');
   }
 }
+

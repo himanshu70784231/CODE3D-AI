@@ -21,6 +21,8 @@ import { AppErrorBoundary } from './components/ErrorBoundaries';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 
+import ProtectedRoute from './components/ProtectedRoute';
+
 function MainAppContent() {
   const { user } = useAuth();
   const { isBright } = useTheme();
@@ -93,10 +95,31 @@ function MainAppContent() {
           <Route path="/sheets" element={<SheetsPage onSelectProblem={handleLaunchConcept} />} />
           <Route path="/sheets/:sheetSlug" element={<SheetsPage onSelectProblem={handleLaunchConcept} />} />
           <Route path="/striver" element={<DsaHub initialTab="striver" onSelectConcept={handleLaunchConcept} />} />
-          <Route path="/saved" element={<SavedVisualizationsPage onReplay={handleLaunchConcept} />} />
+          <Route
+            path="/saved"
+            element={
+              <ProtectedRoute title="Saved Visualizations" message="Please sign in to view and manage your saved 3D algorithm visualizations.">
+                <SavedVisualizationsPage onReplay={handleLaunchConcept} />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/quiz" element={<QuizArena />} />
-          <Route path="/history" element={<HistoryPage onRerunProgram={handleRerunFromHistory} />} />
-          <Route path="/profile" element={<ProfilePage />} />
+          <Route
+            path="/history"
+            element={
+              <ProtectedRoute title="Execution History" message="Please sign in to view your saved execution history, simulation logs, and quiz results.">
+                <HistoryPage onRerunProgram={handleRerunFromHistory} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute title="Developer Profile" message="Please sign in to view your account profile and learning analytics.">
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Box, ChevronDown, Sun, Moon, User } from 'lucide-react';
+import { Box, ChevronDown, Sun, Moon, User, UserPlus } from 'lucide-react';
 import { checkBackendHealth } from '../services/apiService';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -66,7 +66,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
         ? 'bg-white/95 border-slate-200 shadow-xs'
         : 'bg-[#090d16]/95 border-slate-800/80 shadow-md shadow-black/20'
     }`}>
-      {/* Brand Logo: CODE3D-AI (No home icon inside or beside) */}
+      {/* Brand Logo: CODE3D-AI */}
       <div
         className="flex items-center gap-2 cursor-pointer transition hover:opacity-90 shrink-0"
         onClick={() => navigate('/')}
@@ -112,7 +112,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
         })}
       </nav>
 
-      {/* Right Side: Theme Toggle & Unified Account Dropdown */}
+      {/* Right Side: Theme Toggle & Authentication Controls */}
       <div className="flex items-center gap-2">
         {/* Dynamic Dark / Bright Mode Toggle Button */}
         <button
@@ -138,46 +138,62 @@ export default function Navbar({ activeTab, setActiveTab }) {
           )}
         </button>
 
-        {/* Section 4 & 6: Unified Account Dropdown (Save, History, Settings inside Account) */}
-        <div className="relative" ref={accountMenuRef}>
-          <button
-            onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
-            className={`h-8 flex items-center gap-1.5 px-2.5 rounded-lg border text-xs font-semibold transition cursor-pointer ${
-              isAuthenticated && user
-                ? isBright
+        {/* Dynamic Auth Header: Logged in (Avatar + Dropdown) vs Logged out (Sign In / Register) */}
+        {!isAuthenticated ? (
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => openLoginModal('login')}
+              className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-bold transition cursor-pointer shadow-xs ${
+                isBright
+                  ? 'bg-cyan-600 hover:bg-cyan-500 text-white'
+                  : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950'
+              }`}
+            >
+              <User size={13} />
+              <span>Sign In</span>
+            </button>
+            <button
+              onClick={() => openRegisterModal()}
+              className={`h-8 hidden sm:flex items-center gap-1.5 px-3 rounded-lg border text-xs font-semibold transition cursor-pointer ${
+                isBright
+                  ? 'border-slate-300 hover:bg-slate-100 text-slate-700'
+                  : 'border-slate-700 hover:bg-slate-800 text-slate-200'
+              }`}
+            >
+              <UserPlus size={13} />
+              <span>Register</span>
+            </button>
+          </div>
+        ) : (
+          <div className="relative" ref={accountMenuRef}>
+            <button
+              onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
+              className={`h-8 flex items-center gap-1.5 px-2.5 rounded-lg border text-xs font-semibold transition cursor-pointer ${
+                isBright
                   ? 'bg-slate-100 border-slate-200 hover:bg-slate-200/80 text-slate-800'
                   : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-200'
-                : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 border-cyan-400 shadow-xs'
-            }`}
-          >
-            {isAuthenticated && user ? (
-              <>
-                <img
-                  src={user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
-                  alt={user?.fullName || user?.username || 'User'}
-                  className="w-5 h-5 rounded-full object-cover border border-cyan-500/40"
-                />
-                <span className="hidden sm:inline font-bold">
-                  {user?.fullName ? user.fullName.split(' ')[0] : (user?.username || 'Account')}
-                </span>
-                <ChevronDown size={12} className={isBright ? 'text-slate-500' : 'text-slate-400'} />
-              </>
-            ) : (
-              <>
-                <User size={13} />
-                <span>Account</span>
-                <ChevronDown size={12} />
-              </>
-            )}
-          </button>
+              }`}
+            >
+              <img
+                src={user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                alt={user?.fullName || user?.username || 'User'}
+                className="w-5 h-5 rounded-full object-cover border border-cyan-500/40"
+              />
+              <span className="hidden sm:inline font-bold">
+                {user?.fullName ? user.fullName.split(' ')[0] : (user?.username || 'Account')}
+              </span>
+              <ChevronDown size={12} className={isBright ? 'text-slate-500' : 'text-slate-400'} />
+            </button>
 
-          {/* Account Dropdown Menu (Section 9) */}
-          {isAccountMenuOpen && (
-            <div className="absolute right-0 mt-2 z-50">
-              <AccountMenu onClose={() => setIsAccountMenuOpen(false)} />
-            </div>
-          )}
-        </div>
+            {/* Account Dropdown Menu */}
+            {isAccountMenuOpen && (
+              <div className="absolute right-0 mt-2 z-50">
+                <AccountMenu onClose={() => setIsAccountMenuOpen(false)} />
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </header>
   );
