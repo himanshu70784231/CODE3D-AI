@@ -60,8 +60,24 @@ export default function LoginModal() {
       return;
     }
 
+    if (cleanIdentifier.includes('@')) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(cleanIdentifier)) {
+        setError('Please enter a valid email address (e.g. name@example.com)');
+        return;
+      }
+    } else if (cleanIdentifier.length < 3) {
+      setError('Username must be at least 3 characters long');
+      return;
+    }
+
     if (!cleanPassword) {
       setError('Password is required');
+      return;
+    }
+
+    if (cleanPassword.length < 6) {
+      setError('Password must be at least 6 characters long');
       return;
     }
 

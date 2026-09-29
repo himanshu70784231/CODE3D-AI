@@ -10,7 +10,7 @@ export default defineConfig(({ command, mode }) => ({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  base: command === 'build' || mode === 'production' || process.env.NODE_ENV === 'production' ? '/CODE3D-AI/' : '/',
+  base: process.env.VITE_BASE_PATH || (process.env.GITHUB_PAGES ? '/CODE3D-AI/' : '/'),
   server: {
     port: 5173,
     open: false,

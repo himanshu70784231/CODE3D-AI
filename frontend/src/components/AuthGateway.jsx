@@ -45,8 +45,23 @@ export default function AuthGateway() {
         setError('Please enter your username or email');
         return;
       }
+      if (cleanId.includes('@')) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(cleanId)) {
+          setError('Please enter a valid email address');
+          return;
+        }
+      } else if (cleanId.length < 3) {
+        setError('Username must be at least 3 characters long');
+        return;
+      }
+
       if (!cleanPass) {
         setError('Please enter your password');
+        return;
+      }
+      if (cleanPass.length < 6) {
+        setError('Password must be at least 6 characters long');
         return;
       }
 
