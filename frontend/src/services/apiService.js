@@ -12,9 +12,13 @@ const LOCAL_URL_5000 = 'http://localhost:5000/api';
 const isLocalhost = typeof window !== 'undefined' && 
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-let BACKEND_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
+const rawBackendUrl = import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_NODE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_BACKEND_URL || 
   (isLocalhost ? LOCAL_URL_8080 : LIVE_RENDER_URL);
+
+let BACKEND_BASE_URL = rawBackendUrl.endsWith('/') ? rawBackendUrl.slice(0, -1) : rawBackendUrl;
 
 async function smartFetch(endpoint, options = {}) {
   const fetchOpts = {

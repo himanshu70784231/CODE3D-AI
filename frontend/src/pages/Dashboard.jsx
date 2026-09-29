@@ -1,561 +1,303 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Play,
   Layers,
   Code2,
   Sparkles,
-  HelpCircle,
-  Activity,
   ArrowRight,
   Box,
-  CheckCircle,
   Cpu,
-  BarChart3,
-  TrendingUp,
   History,
   BookOpen,
-  Scale,
   Terminal,
   Zap,
-  Shield,
-  Eye,
-  GitBranch,
-  Binary,
-  Database,
   CheckCircle2,
+  Clock,
+  Database,
+  ExternalLink,
 } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
-import { SAMPLE_PROGRAMS } from '../utils/sampleCodes';
-import { STRIVER_PROBLEMS } from '../utils/striverCatalog';
-import { getExecutionHistory } from '../services/apiService';
+import { SAMPLE_PROGRAMS } from '../utils/sampleCodes.js';
+import { ALGORITHM_CATALOG } from '../algorithms/index.js';
+import { getExecutionHistory } from '../services/apiService.js';
 import { getDashboardStats } from '../services/dashboard.js';
 
 export default function Dashboard({ onNavigate }) {
-  const { isBright } = useTheme();
-  const [historyStats, setHistoryStats] = React.useState({ totalExecutionsCount: 0, successfulCount: 0, recentExecutions: [] });
+  const [historyStats, setHistoryStats] = useState({
+    totalExecutionsCount: 0,
+    successfulCount: 0,
+    recentExecutions: [],
+  });
 
-  React.useEffect(() => {
+  useEffect(() => {
     getDashboardStats()
       .then((res) => {
         if (res?.success && res.stats) {
           const recent = (res.stats.recentExecutions || []).map((e) => ({
             id: e.id,
             programTitle: e.title || 'Simulation',
-            language: e.language,
-            totalSteps: e.stepCount,
-            status: e.status,
+            language: e.language || 'java',
+            totalSteps: e.stepCount || 10,
+            status: e.status || 'COMPLETED',
             executedAt: new Date(e.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           }));
           setHistoryStats({
             totalExecutionsCount: res.stats.totalExecutions || 0,
             successfulCount: res.stats.totalExecutions || 0,
-            recentExecutions: recent.slice(0, 3),
+            recentExecutions: recent.slice(0, 5),
           });
         } else {
           fallbackHistory();
         }
       })
-      .catch(() => {
-        fallbackHistory();
-      });
+      .catch(() => fallbackHistory());
 
     function fallbackHistory() {
-      getExecutionHistory().then((data) => {
-        if (data) {
-          const successful = (data.recentExecutions || []).filter(e => e.status === 'COMPLETED').length;
-          setHistoryStats({
-            totalExecutionsCount: data.totalExecutionsCount || (data.recentExecutions || []).length,
-            successfulCount: successful,
-            recentExecutions: (data.recentExecutions || []).slice(0, 3)
-          });
-        }
-      }).catch(() => {});
+      getExecutionHistory()
+        .then((data) => {
+          if (data) {
+            const successful = (data.recentExecutions || []).filter((e) => e.status === 'COMPLETED').length;
+            setHistoryStats({
+              totalExecutionsCount: data.totalExecutionsCount || (data.recentExecutions || []).length,
+              successfulCount: successful,
+              recentExecutions: (data.recentExecutions || []).slice(0, 5),
+            });
+          }
+        })
+        .catch(() => {});
     }
   }, []);
 
-  const workflowSteps = [
+  const quickStartTemplates = [
     {
-      num: '01',
-      title: 'Write or Paste Code',
-      desc: 'Enter Java, Python, C, C++, or JavaScript in a full Monaco code editor with live syntax diagnostics.',
-      icon: Code2,
-      color: 'from-cyan-500 to-blue-500'
+      title: 'Array Traversal & Iteration',
+      category: 'Arrays',
+      lang: 'Java',
+      complexity: 'O(n)',
+      desc: 'Step through an array with index pointers, loop conditions, and atomic memory updates.',
+      progId: 'array-loop',
     },
     {
-      num: '02',
-      title: 'Step Through Execution',
-      desc: 'Control time with Play, Pause, Step Forward (F10), Step Back, and Glyph Margin Breakpoints.',
-      icon: Play,
-      color: 'from-blue-500 to-indigo-500'
+      title: 'Binary Search (Two Pointers)',
+      category: 'Searching',
+      lang: 'Java',
+      complexity: 'O(log n)',
+      desc: 'Halve the search space iteratively with left, right, and mid pointer visualization.',
+      progId: 'binary-search',
     },
     {
-      num: '03',
-      title: 'Inspect Variables & Memory',
-      desc: 'Watch values update in real-time with atomic diff highlighting, array slot indexing, and branch evaluations.',
-      icon: Cpu,
-      color: 'from-purple-500 to-pink-500'
+      title: 'Bubble Sort (Swapping in 3D)',
+      category: 'Sorting',
+      lang: 'Java',
+      complexity: 'O(n²)',
+      desc: 'Observe adjacent comparisons and 3D slot swaps until the array is fully sorted.',
+      progId: 'bubble-sort',
     },
     {
-      num: '04',
-      title: 'Master 3D Data Structures',
-      desc: 'Gain spatial intuition as arrays, trees, graphs, heaps, and matrices animate in 3D WebGL space.',
-      icon: Box,
-      color: 'from-emerald-500 to-teal-500'
-    }
-  ];
-
-  const featureCards = [
-    {
-      title: 'Real AST Execution Engine',
-      desc: 'Powered by JavaParser in the Spring Boot backend and client AST interpreter. No fake hardcoded traces.',
-      icon: Terminal,
-      badge: 'AST Sandboxed',
+      title: 'Two Sum Problem',
+      category: 'Hash Map',
+      lang: 'Java',
+      complexity: 'O(n)',
+      desc: 'Find two indices that sum to target using a lookup table in 3D space.',
+      progId: 'two-sum',
     },
-    {
-      title: 'Interactive 3D Visualizers',
-      desc: '12 dedicated 3D visualizers including Arrays, Linked Lists, Trees, Graphs, Heaps, and Dynamic Programming.',
-      icon: Box,
-      badge: '12 Structures',
-    },
-    {
-      title: 'Monaco Debugger & Breakpoints',
-      desc: 'Click the glyph margin to toggle red breakpoints. Execution halts automatically on breakpoint lines.',
-      icon: Shield,
-      badge: 'F5 / F10 Debugger',
-    },
-    {
-      title: "Striver's SDE Sheet (182 Problems)",
-      desc: 'Full 182-problem curriculum across Days 1–27 with problem statements, optimal code, and 3D traces.',
-      icon: BookOpen,
-      badge: '182 Curated',
-    },
-    {
-      title: 'Algorithm Compare Mode',
-      desc: 'Benchmark two algorithms side-by-side (e.g. Linear vs Binary Search, Bubble vs Quick Sort) with operation counts.',
-      icon: Scale,
-      badge: 'Dual Benchmark',
-    },
-    {
-      title: 'Multi-Language Support',
-      desc: 'Simulate and visualize code written in Java 21, Python 3, C17, C++20, and Node.js JavaScript.',
-      icon: GitBranch,
-      badge: '5 Languages',
-    },
-  ];
-
-  const modules = [
-    {
-      title: 'Launch 3D Studio',
-      desc: 'Step inside execution memory. Inspect arrays, variables, and loops in interactive 3D space.',
-      icon: Play,
-      action: () => onNavigate('visualizer'),
-      primary: true,
-      badge: 'Live Studio',
-    },
-    {
-      title: "Striver's SDE Sheet 📜",
-      desc: 'Master the top 182 SDE interview problems across Days 1–27 with interactive 3D WebGL trace.',
-      icon: BookOpen,
-      action: () => onNavigate('striver'),
-      primary: true,
-      badge: '182 Problems (Days 1–27)',
-    },
-    {
-      title: '3D Algorithm Engine ⚡',
-      desc: 'Step-by-step 3D simulation for Bubble, Merge, Quick, Binary Search, BST, Graphs, and Heaps.',
-      icon: Zap,
-      action: () => onNavigate('algorithms'),
-      primary: true,
-      badge: '14 Core Algorithms',
-    },
-    {
-      title: 'Learn DSA Catalog',
-      desc: 'Master Linked Lists, Stacks, Queues, Binary Trees, and sorting algorithms in 3D.',
-      icon: Layers,
-      action: () => onNavigate('dsa'),
-      badge: `${SAMPLE_PROGRAMS.length} Concepts`,
-    },
-    {
-      title: 'Quiz Arena',
-      desc: 'Challenge algorithmic intuition by predicting variables and branch evaluations.',
-      icon: HelpCircle,
-      action: () => onNavigate('quiz'),
-      badge: 'Challenge',
-    },
-    {
-      title: 'Execution History',
-      desc: 'View recorded simulation traces, database audit logs, and past quiz attempts.',
-      icon: History,
-      action: () => onNavigate('history'),
-      badge: 'Database',
-    },
-    {
-      title: 'Settings & Cloud DB',
-      desc: 'Configure backend connections (Aiven, Render, Railway) and personalize simulation speeds.',
-      icon: Cpu,
-      action: () => onNavigate('settings'),
-      badge: 'Configuration',
-    },
-  ];
-
-  const techStack = [
-    { name: 'Java 21 LTS', role: 'Language Platform', color: 'text-amber-400' },
-    { name: 'Spring Boot 3', role: 'REST Backend API', color: 'text-emerald-400' },
-    { name: 'JavaParser', role: 'AST Compilation Engine', color: 'text-blue-400' },
-    { name: 'React 18 + Vite', role: 'High-Speed Frontend', color: 'text-cyan-400' },
-    { name: 'Three.js / R3F', role: '3D WebGL Rendering', color: 'text-purple-400' },
-    { name: 'Monaco Editor', role: 'VS Code Editor Engine', color: 'text-sky-400' },
-    { name: 'Tailwind CSS', role: 'Obsidian UI Styling', color: 'text-teal-400' },
-    { name: 'PostgreSQL (Neon) / H2', role: 'Relational Database', color: 'text-rose-400' },
   ];
 
   return (
-    <div className={`flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 select-none transition-colors duration-200 ${
-      isBright ? 'bg-slate-50 text-slate-900' : 'bg-[#070b14] text-slate-100'
-    }`}>
-      <div className="max-w-7xl mx-auto space-y-12 pb-12">
-        {/* Hero Section */}
-        <div className={`relative rounded-3xl p-8 sm:p-12 md:p-16 overflow-hidden shadow-2xl border transition-colors ${
-          isBright
-            ? 'bg-gradient-to-b from-white via-cyan-50/30 to-slate-100 border-slate-200 text-slate-900 shadow-slate-200'
-            : 'bg-gradient-to-b from-slate-900/90 via-slate-950 to-[#070b14] border-cyan-500/30 shadow-2xl shadow-cyan-950/40 text-white'
-        }`}>
-          {/* Vibrant background glow effects */}
-          <div className="absolute -top-32 -right-32 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 max-w-4xl space-y-6">
-            <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-mono font-semibold border ${
-              isBright
-                ? 'bg-cyan-50 border-cyan-300 text-cyan-800'
-                : 'bg-cyan-950/80 border-cyan-500/40 text-cyan-300 shadow-sm shadow-cyan-950'
-            }`}>
-              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-              <span>NEXT-GENERATION 3D CODE VISUALIZER &amp; DEBUGGER</span>
+    <div className="flex-1 overflow-y-auto bg-[#08111f] text-[#f8fafc] p-4 sm:p-6 md:p-8 font-sans select-none">
+      <div className="max-w-6xl mx-auto space-y-6 pb-12">
+        {/* Workspace Welcome & Continue Banner */}
+        <div className="bg-[#101c2d] border border-[#26364a] rounded-lg p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-md">
+          <div className="space-y-1.5 max-w-2xl">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#1e2f47] text-[#38bdf8] border border-[#3b82f6]/40 uppercase tracking-wide">
+                Developer IDE Workspace
+              </span>
+              <span className="text-xs text-[#94a3b8] font-mono">v2.4.0</span>
             </div>
-
-            <div className="space-y-3">
-              <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight font-sans leading-none">
-                SEE YOUR CODE <br />
-                <span className="bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 bg-clip-text text-transparent">
-                  COME ALIVE
-                </span>
-              </h1>
-
-              <p className={`text-xl sm:text-2xl font-light italic ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
-                "Write code → Analyze → Execute → Understand → Visualize in 3D"
-              </p>
-            </div>
-
-            <p className={`text-sm sm:text-base md:text-lg leading-relaxed max-w-3xl ${
-              isBright ? 'text-slate-600' : 'text-slate-300'
-            }`}>
-              Execute custom Java, Python, C, C++, and JavaScript programs with real AST interpretation.
-              Watch variables update, loop branches evaluate, arrays swap, and call stacks push in an interactive
-              3D WebGL environment with atomic time-travel debugging.
-            </p>
-
-            {/* CTAs: Visualizer | DSA Hub | AI Tutor | Quiz */}
-            <div className="pt-2 flex flex-wrap items-center gap-3 sm:gap-4">
-              <button
-                id="home-btn-start-visualizer"
-                onClick={() => onNavigate('visualizer')}
-                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold px-6 py-3 rounded-xl text-sm flex items-center gap-2.5 transition shadow-lg shadow-cyan-500/30 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <Play size={16} className="fill-current" />
-                <span>Start Visualizer</span>
-                <ArrowRight size={15} />
-              </button>
-
-              <button
-                id="home-btn-dsa-hub"
-                onClick={() => onNavigate('dsa')}
-                className={`border font-semibold px-5 py-3 rounded-xl text-sm flex items-center gap-2 transition cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
-                  isBright
-                    ? 'bg-white hover:bg-slate-100 border-slate-300 text-slate-800 shadow-sm'
-                    : 'bg-slate-900/90 hover:bg-slate-800 border-slate-700 text-slate-200'
-                }`}
-              >
-                <Layers size={16} className={isBright ? 'text-cyan-600' : 'text-cyan-400'} />
-                <span>DSA Hub</span>
-              </button>
-
-              <button
-                id="home-btn-ai-tutor"
-                onClick={() => onNavigate('ai')}
-                className={`border font-semibold px-5 py-3 rounded-xl text-sm flex items-center gap-2 transition cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
-                  isBright
-                    ? 'bg-purple-50 hover:bg-purple-100 border-purple-300 text-purple-900 shadow-sm'
-                    : 'bg-purple-950/40 hover:bg-purple-900/50 border-purple-500/40 text-purple-300'
-                }`}
-              >
-                <Sparkles size={16} className="text-purple-400" />
-                <span>AI Tutor</span>
-              </button>
-
-              <button
-                id="home-btn-quiz"
-                onClick={() => onNavigate('quiz')}
-                className={`border font-semibold px-5 py-3 rounded-xl text-sm flex items-center gap-2 transition cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
-                  isBright
-                    ? 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900 shadow-sm'
-                    : 'bg-amber-950/40 hover:bg-amber-900/50 border-amber-500/40 text-amber-300'
-                }`}
-              >
-                <HelpCircle size={16} className="text-amber-400" />
-                <span>Quiz</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Live Metrics Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: 'Data Structure Visualizers', value: '12 Active', icon: Box, sub: 'Arrays, Trees, Graphs, DP' },
-            { label: 'Striver SDE Sheet', value: '182 Problems', icon: BookOpen, sub: 'Days 1 to 27 complete' },
-            { label: 'Execution Engine', value: '100% Real AST', icon: Terminal, sub: 'JavaParser + Sandboxing' },
-            { label: 'Supported Languages', value: '5 Languages', icon: GitBranch, sub: 'Java, Python, C, C++, JS' },
-          ].map((stat, i) => {
-            const Icon = stat.icon;
-            return (
-              <div
-                key={i}
-                className={`border rounded-2xl p-5 transition ${
-                  isBright
-                    ? 'bg-white border-slate-200 shadow-sm hover:border-slate-300'
-                    : 'bg-slate-900/60 border-slate-800/80 hover:border-cyan-500/30 shadow-lg'
-                }`}
-              >
-                <div className={`flex items-center justify-between mb-2 ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>
-                  <span className="text-xs font-semibold uppercase tracking-wider">{stat.label}</span>
-                  <Icon size={18} className={isBright ? 'text-cyan-600' : 'text-cyan-400'} />
-                </div>
-                <div className={`text-2xl sm:text-3xl font-bold font-mono ${isBright ? 'text-slate-900' : 'text-white'}`}>
-                  {stat.value}
-                </div>
-                <div className={`text-xs font-mono mt-1 ${isBright ? 'text-cyan-700' : 'text-cyan-400'}`}>
-                  {stat.sub}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* How It Works - 4-Step Interactive Workflow */}
-        <div className="space-y-6">
-          <div className="text-center max-w-2xl mx-auto space-y-2">
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-cyan-400">
-              Interactive Workflow
-            </span>
-            <h2 className={`text-2xl sm:text-3xl font-extrabold ${isBright ? 'text-slate-900' : 'text-white'}`}>
-              How CODE3D-AI Works
-            </h2>
-            <p className={`text-sm ${isBright ? 'text-slate-600' : 'text-slate-400'}`}>
-              From source code to full 3D spatial execution in milliseconds
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#f8fafc]">
+              CODE<span className="text-[#3b82f6]">3D</span>-AI Studio
+            </h1>
+            <p className="text-xs sm:text-sm text-[#94a3b8] leading-relaxed">
+              Step inside code execution memory. Real AST interpretation, synchronized variable inspection,
+              and interactive 3D WebGL spatial data structures.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {workflowSteps.map((step, idx) => {
-              const Icon = step.icon;
-              return (
-                <div
-                  key={idx}
-                  className={`p-6 rounded-2xl border flex flex-col justify-between transition-all ${
-                    isBright
-                      ? 'bg-white border-slate-200 shadow-sm hover:border-cyan-400 hover:shadow-md'
-                      : 'bg-slate-900/50 border-slate-800/80 hover:border-cyan-500/40 hover:bg-slate-900/80'
-                  }`}
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-mono font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
-                        STEP {step.num}
-                      </span>
-                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${step.color} flex items-center justify-center text-slate-950 font-bold shadow-sm`}>
-                        <Icon size={16} />
-                      </div>
-                    </div>
-                    <h3 className={`font-bold text-base ${isBright ? 'text-slate-900' : 'text-white'}`}>
-                      {step.title}
-                    </h3>
-                    <p className={`text-xs leading-relaxed ${isBright ? 'text-slate-600' : 'text-slate-400'}`}>
-                      {step.desc}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Feature Highlights Grid */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className={`text-2xl font-extrabold ${isBright ? 'text-slate-900' : 'text-white'}`}>
-                Platform Architecture Features
-              </h2>
-              <p className={`text-xs mt-1 ${isBright ? 'text-slate-600' : 'text-slate-400'}`}>
-                Designed for engineering students, SDE aspirants, and educators
-              </p>
-            </div>
+          <div className="flex items-center gap-2.5 shrink-0">
             <button
               onClick={() => onNavigate('visualizer')}
-              className="text-xs font-mono text-cyan-400 hover:underline flex items-center gap-1"
+              className="h-9 px-4 rounded bg-[#3b82f6] hover:bg-[#2563eb] text-white text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-sm hover:scale-[1.02] active:scale-[0.98]"
             >
-              <span>Explore Visualizer</span>
+              <Play size={13} className="fill-current" />
+              <span>Launch Studio</span>
               <ArrowRight size={13} />
+            </button>
+
+            <button
+              onClick={() => onNavigate('striver')}
+              className="h-9 px-3.5 rounded bg-[#101c2d] hover:bg-[#142338] border border-[#f59e0b]/50 text-[#fbbf24] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <BookOpen size={13} />
+              <span>Striver Sheet</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Quick Start Templates Grid */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#94a3b8]">
+              <Zap size={14} className="text-[#3b82f6]" />
+              <span>Quick Start Templates</span>
+            </div>
+            <button
+              onClick={() => onNavigate('algorithms')}
+              className="text-xs text-[#38bdf8] hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <span>View all algorithms</span>
+              <ArrowRight size={11} />
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {featureCards.map((feat, idx) => {
-              const Icon = feat.icon;
-              return (
-                <div
-                  key={idx}
-                  className={`p-6 rounded-2xl border transition-all ${
-                    isBright
-                      ? 'bg-white border-slate-200 shadow-sm hover:border-slate-300'
-                      : 'bg-slate-900/40 border-slate-800/80 hover:border-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center">
-                      <Icon size={18} />
-                    </div>
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                      {feat.badge}
-                    </span>
-                  </div>
-                  <h3 className={`font-bold text-sm mb-1.5 ${isBright ? 'text-slate-900' : 'text-white'}`}>
-                    {feat.title}
-                  </h3>
-                  <p className={`text-xs leading-relaxed ${isBright ? 'text-slate-600' : 'text-slate-400'}`}>
-                    {feat.desc}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Modules Quick Launch */}
-        <div className="space-y-4">
-          <h2 className={`text-xl font-bold ${isBright ? 'text-slate-900' : 'text-white'}`}>
-            Explore Studio Modules
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {modules.map((m, idx) => {
-              const Icon = m.icon;
-              return (
-                <div
-                  key={idx}
-                  onClick={m.action}
-                  className={`p-5 rounded-2xl border flex flex-col justify-between transition-all cursor-pointer group ${
-                    m.primary
-                      ? isBright
-                        ? 'bg-gradient-to-b from-cyan-50 to-white border-cyan-300 shadow-md hover:shadow-lg'
-                        : 'bg-gradient-to-b from-cyan-950/40 to-slate-900/80 border-cyan-500/40 shadow-lg shadow-cyan-950/40 hover:border-cyan-400'
-                      : isBright
-                      ? 'bg-white border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300'
-                      : 'bg-slate-900/50 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900/80'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                        m.primary
-                          ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
-                          : isBright
-                          ? 'bg-slate-100 text-cyan-700 border border-slate-200'
-                          : 'bg-slate-800 text-cyan-400'
-                      }`}>
-                        <Icon size={18} />
-                      </div>
-                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
-                        isBright
-                          ? 'bg-slate-100 border-slate-200 text-slate-700'
-                          : 'bg-slate-800/80 border-slate-700 text-slate-400'
-                      }`}>
-                        {m.badge}
-                      </span>
-                    </div>
-                    <h3 className={`font-bold text-sm transition-colors ${
-                      isBright ? 'text-slate-900 group-hover:text-cyan-700' : 'text-white group-hover:text-cyan-300'
-                    }`}>
-                      {m.title}
-                    </h3>
-                    <p className={`text-xs mt-1.5 leading-relaxed ${isBright ? 'text-slate-600' : 'text-slate-400'}`}>
-                      {m.desc}
-                    </p>
-                  </div>
-                  <div className={`mt-4 pt-3 border-t flex items-center justify-between text-xs font-semibold group-hover:translate-x-0.5 transition-transform ${
-                    isBright ? 'border-slate-100 text-cyan-700' : 'border-slate-800/60 text-cyan-400'
-                  }`}>
-                    <span>Launch Module</span>
-                    <ArrowRight size={13} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Technology Stack Grid */}
-        <div className={`p-6 sm:p-8 rounded-3xl border transition-colors ${
-          isBright ? 'bg-slate-100/70 border-slate-200' : 'bg-slate-900/40 border-slate-800/80'
-        }`}>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div>
-              <h3 className={`text-lg font-bold ${isBright ? 'text-slate-900' : 'text-white'}`}>
-                Production Technology Stack
-              </h3>
-              <p className={`text-xs mt-0.5 ${isBright ? 'text-slate-600' : 'text-slate-400'}`}>
-                Modern architecture engineered for sub-millisecond execution analysis
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="text-xs font-mono font-bold text-emerald-400">All Systems Operational</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {techStack.map((tech, idx) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {quickStartTemplates.map((item, idx) => (
               <div
                 key={idx}
-                className={`p-3.5 rounded-xl border font-mono text-xs ${
-                  isBright ? 'bg-white border-slate-200' : 'bg-slate-950/60 border-slate-800'
-                }`}
+                onClick={() => onNavigate('visualizer')}
+                className="bg-[#101c2d] hover:bg-[#142338] border border-[#26364a] hover:border-[#3b82f6] rounded-md p-3.5 flex flex-col justify-between transition-all cursor-pointer group shadow-2xs"
               >
-                <div className={`font-bold ${tech.color}`}>{tech.name}</div>
-                <div className={`text-[11px] mt-0.5 ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>
-                  {tech.role}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[10px] font-mono text-[#94a3b8]">
+                    <span>{item.category}</span>
+                    <span className="text-[#38bdf8]">{item.complexity}</span>
+                  </div>
+                  <h3 className="font-semibold text-xs text-[#f8fafc] group-hover:text-[#38bdf8] transition-colors">
+                    {item.title}
+                  </h3>
+                  <p className="text-[11px] text-[#94a3b8] line-clamp-2">
+                    {item.desc}
+                  </p>
+                </div>
+
+                <div className="pt-3 flex items-center justify-between text-[11px] text-[#64748b]">
+                  <span className="font-mono">{item.lang}</span>
+                  <span className="text-[#3b82f6] flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                    <span>Open</span>
+                    <ArrowRight size={10} />
+                  </span>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Footer */}
-        <footer className={`pt-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4 text-xs ${
-          isBright ? 'border-slate-200 text-slate-500' : 'border-slate-800/80 text-slate-400'
-        }`}>
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-cyan-400">CODE3D AI</span>
-            <span>• Interactive 3D Educational Code Visualization Engine</span>
+        {/* Two-Column Section: Recent Sessions & 3D Engine Catalog */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Recent Execution History Table (2 cols) */}
+          <div className="lg:col-span-2 bg-[#101c2d] border border-[#26364a] rounded-md overflow-hidden flex flex-col">
+            <div className="h-9 bg-[#142338] border-b border-[#26364a] px-3.5 flex items-center justify-between text-xs font-semibold text-[#f8fafc]">
+              <div className="flex items-center gap-2">
+                <History size={13} className="text-[#3b82f6]" />
+                <span>Recent Execution Sessions</span>
+              </div>
+              <button
+                onClick={() => onNavigate('history')}
+                className="text-[11px] text-[#38bdf8] hover:underline font-normal cursor-pointer"
+              >
+                View all ({historyStats.totalExecutionsCount})
+              </button>
+            </div>
+
+            <div className="p-0 overflow-x-auto flex-1">
+              {historyStats.recentExecutions.length === 0 ? (
+                <div className="p-6 text-center text-xs text-[#64748b] font-mono italic">
+                  No recorded simulations yet. Execute code in Studio to log sessions.
+                </div>
+              ) : (
+                <table className="w-full text-left font-mono text-xs">
+                  <thead>
+                    <tr className="border-b border-[#26364a] text-[#94a3b8] text-[10px] uppercase tracking-wider bg-[#0d1726]/40">
+                      <th className="py-2 px-3 font-semibold">Program</th>
+                      <th className="py-2 px-3 font-semibold">Lang</th>
+                      <th className="py-2 px-3 font-semibold">Steps</th>
+                      <th className="py-2 px-3 font-semibold">Status</th>
+                      <th className="py-2 px-3 font-semibold text-right">Time</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#1e2c3d]">
+                    {historyStats.recentExecutions.map((row, idx) => (
+                      <tr
+                        key={idx}
+                        onClick={() => onNavigate('visualizer')}
+                        className="hover:bg-[#142338] transition-colors cursor-pointer text-[#f8fafc]"
+                      >
+                        <td className="py-2 px-3 font-medium truncate max-w-[200px]">
+                          {row.programTitle}
+                        </td>
+                        <td className="py-2 px-3 text-[#38bdf8] uppercase text-[10px]">
+                          {row.language}
+                        </td>
+                        <td className="py-2 px-3 text-[#94a3b8]">{row.totalSteps}</td>
+                        <td className="py-2 px-3">
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-950/60 text-[#22c55e] border border-emerald-500/30">
+                            {row.status}
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 text-[#64748b] text-right text-[11px]">
+                          {row.executedAt}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <button onClick={() => onNavigate('visualizer')} className="hover:text-cyan-400 transition">Visualizer</button>
-            <button onClick={() => onNavigate('striver')} className="hover:text-cyan-400 transition">Striver SDE</button>
-            <button onClick={() => onNavigate('dsa')} className="hover:text-cyan-400 transition">DSA Hub</button>
-            <button onClick={() => onNavigate('quiz')} className="hover:text-cyan-400 transition">Quiz</button>
+
+          {/* System & Architecture Status (1 col) */}
+          <div className="bg-[#101c2d] border border-[#26364a] rounded-md overflow-hidden flex flex-col">
+            <div className="h-9 bg-[#142338] border-b border-[#26364a] px-3.5 flex items-center justify-between text-xs font-semibold text-[#f8fafc]">
+              <div className="flex items-center gap-2">
+                <Cpu size={13} className="text-[#14b8a6]" />
+                <span>Runtime Diagnostics</span>
+              </div>
+            </div>
+
+            <div className="p-3.5 space-y-3 text-xs font-mono">
+              <div className="flex items-center justify-between pb-2 border-b border-[#26364a]">
+                <span className="text-[#94a3b8]">AST Interpreter:</span>
+                <span className="text-[#22c55e] font-semibold flex items-center gap-1">
+                  <CheckCircle2 size={12} /> Active
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between pb-2 border-b border-[#26364a]">
+                <span className="text-[#94a3b8]">3D GPU Engine:</span>
+                <span className="text-[#38bdf8] font-semibold">WebGL 2.0</span>
+              </div>
+
+              <div className="flex items-center justify-between pb-2 border-b border-[#26364a]">
+                <span className="text-[#94a3b8]">Curated Problems:</span>
+                <span className="text-[#f59e0b] font-semibold">182 SDE</span>
+              </div>
+
+              <div className="flex items-center justify-between pb-2 border-b border-[#26364a]">
+                <span className="text-[#94a3b8]">Database:</span>
+                <span className="text-[#c084fc] font-semibold">PostgreSQL</span>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={() => onNavigate('dsa')}
+                  className="w-full py-1.5 rounded bg-[#1e2f47] hover:bg-[#253956] text-[#38bdf8] text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Layers size={12} />
+                  <span>Browse DSA Hub</span>
+                </button>
+              </div>
+            </div>
           </div>
-        </footer>
+        </div>
       </div>
     </div>
   );

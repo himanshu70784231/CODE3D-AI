@@ -1,0 +1,26 @@
+/* CODE3D-AI Dashboard Styles */
+
+.dashboard-container {
+  background-color: var(--bg-main, #08111f);
+  color: var(--text-main, #f8fafc);
+}
+
+.ide-card {
+  background-color: var(--bg-panel, #101c2d);
+  border: 1px solid var(--border-color, #26364a);
+  border-radius: 8px;
+  transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+.ide-card:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 16px rgba(13, 23, 38, 0.6);
+  transform: translateY(-2px);
+}
+
+.metric-pill {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}

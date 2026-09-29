@@ -1,51 +1,57 @@
-import React, { useState, useEffect } from 'react';
-import CodeEditor from '../components/CodeEditor';
-import StatePanel from '../components/StatePanel';
-import OutputConsole from '../components/OutputConsole';
-import Timeline from '../components/Timeline';
-import SceneContainer from '../visualizers/SceneContainer';
-import DsaSceneDispatcher from '../visualizers/DsaSceneDispatcher';
-import AiAssistantModal from '../components/AiAssistantModal';
-import QuizModal from '../components/QuizModal';
-import CustomCodeModal from '../components/CustomCodeModal';
-import CodeDoctorModal from '../components/CodeDoctorModal';
-import StriverSheetDrawer from '../components/StriverSheetDrawer';
-import CompareModeModal from '../components/CompareModeModal';
-import InputGenerator from '../components/InputGenerator';
-import { ALGORITHM_CATALOG, generateAlgorithmSteps } from '../algorithms/index';
-import { useExecutionTimeline } from '../hooks/useExecutionTimeline';
-import { getExecutionTrace, extractNumbersFromCode } from '../services/executionSimulator';
-import { validateSourceCode } from '../services/codeValidator';
-import { DEFAULT_JAVA_CODE, SAMPLE_PROGRAMS, LANGUAGE_DEFAULTS, CURRICULUM_CATEGORIES } from '../utils/sampleCodes';
-import { STRIVER_PROBLEMS } from '../utils/striverCatalog';
-import { executeProgram, analyzeCode, checkBackendHealth, recordExecutionHistory, saveProgram } from '../services/apiService';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import TopNav from '../components/TopNav.jsx';
+import EditorPanel from '../components/EditorPanel.jsx';
+import ScenePanel from '../components/ScenePanel.jsx';
+import VariablePanel from '../components/VariablePanel.jsx';
+import ConditionPanel from '../components/ConditionPanel.jsx';
+import AiPanel from '../components/AiPanel.jsx';
+import OutputConsole from '../components/OutputConsole.jsx';
+import Timeline from '../components/Timeline.jsx';
+import ResizeHandle from '../components/ResizeHandle.jsx';
+import InputGenerator from '../components/InputGenerator.jsx';
+import StepInspector from '../components/StepInspector.jsx';
+import ComplexityPanel from '../components/ComplexityPanel.jsx';
+import DsaSceneDispatcher from '../visualizers/DsaSceneDispatcher.jsx';
+import AiAssistantModal from '../components/AiAssistantModal.jsx';
+import QuizModal from '../components/QuizModal.jsx';
+import CustomCodeModal from '../components/CustomCodeModal.jsx';
+import CodeDoctorModal from '../components/CodeDoctorModal.jsx';
+import StriverSheetDrawer from '../components/StriverSheetDrawer.jsx';
+import CompareModeModal from '../components/CompareModeModal.jsx';
+import { VisualizerErrorBoundary, EditorErrorBoundary } from '../components/ErrorBoundaries.jsx';
+
+import { ALGORITHM_CATALOG } from '../algorithms/index.js';
+import { useExecutionTimeline } from '../hooks/useExecutionTimeline.js';
+import { getExecutionTrace, extractNumbersFromCode } from '../services/executionSimulator.js';
+import { validateSourceCode } from '../services/codeValidator.js';
+import { DEFAULT_JAVA_CODE, SAMPLE_PROGRAMS, LANGUAGE_DEFAULTS, CURRICULUM_CATEGORIES } from '../utils/sampleCodes.js';
+import { STRIVER_PROBLEMS } from '../utils/striverCatalog.js';
+import { executeProgram, analyzeCode, checkBackendHealth, recordExecutionHistory, saveProgram } from '../services/apiService.js';
 import { executionManager } from '../execution/index.js';
-import { VisualizerErrorBoundary, EditorErrorBoundary } from '../components/ErrorBoundaries';
-import { useTheme } from '../context/ThemeContext';
+
 import {
-  Code2,
-  Sparkles,
-  HelpCircle,
-  Bookmark,
   Layers,
-  Cpu,
-  Server,
-  Check,
+  BookOpen,
+  Code2,
   Lightbulb,
-  Stethoscope,
+  Settings,
+  Sparkles,
+  Cpu,
+  Variable,
+  GitBranch,
+  Terminal,
+  Clock,
+  ChevronLeft,
+  ChevronRight,
   Maximize2,
   Minimize2,
-  SlidersHorizontal,
-  Eye,
-  EyeOff,
+  X,
   Play,
-  Trophy,
-  BookOpen,
-  Scale,
+  RotateCcw,
 } from 'lucide-react';
 
 export default function Visualizer({ initialConcept, initialOpenStriver = false }) {
-  const { isBright } = useTheme();
+  // Core Program & Execution State
   const [selectedSample, setSelectedSample] = useState(initialConcept || SAMPLE_PROGRAMS[0]);
   const [code, setCode] = useState(initialConcept?.code || DEFAULT_JAVA_CODE);
   const [lastExecutedCode, setLastExecutedCode] = useState(initialConcept?.code || DEFAULT_JAVA_CODE);
@@ -58,23 +64,16 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     }
     return getExecutionTrace(initialConcept?.code || DEFAULT_JAVA_CODE, initialConcept?.language || 'java');
   });
+
   const [backendOnline, setBackendOnline] = useState(false);
   const [timeComplexity, setTimeComplexity] = useState(initialConcept?.timeComplexity || SAMPLE_PROGRAMS[0].timeComplexity);
   const [spaceComplexity, setSpaceComplexity] = useState(initialConcept?.spaceComplexity || SAMPLE_PROGRAMS[0].spaceComplexity);
-
-  // View Layout Toggles requested by user:
-  // 1. Program State panel visibility toggle
-  // 2. 100% Fullscreen 3D Theater Mode
-  const [showStatePanel, setShowStatePanel] = useState(true);
-  const [isFull3DView, setIsFull3DView] = useState(false);
-
-  // Direct Form User Input
   const [formInputValues, setFormInputValues] = useState('10, 20, 30, 40');
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionError, setExecutionError] = useState(null);
   const [syntaxErrorLine, setSyntaxErrorLine] = useState(null);
 
-  // Modals & responsive view state
+  // Modals & Navigation Drawers
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [isQuizOpen, setIsQuizOpen] = useState(false);
   const [isCustomCodeOpen, setIsCustomCodeOpen] = useState(false);
@@ -82,28 +81,27 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
   const [isStriverSheetOpen, setIsStriverSheetOpen] = useState(initialOpenStriver);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [activeStriverProblem, setActiveStriverProblem] = useState(null);
-  const [mobileTab, setMobileTab] = useState('3d'); // '3d' | 'code' | 'state'
   const [saveStatus, setSaveStatus] = useState(null); // null | 'SAVING' | 'SAVED' | 'ERROR'
 
-  const handleSaveProgram = async () => {
-    setSaveStatus('SAVING');
-    try {
-      await saveProgram({
-        title: selectedSample?.title || 'Custom Algorithm',
-        description: selectedSample?.description || 'Saved from Visualizer',
-        code,
-        language,
-        timeComplexity,
-        spaceComplexity,
-      });
-      setSaveStatus('SAVED');
-      setTimeout(() => setSaveStatus(null), 2500);
-    } catch (e) {
-      setSaveStatus('ERROR');
-      setTimeout(() => setSaveStatus(null), 2500);
-    }
-  };
+  // Workspace Panel Dimensions & Collapse States
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState('concepts'); // 'concepts' | 'striver' | 'input' | 'solver'
+  const [sidebarWidthPx, setSidebarWidthPx] = useState(240);
 
+  const [editorWidthPercent, setEditorWidthPercent] = useState(38);
+  const [rightPanelWidthPx, setRightPanelWidthPx] = useState(340);
+  const [bottomPanelHeightPx, setBottomPanelHeightPx] = useState(175);
+
+  const [editorCollapsed, setEditorCollapsed] = useState(false);
+  const [sceneCollapsed, setSceneCollapsed] = useState(false);
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+  const [bottomPanelCollapsed, setBottomPanelCollapsed] = useState(false);
+  const [fullscreenPanel, setFullscreenPanel] = useState(null); // null | 'editor' | 'scene' | 'right' | 'bottom'
+
+  const [rightPanelTab, setRightPanelTab] = useState('state'); // 'state' | 'variables' | 'condition' | 'ai'
+  const [bottomPanelTab, setBottomPanelTab] = useState('console'); // 'console' | 'timeline'
+
+  // Execution Timeline Hook
   const {
     currentStepIndex,
     currentStep,
@@ -121,118 +119,16 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     reset,
     breakpoints,
     toggleBreakpoint,
-    executionState,
     cumulativeOutput,
     finalCorrectOutput,
   } = useExecutionTimeline(trace);
 
-  // Dynamic Box Resizing State (Editor width %, Console height px, and State panel width px)
-  const [editorWidthPercent, setEditorWidthPercent] = useState(35);
-  const [consoleHeightPx, setConsoleHeightPx] = useState(165);
-  const [statePanelWidthPx, setStatePanelWidthPx] = useState(() => {
-    try {
-      const saved = localStorage.getItem('code3d_state_panel_width');
-      return saved ? Math.max(220, Math.min(650, parseInt(saved, 10))) : 320;
-    } catch {
-      return 320;
-    }
-  });
-  const [isResizingEditor, setIsResizingEditor] = useState(false);
-  const [isResizingConsole, setIsResizingConsole] = useState(false);
-  const [isResizingStatePanel, setIsResizingStatePanel] = useState(false);
-
-  // Handle dragging horizontal splitter between Code Editor and 3D Viewport
-  const startEditorResize = (e) => {
-    e.preventDefault();
-    setIsResizingEditor(true);
-    let rafId = null;
-    const onMouseMove = (moveEvent) => {
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        const containerWidth = window.innerWidth;
-        const newPercent = Math.min(65, Math.max(20, (moveEvent.clientX / containerWidth) * 100));
-        setEditorWidthPercent(Math.round(newPercent));
-      });
-    };
-    const onMouseUp = () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      setIsResizingEditor(false);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-  };
-
-  // Handle dragging vertical splitter between 3D Canvas and Output Console
-  const startConsoleResize = (e) => {
-    e.preventDefault();
-    setIsResizingConsole(true);
-    const initialHeight = consoleHeightPx;
-    const initialY = e.clientY;
-    let rafId = null;
-    const onMouseMove = (moveEvent) => {
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        const deltaY = initialY - moveEvent.clientY;
-        const newHeight = Math.min(380, Math.max(70, initialHeight + deltaY));
-        setConsoleHeightPx(Math.round(newHeight));
-      });
-    };
-    const onMouseUp = () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      setIsResizingConsole(false);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-  };
-
-  // Handle dragging mouse-resizable splitter for Program State / Execution panel (Part 3)
-  const startStatePanelResize = (e) => {
-    e.preventDefault();
-    setIsResizingStatePanel(true);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-
-    let rafId = null;
-    const onMouseMove = (moveEvent) => {
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        const viewportWidth = window.innerWidth;
-        const newWidth = Math.max(220, Math.min(Math.round(viewportWidth * 0.48), viewportWidth - moveEvent.clientX));
-        setStatePanelWidthPx(newWidth);
-      });
-    };
-
-    const onMouseUp = () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      setIsResizingStatePanel(false);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      try {
-        setStatePanelWidthPx((curr) => {
-          localStorage.setItem('code3d_state_panel_width', String(curr));
-          return curr;
-        });
-      } catch {}
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-  };
-
   // Check backend health on mount
   useEffect(() => {
-    checkBackendHealth().then((isUp) => {
-      setBackendOnline(isUp);
-    });
+    checkBackendHealth().then((isUp) => setBackendOnline(isUp));
   }, []);
 
-  // Synchronize formInputValues whenever code or selected sample changes
+  // Sync form input numbers when code or sample changes
   useEffect(() => {
     const nums = extractNumbersFromCode(code);
     if (nums && nums.length > 0) {
@@ -240,15 +136,13 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     }
   }, [selectedSample]);
 
-  // Update visualizer state whenever initialConcept changes
+  // Load initialConcept if passed from outside
   useEffect(() => {
     if (initialConcept) {
       setSelectedSample(initialConcept);
       setCode(initialConcept.code);
       setLastExecutedCode(initialConcept.code);
-      if (initialConcept.language) {
-        setLanguage(initialConcept.language);
-      }
+      if (initialConcept.language) setLanguage(initialConcept.language);
       setTimeComplexity(initialConcept.timeComplexity || 'O(n)');
       setSpaceComplexity(initialConcept.spaceComplexity || 'O(1)');
 
@@ -256,74 +150,65 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
         setTrace(initialConcept.trace);
         reset();
         setTimeout(() => play(), 100);
-      } else if (backendOnline && initialConcept.id && initialConcept.id !== 'custom') {
-        executeProgram(initialConcept.code, initialConcept.id, initialConcept.language || 'java')
-          .then((res) => {
-            if (res?.steps?.length > 0) {
-              setTrace(res.steps);
-            } else {
-              setTrace(getExecutionTrace(initialConcept.code, initialConcept.language || 'java'));
-            }
-            reset();
-            setTimeout(() => play(), 100);
-          })
-          .catch(() => {
-            setTrace(getExecutionTrace(initialConcept.code, initialConcept.language || 'java'));
-            reset();
-            setTimeout(() => play(), 100);
-          });
       } else {
-        setTrace(getExecutionTrace(initialConcept.code, initialConcept.language || 'java'));
+        const fallback = getExecutionTrace(initialConcept.code, initialConcept.language || 'java');
+        setTrace(fallback);
         reset();
         setTimeout(() => play(), 100);
       }
     }
-  }, [initialConcept, backendOnline]);
+  }, [initialConcept]);
 
-  // Handle preset selection
+  // Handle program save
+  const handleSaveProgram = async () => {
+    setSaveStatus('SAVING');
+    try {
+      await saveProgram({
+        title: selectedSample?.title || 'Custom Algorithm',
+        description: selectedSample?.description || 'Saved from Visualizer',
+        code,
+        language,
+        timeComplexity,
+        spaceComplexity,
+      });
+      setSaveStatus('SAVED');
+      setTimeout(() => setSaveStatus(null), 2500);
+    } catch {
+      setSaveStatus('ERROR');
+      setTimeout(() => setSaveStatus(null), 2500);
+    }
+  };
+
+  // Preset program selection
   const handleSelectProgram = async (prog) => {
     setSelectedSample(prog);
     setCode(prog.code);
     setLastExecutedCode(prog.code);
-    setLanguage('java');
+    setLanguage(prog.language || 'java');
     setTimeComplexity(prog.timeComplexity);
     setSpaceComplexity(prog.spaceComplexity);
 
-    // Update form input field with preset numbers
     const nums = extractNumbersFromCode(prog.code);
     if (nums && nums.length > 0) {
       setFormInputValues(nums.join(', '));
     }
 
-    let finalSteps = null;
-    if (backendOnline) {
-      try {
-        const res = await executeProgram(prog.code, prog.id, 'java');
-        if (res && res.steps && res.steps.length > 0) {
-          finalSteps = res.steps;
-        }
-      } catch (e) {}
-    }
-
-    if (!finalSteps || finalSteps.length === 0) {
-      finalSteps = getExecutionTrace(prog.code, 'java');
-    }
-
-    setTrace(finalSteps);
+    const steps = getExecutionTrace(prog.code, prog.language || 'java');
+    setTrace(steps);
     reset();
-    setTimeout(() => play(), 100);
+    setTimeout(() => play(), 80);
 
     recordExecutionHistory({
       programTitle: prog.title,
       conceptId: prog.id,
-      language: 'java',
-      totalSteps: finalSteps.length,
+      language: prog.language || 'java',
+      totalSteps: steps.length,
       status: 'COMPLETED',
       code: prog.code,
     });
   };
 
-  // Handle selecting an algorithm from the 3D algorithm engine
+  // 3D Algorithm catalog selection
   const handleSelectAlgorithm = (algo) => {
     const input = Array.isArray(algo.defaultInput) ? algo.defaultInput : [45, 12, 89, 23, 7, 64, 31];
     const target = algo.defaultTarget !== undefined ? algo.defaultTarget : 23;
@@ -349,7 +234,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     setFormInputValues(Array.isArray(input) ? input.join(', ') : String(input));
     setTrace(res.steps);
     reset();
-    setTimeout(() => play(), 100);
+    setTimeout(() => play(), 80);
 
     recordExecutionHistory({
       programTitle: algo.name,
@@ -361,7 +246,55 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     });
   };
 
-  // Handle language change from editor
+  // Striver Problem Selection
+  const handleSelectStriverProblem = (problem) => {
+    setIsStriverSheetOpen(false);
+    setActiveStriverProblem(problem);
+    const sampleObj = {
+      id: problem.id || `striver-${problem.striverId}`,
+      title: problem.title,
+      category: problem.category,
+      description: `${problem.day}: ${problem.title}`,
+      difficulty: problem.difficulty,
+      timeComplexity: problem.timeComplexity,
+      spaceComplexity: problem.spaceComplexity,
+      code: problem.code,
+    };
+    setSelectedSample(sampleObj);
+    setCode(problem.code);
+    setLastExecutedCode(problem.code);
+    if (problem.language) setLanguage(problem.language);
+    setTimeComplexity(problem.timeComplexity);
+    setSpaceComplexity(problem.spaceComplexity);
+
+    if (problem.defaultInput) {
+      setFormInputValues(problem.defaultInput);
+    }
+
+    const newSteps = getExecutionTrace(
+      problem.code,
+      problem.language || language,
+      problem.defaultInput,
+      problem.archetype
+    );
+
+    if (newSteps && newSteps.length > 0) {
+      setTrace(newSteps);
+      reset();
+      setTimeout(() => play(), 60);
+
+      recordExecutionHistory({
+        programTitle: problem.title,
+        conceptId: `striver-${problem.striverId || problem.id}`,
+        language: problem.language || language,
+        totalSteps: newSteps.length,
+        status: 'COMPLETED',
+        code: problem.code,
+      });
+    }
+  };
+
+  // Language Change
   const handleLanguageChange = async (newLang) => {
     setLanguage(newLang);
     const template = LANGUAGE_DEFAULTS[newLang] || DEFAULT_JAVA_CODE;
@@ -369,7 +302,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     setLastExecutedCode(template);
     setSelectedSample({
       id: 'custom',
-      title: `${newLang.toUpperCase()} Traversal`,
+      title: `${newLang.toUpperCase()} Execution`,
       category: 'Multi-Language',
       description: `Dynamic ${newLang.toUpperCase()} execution trace in 3D space.`,
       difficulty: 'Beginner',
@@ -383,29 +316,14 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
       setFormInputValues(nums.join(', '));
     }
 
-    if (backendOnline) {
-      const [execRes, astRes] = await Promise.all([
-        executeProgram(template, 'custom', newLang),
-        analyzeCode(template, newLang),
-      ]);
-      if (execRes && execRes.steps && execRes.steps.length > 0) {
-        setTrace(execRes.steps);
-        reset();
-      }
-      if (astRes) {
-        if (astRes.timeComplexity) setTimeComplexity(astRes.timeComplexity);
-        if (astRes.spaceComplexity) setSpaceComplexity(astRes.spaceComplexity);
-      }
-    } else {
-      setTrace(getExecutionTrace(template, newLang));
-      reset();
-    }
+    const traceSteps = getExecutionTrace(template, newLang);
+    setTrace(traceSteps);
+    reset();
   };
 
-  // Directly apply User Form Input into code and 3D visualizer
-  const applyNewValuesToCode = async (vals) => {
+  // Apply Form Input numbers to code
+  const applyNewValuesToCode = (vals) => {
     if (!vals || vals.length === 0) return;
-
     const inputStr = vals.join(', ');
     setFormInputValues(inputStr);
 
@@ -427,8 +345,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
       }
     }
 
-    // Run dynamic trace with new input values preserving the algorithm
-    let newSteps = getExecutionTrace(
+    const newSteps = getExecutionTrace(
       updatedCode,
       language,
       inputStr,
@@ -442,24 +359,14 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     }
   };
 
-  const handleApplyFormInput = () => {
-    const vals = extractNumbersFromCode(formInputValues);
-    applyNewValuesToCode(vals);
-  };
-
-  const handleApplyPresetValues = (vals) => {
-    setFormInputValues(vals.join(', '));
-    applyNewValuesToCode(vals);
-  };
-
-  // Handle user applying custom code from modal
+  // Custom Code Modal Apply
   const handleCustomCodeApply = async ({ code: customCode, language: customLang }) => {
     setLanguage(customLang);
     setCode(customCode);
     setLastExecutedCode(customCode);
     setSelectedSample({
       id: 'custom',
-      title: `⚡ Custom ${customLang.toUpperCase()} Code`,
+      title: `Custom ${customLang.toUpperCase()} Code`,
       category: 'Custom Algorithms',
       description: 'User-submitted code dynamically analyzed and rendered in 3D.',
       difficulty: 'Custom',
@@ -473,30 +380,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
       setFormInputValues(nums.join(', '));
     }
 
-    let newSteps = null;
-    if (backendOnline) {
-      try {
-        const [execRes, astRes] = await Promise.all([
-          executeProgram(customCode, 'custom', customLang),
-          analyzeCode(customCode, customLang),
-        ]);
-
-        if (execRes && execRes.steps && execRes.steps.length > 0) {
-          newSteps = execRes.steps;
-        }
-        if (astRes) {
-          if (astRes.timeComplexity) setTimeComplexity(astRes.timeComplexity);
-          if (astRes.spaceComplexity) setSpaceComplexity(astRes.spaceComplexity);
-        }
-      } catch (err) {
-        console.warn('Backend custom execution failed, using simulator:', err);
-      }
-    }
-
-    if (!newSteps || newSteps.length === 0) {
-      newSteps = getExecutionTrace(customCode, customLang);
-    }
-
+    const newSteps = getExecutionTrace(customCode, customLang);
     if (newSteps && newSteps.length > 0) {
       setTrace(newSteps);
       reset();
@@ -513,38 +397,30 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     }
   };
 
-  // Execute User Code Pipeline: Code Editor -> Verification -> 3D Trace -> Animation
+  // Run Code Pipeline
   const handleRunCode = async () => {
-    // If currently playing, clicking pause halts animation
     if (isPlaying) {
       pause();
       return;
     }
-    // If paused mid-way and code has not changed, clicking resumes
     if (!isCodeDirty && !isAtEnd && !isAtStart && !syntaxErrorLine) {
       play();
       return;
     }
 
     if (!code || !code.trim()) {
-      setExecutionError('Cannot execute empty code! Please write code or select a sample problem.');
+      setExecutionError('Cannot execute empty code! Please enter code or select a sample.');
       return;
     }
 
-    // 1. Precise Multi-Language Syntax Validation
     const validation = validateSourceCode(code, language);
     if (!validation.isValid) {
       const err = validation.error;
       setSyntaxErrorLine(err.line);
-      setExecutionError(`[Syntax Error at Line ${err.line}] ${err.message} — ${err.suggestion}`);
+      setExecutionError(`[Syntax Diagnostic at Line ${err.line}] ${err.message} — ${err.suggestion}`);
       setIsExecuting(false);
       pause();
       return;
-    }
-
-    const nums = extractNumbersFromCode(code);
-    if (nums && nums.length > 0) {
-      setFormInputValues(nums.join(', '));
     }
 
     setSyntaxErrorLine(null);
@@ -575,19 +451,18 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
         setTimeout(() => play(), 60);
 
         recordExecutionHistory({
-          programTitle: selectedSample?.title || (activeStriverProblem ? activeStriverProblem.title : 'Custom Code Execution'),
-          conceptId: activeStriverProblem ? `striver-${activeStriverProblem.striverId || activeStriverProblem.id}` : (selectedSample?.id || 'custom'),
-          language: language,
+          programTitle: selectedSample?.title || 'Code Execution',
+          conceptId: activeStriverProblem ? `striver-${activeStriverProblem.id}` : (selectedSample?.id || 'custom'),
+          language,
           totalSteps: newSteps.length,
           status: 'COMPLETED',
-          code: code,
+          code,
         });
       } else {
-        setExecutionError('Could not parse execution steps for this code. Please check for syntax errors.');
+        setExecutionError('Could not parse execution steps for this code.');
       }
     } catch (err) {
-      console.error('Execution pipeline error:', err);
-      setExecutionError(`Execution Error: ${err.message || 'Unknown error occurred while parsing code.'}`);
+      setExecutionError(`Execution Diagnostic: ${err.message || 'Error occurred while running code.'}`);
     } finally {
       setIsExecuting(false);
     }
@@ -603,8 +478,8 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     reset();
   };
 
-  // Bidirectional interaction: 3D Element Click -> Seek Timeline & Code Line (Section 40)
-  const handleSelectElementFrom3D = (index, value) => {
+  // Bidirectional interaction: 3D Element Click -> Seek Timeline & Code Line
+  const handleSelectElementFrom3D = (index) => {
     if (!trace || trace.length === 0) return;
     const forwardStep = trace.findIndex((step, idx) => {
       if (idx < currentStepIndex) return false;
@@ -624,7 +499,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     }
   };
 
-  // Bidirectional interaction: Code Editor Line Click -> Seek Timeline & 3D Scene (Section 40)
+  // Bidirectional interaction: Editor Line Click -> Seek Timeline
   const handleSelectLineFromEditor = (lineNumber) => {
     if (!trace || trace.length === 0 || !lineNumber) return;
     const matchedStep = trace.findIndex((step) => step.lineNumber === lineNumber);
@@ -633,16 +508,8 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     }
   };
 
-  // Handle Personal Problem applied solution & 3D visualization
-  const handleApplyCorrectedCode = async ({
-    code: correctedCode,
-    language: correctedLang,
-    trace: correctedTrace,
-    problemTitle,
-    timeComplexity: tc,
-    spaceComplexity: sc,
-    launch3D = true,
-  }) => {
+  // Handle Personal Problem Solver applied code
+  const handleApplyDoctorCode = ({ code: correctedCode, language: correctedLang, problemTitle, timeComplexity: tc, spaceComplexity: sc }) => {
     setLanguage(correctedLang);
     setCode(correctedCode);
     setLastExecutedCode(correctedCode);
@@ -659,116 +526,15 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
       code: correctedCode,
     });
 
-    const nums = extractNumbersFromCode(correctedCode);
-    if (nums && nums.length > 0) {
-      setFormInputValues(nums.join(', '));
-    }
-
-    if (correctedTrace && correctedTrace.length > 0) {
-      setTrace(correctedTrace);
-      reset();
-      if (launch3D) {
-        setTimeout(() => play(), 50);
-      }
-    } else {
-      let newSteps = null;
-      if (backendOnline) {
-        try {
-          const [execRes, astRes] = await Promise.all([
-            executeProgram(correctedCode, 'custom', correctedLang),
-            analyzeCode(correctedCode, correctedLang),
-          ]);
-          if (execRes?.steps?.length > 0) newSteps = execRes.steps;
-          if (astRes?.timeComplexity) setTimeComplexity(astRes.timeComplexity);
-          if (astRes?.spaceComplexity) setSpaceComplexity(astRes.spaceComplexity);
-        } catch (err) {
-          console.warn('Backend repaired execution failed, using simulator:', err);
-        }
-      }
-
-      if (!newSteps || newSteps.length === 0) {
-        newSteps = getExecutionTrace(correctedCode, correctedLang);
-      }
-
-      if (newSteps && newSteps.length > 0) {
-        setTrace(newSteps);
-        reset();
-        if (launch3D) {
-          setTimeout(() => play(), 50);
-        }
-      }
-    }
-
-    recordExecutionHistory({
-      programTitle: problemTitle ? `💡 ${problemTitle}` : `💡 Personal Problem (${correctedLang.toUpperCase()})`,
-      conceptId: 'personal-problem',
-      language: correctedLang,
-      totalSteps: (correctedTrace?.length || 1),
-      status: 'COMPLETED',
-      code: correctedCode,
-    });
-  };
-
-  // Handle user selecting a Striver SDE Sheet question from drawer
-  const handleSelectStriverProblem = async (problem) => {
-    setIsStriverSheetOpen(false); // Automatically dismiss drawer so 3D scene is immediately visible
-    setActiveStriverProblem(problem);
-    const sampleObj = {
-      id: problem.id || `striver-${problem.striverId}`,
-      title: problem.title,
-      category: problem.category,
-      description: `${problem.day}: ${problem.title}`,
-      difficulty: problem.difficulty,
-      timeComplexity: problem.timeComplexity,
-      spaceComplexity: problem.spaceComplexity,
-      code: problem.code,
-    };
-    setSelectedSample(sampleObj);
-    setCode(problem.code);
-    setLastExecutedCode(problem.code);
-    if (problem.language) setLanguage(problem.language);
-    setTimeComplexity(problem.timeComplexity);
-    setSpaceComplexity(problem.spaceComplexity);
-
-    if (problem.defaultInput) {
-      setFormInputValues(problem.defaultInput);
-    }
-
-    // Synthesize verified 3D execution trace with matched archetype and accurate inputs/outputs
-    const newSteps = getExecutionTrace(
-      problem.code,
-      problem.language || language,
-      problem.defaultInput,
-      problem.archetype
-    );
-
-    // Enrich complexity metrics in background if backend is online
-    if (backendOnline) {
-      analyzeCode(problem.code, problem.language || language)
-        .then((astRes) => {
-          if (astRes?.timeComplexity) setTimeComplexity(astRes.timeComplexity);
-          if (astRes?.spaceComplexity) setSpaceComplexity(astRes.spaceComplexity);
-        })
-        .catch(() => {});
-    }
-
+    const newSteps = getExecutionTrace(correctedCode, correctedLang);
     if (newSteps && newSteps.length > 0) {
       setTrace(newSteps);
       reset();
-      setTimeout(() => play(), 60);
-
-      recordExecutionHistory({
-        programTitle: problem.title,
-        conceptId: `striver-${problem.striverId || problem.id}`,
-        language: problem.language || language,
-        totalSteps: newSteps.length,
-        status: 'COMPLETED',
-        code: problem.code,
-      });
+      setTimeout(() => play(), 50);
     }
   };
 
-  // Synchronized Timeline Play handler
+  // Timeline Play / Resume
   const handleTimelinePlay = () => {
     if (isCodeDirty) {
       handleRunCode();
@@ -780,7 +546,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     }
   };
 
-  // Window-level Ctrl+Enter / Cmd+Enter listener to trigger instant 3D execution
+  // Window-level Ctrl+Enter shortcut listener
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
@@ -790,591 +556,638 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [code, language, backendOnline, isCodeDirty]);
+  }, [code, language, isCodeDirty, isPlaying]);
+
+  // Resizing logic with pointer capture & window dispatch
+  const handleResizeEditor = useCallback((moveEvent) => {
+    const totalWidth = window.innerWidth - (sidebarOpen ? sidebarWidthPx : 48) - (rightPanelCollapsed ? 32 : rightPanelWidthPx);
+    if (totalWidth <= 0) return;
+    const newPercent = Math.min(65, Math.max(20, (moveEvent.clientX / window.innerWidth) * 100));
+    setEditorWidthPercent(Math.round(newPercent));
+  }, [sidebarOpen, sidebarWidthPx, rightPanelCollapsed, rightPanelWidthPx]);
+
+  const handleResizeRightPanel = useCallback((moveEvent) => {
+    const newWidth = Math.max(220, Math.min(600, window.innerWidth - moveEvent.clientX));
+    setRightPanelWidthPx(newWidth);
+  }, []);
+
+  const handleResizeBottomPanel = useCallback((moveEvent) => {
+    const newHeight = Math.max(70, Math.min(420, window.innerHeight - moveEvent.clientY));
+    setBottomPanelHeightPx(newHeight);
+  }, []);
+
+  const handleResizeSidebar = useCallback((moveEvent) => {
+    const newWidth = Math.max(160, Math.min(400, moveEvent.clientX - 48));
+    setSidebarWidthPx(newWidth);
+  }, []);
 
   return (
-    <div className={`flex-1 flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden select-none transition-colors duration-200 ${
-      isBright ? 'bg-slate-100 text-slate-900' : 'bg-[#070b14] text-slate-100'
-    }`}>
-      {/* Visualizer Header Controls */}
-      <div className={`min-h-10 border-b px-3 py-1.5 flex items-center justify-between text-xs overflow-x-auto no-scrollbar gap-2 transition-colors ${
-        isBright
-          ? 'bg-white border-slate-200 text-slate-700 shadow-sm'
-          : 'bg-[#0b0f19] border-slate-800/80 text-slate-300'
-      }`}>
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <span className={`font-semibold flex items-center gap-1.5 ${isBright ? 'text-slate-800' : 'text-slate-200'}`}>
-            <Layers size={14} className={isBright ? 'text-cyan-600' : 'text-cyan-400'} />
-            <span className="hidden sm:inline">Concept:</span>
-          </span>
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] w-full overflow-hidden bg-[#08111f] text-[#f8fafc] select-none font-sans">
+      {/* Top Professional IDE Toolbar */}
+      <TopNav
+        projectName={selectedSample?.title || 'Execution Workspace'}
+        language={language}
+        onChangeLanguage={handleLanguageChange}
+        onRun={handleRunCode}
+        isRunning={isExecuting}
+        isPlaying={isPlaying}
+        onExplainAi={() => {
+          setRightPanelCollapsed(false);
+          setRightPanelTab('ai');
+        }}
+        onVisualize={() => {
+          setSceneCollapsed(false);
+        }}
+        onSave={handleSaveProgram}
+        isSaving={saveStatus === 'SAVING'}
+        saveSuccess={saveStatus === 'SAVED'}
+        onOpenSettings={() => {}}
+        onOpenCodeDoctor={() => setIsCodeDoctorOpen(true)}
+        onOpenStriverSheet={() => setIsStriverSheetOpen(true)}
+      />
 
-          {/* Categorized Concept Dropdown grouped by Curriculum & Striver Sheet */}
-          <select
-            value={selectedSample.id}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (val.startsWith('algo-')) {
-                const id = val.replace('algo-', '');
-                const algo = ALGORITHM_CATALOG.find((a) => a.id === id);
-                if (algo) handleSelectAlgorithm(algo);
-              } else if (val.startsWith('striver-')) {
-                const id = parseInt(val.replace('striver-', ''), 10);
-                const p = STRIVER_PROBLEMS.find((prob) => prob.id === id);
-                if (p) {
-                  handleSelectStriverProblem({
-                    id: `striver-${p.id}`,
-                    striverId: p.id,
-                    title: p.title,
-                    shortTitle: p.shortTitle,
-                    day: p.day,
-                    dayNumber: p.dayNumber,
-                    category: p.category,
-                    difficulty: p.difficulty,
-                    archetype: p.archetype,
-                    timeComplexity: p.timeComplexity,
-                    spaceComplexity: p.spaceComplexity,
-                    description: p.description,
-                    defaultInput: p.defaultInput,
-                    code: p.javaCode,
-                    language: 'java',
-                  });
-                }
-              } else {
-                const found = SAMPLE_PROGRAMS.find((p) => p.id === val);
-                if (found) handleSelectProgram(found);
-              }
-            }}
-            className={`h-8 border rounded-lg px-2.5 text-xs font-medium focus:outline-none focus:border-cyan-500 cursor-pointer max-w-[160px] sm:max-w-none transition-colors ${
-              isBright
-                ? 'bg-white border-slate-300 text-slate-900 font-semibold'
-                : 'bg-slate-950 border-slate-700/80 text-cyan-300'
-            }`}
-          >
-            {(selectedSample.id === 'custom' || selectedSample.id === 'personal-problem') && (
-              <option value={selectedSample.id}>
-                {selectedSample.title || '⚡ Custom Execution'}
-              </option>
-            )}
-            <optgroup label="⚡ 3D Algorithm Engine">
-              {ALGORITHM_CATALOG.map((algo) => (
-                <option key={`algo-${algo.id}`} value={`algo-${algo.id}`}>
-                  {algo.name} ({algo.category})
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="📜 Striver SDE Sheet (Top Flagships)">
-              {STRIVER_PROBLEMS.slice(0, 40).map((p) => (
-                <option key={`striver-${p.id}`} value={`striver-${p.id}`}>
-                  {p.title} ({p.difficulty})
-                </option>
-              ))}
-            </optgroup>
-            {CURRICULUM_CATEGORIES.map((category) => {
-              const items = SAMPLE_PROGRAMS.filter((p) => p.category === category);
-              if (items.length === 0) return null;
-              return (
-                <optgroup key={category} label={`📂 ${category}`}>
-                  {items.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.title} ({p.difficulty})
-                    </option>
-                  ))}
-                </optgroup>
-              );
-            })}
-          </select>
-
-          {/* Prominent Personal Problem Button */}
-          <button
-            onClick={() => setIsCodeDoctorOpen(true)}
-            className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition shadow-xs shrink-0 border cursor-pointer ${
-              isBright
-                ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
-                : 'bg-gradient-to-r from-amber-500/15 to-orange-500/15 hover:from-amber-500/25 hover:to-orange-500/25 text-amber-300 border-amber-500/40'
-            }`}
-            title="Personal Problem: Solve custom DSA problems & auto-visualize in 3D"
-          >
-            <Lightbulb size={13} className={isBright ? 'text-amber-700' : 'text-amber-400'} />
-            <span>Personal Problem 💡</span>
-          </button>
-
-          {/* Prominent "Input Any Code" Button */}
-          <button
-            onClick={() => setIsCustomCodeOpen(true)}
-            className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition shadow-xs shrink-0 border cursor-pointer ${
-              isBright
-                ? 'bg-cyan-100 text-cyan-900 border-cyan-300 hover:bg-cyan-200'
-                : 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 text-cyan-300 border-cyan-500/40'
-            }`}
-            title="Input any code in JS, C, C++, Python, or Java to visualize in 3D"
-          >
-            <Code2 size={13} className={isBright ? 'text-cyan-700' : 'text-cyan-400'} />
-            <span>Input Code ⚡</span>
-          </button>
-
-          {/* Striver SDE Sheet Toggle Button */}
-          <button
-            onClick={() => setIsStriverSheetOpen((prev) => !prev)}
-            className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition shadow-xs shrink-0 border cursor-pointer ${
-              isStriverSheetOpen
-                ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold shadow-amber-500/20'
-                : isBright
-                  ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
-                  : 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-300 border-amber-500/40 shadow-amber-500/10'
-            }`}
-            title="Toggle Striver SDE Sheet: 182 Core DSA Problems with 3D Visualization"
-          >
-            <BookOpen size={13} className={isStriverSheetOpen ? 'text-slate-950' : 'text-amber-400'} />
-            <span>Striver Sheet 📜</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/30 text-amber-200 font-mono">182</span>
-          </button>
-
-        </div>
-
-        {/* Right Controls: AI Tutor, Quiz, Save, State Panel Toggle, Full 3D Theater Mode */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {/* AI Tutor Assistant Button */}
-          <button
-            onClick={() => setIsAiOpen(true)}
-            className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition border shadow-xs cursor-pointer ${
-              isBright
-                ? 'bg-purple-50 text-purple-900 border-purple-300 hover:bg-purple-100'
-                : 'bg-purple-950/70 hover:bg-purple-900 border-purple-700/60 text-purple-300'
-            }`}
-            title="AI Tutor: Step-by-step code explanation, hints and guidance"
-          >
-            <Sparkles size={13} className="text-purple-400" />
-            <span className="hidden sm:inline">AI Tutor</span>
-            <span className="sm:hidden">AI</span>
-          </button>
-
-          {/* Interactive Quiz Button */}
-          <button
-            onClick={() => setIsQuizOpen(true)}
-            className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition border shadow-xs cursor-pointer ${
-              isBright
-                ? 'bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100'
-                : 'bg-emerald-950/70 hover:bg-emerald-900 border-emerald-700/60 text-emerald-300'
-            }`}
-            title="Quiz: Test your understanding of this algorithm"
-          >
-            <HelpCircle size={13} className="text-emerald-400" />
-            <span>Quiz</span>
-          </button>
-
-          {/* Save Program Button */}
-          <button
-            onClick={handleSaveProgram}
-            disabled={saveStatus === 'SAVING'}
-            className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition border shadow-xs cursor-pointer ${
-              saveStatus === 'SAVED'
-                ? 'bg-emerald-600 text-white border-emerald-500'
-                : isBright
-                ? 'bg-blue-50 text-blue-900 border-blue-300 hover:bg-blue-100'
-                : 'bg-blue-950/70 hover:bg-blue-900 border-blue-700/60 text-blue-300'
-            }`}
-            title="Save this program to your collection"
-          >
-            <Bookmark size={13} className={saveStatus === 'SAVED' ? 'text-white' : 'text-blue-400'} />
-            <span className="hidden sm:inline">{saveStatus === 'SAVED' ? 'Saved! ✓' : saveStatus === 'SAVING' ? 'Saving...' : 'Save'}</span>
-          </button>
-
-          {/* Toggle Program State Panel Button */}
-          <button
-            onClick={() => setShowStatePanel((prev) => !prev)}
-            className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition border shadow-xs cursor-pointer ${
-              showStatePanel
-                ? isBright
-                  ? 'bg-cyan-50 border-cyan-300 text-cyan-800'
-                  : 'bg-cyan-950/70 border-cyan-700/50 text-cyan-300'
-                : isBright
-                  ? 'bg-slate-100 border-slate-300 text-slate-500 hover:text-slate-800'
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-            }`}
-            title={showStatePanel ? 'Hide Program State panel to expand 3D viewport' : 'Show Program State panel'}
-          >
-            {showStatePanel ? <Eye size={12} /> : <EyeOff size={12} />}
-            <span className="hidden sm:inline">State:</span>
-            <span>{showStatePanel ? 'ON' : 'OFF'}</span>
-          </button>
-
-          {/* Fullscreen 3D Theater Mode Toggle Button */}
-          <button
-            onClick={() => setIsFull3DView((prev) => !prev)}
-            className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition border shadow-xs cursor-pointer ${
-              isFull3DView
-                ? 'bg-purple-600 border-purple-400 text-white shadow-md shadow-purple-600/30'
-                : isBright
-                  ? 'bg-purple-50 hover:bg-purple-100 border-purple-300 text-purple-800'
-                  : 'bg-purple-950/70 hover:bg-purple-900 border-purple-700/50 text-purple-300'
-            }`}
-            title={isFull3DView ? 'Exit Full 3D Theater mode and show Studio' : 'Full 3D Mode: Expand 3D canvas to 100% full screen'}
-          >
-            {isFull3DView ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-            <span className="hidden sm:inline">{isFull3DView ? 'Exit 3D' : 'Full 3D'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile View Switcher (Visible only on mobile devices) */}
-      <div className={`md:hidden flex items-center border-b p-1 shrink-0 ${
-        isBright ? 'bg-white border-slate-200' : 'bg-slate-950 border-slate-800/80'
-      }`}>
-        <button
-          onClick={() => setMobileTab('3d')}
-          className={`flex-1 py-1.5 text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 transition ${
-            mobileTab === '3d'
-              ? isBright
-                ? 'bg-cyan-100 text-cyan-800 border border-cyan-300 shadow-sm'
-                : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-              : isBright ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <span>🧊 3D Scene</span>
-        </button>
-        <button
-          onClick={() => setMobileTab('code')}
-          className={`flex-1 py-1.5 text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 transition ${
-            mobileTab === 'code'
-              ? isBright
-                ? 'bg-cyan-100 text-cyan-800 border border-cyan-300 shadow-sm'
-                : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-              : isBright ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <span>💻 Code Editor</span>
-        </button>
-        <button
-          onClick={() => setMobileTab('state')}
-          className={`flex-1 py-1.5 text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 transition ${
-            mobileTab === 'state'
-              ? isBright
-                ? 'bg-cyan-100 text-cyan-800 border border-cyan-300 shadow-sm'
-                : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-              : isBright ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <span>📊 Variables</span>
-        </button>
-      </div>
-
-      {/* Execution Pipeline Warning / Error Alert */}
+      {/* Execution Diagnostic Alert Bar */}
       {executionError && (
-        <div className={`px-4 py-2 text-xs flex items-center justify-between border-b animate-fadeIn z-20 shrink-0 ${
-          isBright
-            ? 'bg-rose-50 text-rose-900 border-rose-200'
-            : 'bg-rose-950/40 text-rose-200 border-rose-800/60'
-        }`}>
+        <div className="px-4 py-2 text-xs flex items-center justify-between border-b border-[#ef4444]/40 bg-rose-950/50 text-[#fca5a5] shrink-0 z-20">
           <div className="flex items-center gap-2">
-            <span className="font-bold">⚠️ Notice:</span>
+            <span className="font-bold text-[#ef4444]">Diagnostic:</span>
             <span>{executionError}</span>
           </div>
           <button
             onClick={() => setExecutionError(null)}
-            className={`px-2 py-0.5 rounded text-[11px] font-semibold border transition cursor-pointer ${
-              isBright
-                ? 'bg-white hover:bg-rose-100 border-rose-300 text-rose-800'
-                : 'bg-rose-900/60 hover:bg-rose-900 border-rose-700 text-rose-200'
-            }`}
+            className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#101c2d] hover:bg-[#1e2f47] border border-[#ef4444]/40 text-[#fca5a5] cursor-pointer"
           >
             Dismiss
           </button>
         </div>
       )}
 
-      {/* Main Studio Workspace with Draggable Box Resizers */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative select-none">
-        {/* Left Box: Monaco Code Editor */}
-        {!isFull3DView && (
-          <div
-            className={`${mobileTab === 'code' ? 'block w-full' : 'hidden'} md:block h-full overflow-hidden shrink-0 transition-all duration-75`}
-            style={{ width: isFull3DView ? 0 : `${editorWidthPercent}%` }}
-          >
-            <EditorErrorBoundary>
-              <CodeEditor
-                code={code}
-                onChangeCode={(val) => {
-                  setCode(val);
-                  if (syntaxErrorLine) setSyntaxErrorLine(null);
-                  if (executionError) setExecutionError(null);
-                }}
-                language={language}
-                onChangeLanguage={handleLanguageChange}
-                onOpenCustomCode={() => setIsCustomCodeOpen(true)}
-                onOpenCodeDoctor={() => setIsCodeDoctorOpen(true)}
-                onOpenPersonalProblem={() => setIsCodeDoctorOpen(true)}
-                onOpenStriverSheet={() => setIsStriverSheetOpen(true)}
-                onOpenLeetCode={() => setIsStriverSheetOpen(true)}
-                currentLineNumber={currentStep?.lineNumber || null}
-                syntaxErrorLine={syntaxErrorLine}
-                isPlaying={isPlaying}
-                onPlay={handleRunCode}
-                onRunCode={handleRunCode}
-                onResetCode={handleResetCode}
-                isExecuting={isExecuting}
-                isCodeDirty={isCodeDirty}
-                onPause={pause}
-                onNext={nextStep}
-                onPrev={prevStep}
-                onReset={reset}
-                isAtStart={isAtStart}
-                isAtEnd={isAtEnd}
-                breakpoints={breakpoints}
-                onToggleBreakpoint={toggleBreakpoint}
-                onSelectLine={handleSelectLineFromEditor}
-              />
-            </EditorErrorBoundary>
-          </div>
-        )}
-
-        {/* Draggable & Hover Resizing Divider Bar between Code Editor and 3D Visualizer */}
-        {!isFull3DView && (
-          <div
-            onMouseDown={startEditorResize}
-            className={`hidden md:flex flex-col items-center justify-center w-2 relative group cursor-col-resize z-20 transition-colors ${
-              isResizingEditor
-                ? 'bg-cyan-500 shadow-lg shadow-cyan-500/50'
-                : isBright
-                ? 'bg-slate-200 hover:bg-cyan-400'
-                : 'bg-slate-800/80 hover:bg-cyan-500/80'
-            }`}
-            title={`Drag to resize Code vs 3D Box (Current: ${editorWidthPercent}%)`}
-          >
-            {/* Hover Grab Handle Dots */}
-            <div className="w-1 h-8 rounded-full bg-slate-400/50 group-hover:bg-slate-900 group-hover:scale-y-125 transition-all"></div>
-
-            {/* Quick Preset Buttons on Hover */}
-            <div className="absolute top-2 left-3 hidden group-hover:flex items-center gap-1 backdrop-blur-md bg-slate-950/90 border border-slate-700 rounded-lg p-1 text-[10px] shadow-xl z-30 pointer-events-auto">
-              <span className="text-slate-400 font-mono px-1">Editor:</span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setEditorWidthPercent(25);
-                }}
-                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-600 text-cyan-300 font-mono"
-              >
-                25%
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setEditorWidthPercent(35);
-                }}
-                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-600 text-cyan-300 font-mono"
-              >
-                35%
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setEditorWidthPercent(50);
-                }}
-                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-600 text-cyan-300 font-mono"
-              >
-                50%
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Center Box: 3D Visualization + Console + User Input Bar */}
-        <div className={`
-          ${mobileTab === '3d' ? 'flex' : 'hidden'} 
-          md:flex flex-1 h-full flex-col overflow-hidden transition-all duration-75 border-r border-slate-800/80
-        `}>
-          {/* Direct Interactive Input Generator Bar */}
-          <div className="shrink-0 border-b">
-            <InputGenerator
-              currentValues={extractNumbersFromCode(formInputValues) || [45, 12, 89, 23, 7, 64, 31]}
-              currentTarget={23}
-              showTarget={selectedSample?.category === 'Searching' || selectedSample?.id?.includes('search')}
-              onGenerate={({ values, target }) => {
-                const inputStr = values.join(', ');
-                setFormInputValues(inputStr);
-
-                // If this is one of our registered 3D algorithms
-                const algo = ALGORITHM_CATALOG.find((a) => a.id === selectedSample.id || `algo-${a.id}` === selectedSample.id);
-                if (algo) {
-                  const res = algo.generator(values, target);
-                  setTrace(res.steps);
-                  reset();
-                  setTimeout(() => play(), 80);
-                  return;
+      {/* Main Multi-Panel Workspace Body */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* ========================================================
+            LEFT ZONE: ACTIVITY BAR & COLLAPSIBLE SIDEBAR
+            ======================================================== */}
+        <div className="flex h-full shrink-0 z-20">
+          {/* Left Vertical Activity Icon Strip (48px) */}
+          <div className="w-12 h-full bg-[#0d1726] border-r border-[#26364a] flex flex-col items-center py-2 gap-2 shrink-0 select-none">
+            <button
+              onClick={() => {
+                if (sidebarOpen && sidebarTab === 'concepts') setSidebarOpen(false);
+                else {
+                  setSidebarTab('concepts');
+                  setSidebarOpen(true);
                 }
-
-                // Otherwise apply into code & simulator
-                applyNewValuesToCode(values);
               }}
-            />
-          </div>
-
-          {/* 3D Canvas Viewport Box */}
-          <div className="flex-1 relative min-h-[220px]">
-            <VisualizerErrorBoundary onReset={reset}>
-              <SceneContainer
-                currentStep={currentStep}
-                code={code}
-                statusLabel={currentStep?.dataStructureState?.label || null}
-                activeDetails={currentStep?.dataStructureState?.focusInfo || null}
-                correctOutput={finalCorrectOutput}
-                isAtEnd={isAtEnd}
-                cumulativeOutput={cumulativeOutput}
-                isFull3DView={isFull3DView}
-                onToggleFull3D={() => setIsFull3DView((prev) => !prev)}
-                onSelectElement={handleSelectElementFrom3D}
-              >
-                <DsaSceneDispatcher
-                  dataStructureState={currentStep?.dataStructureState}
-                />
-              </SceneContainer>
-            </VisualizerErrorBoundary>
-          </div>
-
-          {/* Draggable & Hover Resizing Divider Bar between 3D Canvas and Console */}
-          {!isFull3DView && (
-            <div
-              onMouseDown={startConsoleResize}
-              className={`h-2 w-full relative group cursor-row-resize z-20 flex items-center justify-center transition-colors ${
-                isResizingConsole
-                  ? 'bg-cyan-500 shadow-lg shadow-cyan-500/50'
-                  : isBright
-                  ? 'bg-slate-200 hover:bg-cyan-400'
-                  : 'bg-slate-800/80 hover:bg-cyan-500/80'
+              className={`w-9 h-9 rounded flex items-center justify-center transition-colors cursor-pointer ${
+                sidebarOpen && sidebarTab === 'concepts'
+                  ? 'bg-[#1e2f47] text-[#38bdf8] border border-[#3b82f6]/40'
+                  : 'text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#101c2d]'
               }`}
-              title={`Drag to resize Console Height (Current: ${consoleHeightPx}px)`}
+              title="Concepts & Algorithms Catalog"
             >
-              {/* Horizontal Grip Line */}
-              <div className="w-12 h-1 rounded-full bg-slate-400/50 group-hover:bg-slate-900 group-hover:scale-x-125 transition-all"></div>
+              <Layers size={18} />
+            </button>
 
-              {/* Quick Height Preset Buttons on Hover */}
-              <div className="absolute right-3 -top-7 hidden group-hover:flex items-center gap-1 backdrop-blur-md bg-slate-950/90 border border-slate-700 rounded-lg p-1 text-[10px] shadow-xl z-30 pointer-events-auto">
-                <span className="text-slate-400 font-mono px-1">Console:</span>
+            <button
+              onClick={() => setIsStriverSheetOpen(true)}
+              className="w-9 h-9 rounded flex items-center justify-center text-[#f59e0b] hover:bg-[#101c2d] hover:text-[#fbbf24] transition-colors cursor-pointer"
+              title="Striver SDE Sheet (182 Questions)"
+            >
+              <BookOpen size={18} />
+            </button>
+
+            <button
+              onClick={() => setIsCustomCodeOpen(true)}
+              className="w-9 h-9 rounded flex items-center justify-center text-[#2dd4bf] hover:bg-[#101c2d] hover:text-[#5eead4] transition-colors cursor-pointer"
+              title="Input Any Custom Code"
+            >
+              <Code2 size={18} />
+            </button>
+
+            <button
+              onClick={() => setIsCodeDoctorOpen(true)}
+              className="w-9 h-9 rounded flex items-center justify-center text-[#fbbf24] hover:bg-[#101c2d] hover:text-[#fef08a] transition-colors cursor-pointer"
+              title="Personal Problem Solver"
+            >
+              <Lightbulb size={18} />
+            </button>
+
+            <div className="flex-1" />
+
+            <button
+              onClick={() => setIsCompareOpen(true)}
+              className="w-9 h-9 rounded flex items-center justify-center text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#101c2d] transition-colors cursor-pointer"
+              title="Compare Mode"
+            >
+              <Clock size={16} />
+            </button>
+          </div>
+
+          {/* Left Expanded Sidebar Panel */}
+          {sidebarOpen && (
+            <div
+              style={{ width: `${sidebarWidthPx}px` }}
+              className="h-full bg-[#101c2d] border-r border-[#26364a] flex flex-col overflow-hidden text-xs"
+            >
+              <div className="h-9 px-3 bg-[#142338] border-b border-[#26364a] flex items-center justify-between text-xs font-semibold text-[#f8fafc] shrink-0">
+                <span className="uppercase tracking-wider text-[11px] text-[#94a3b8]">
+                  {sidebarTab === 'concepts' ? 'Algorithm Catalog' : 'Sidebar'}
+                </span>
                 <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setConsoleHeightPx(90);
-                  }}
-                  className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-600 text-cyan-300 font-mono"
+                  onClick={() => setSidebarOpen(false)}
+                  className="p-1 rounded hover:bg-[#1e2f47] text-[#94a3b8] hover:text-[#f8fafc] cursor-pointer"
+                  title="Close Sidebar"
                 >
-                  90px
+                  <X size={13} />
                 </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setConsoleHeightPx(165);
-                  }}
-                  className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-600 text-cyan-300 font-mono"
-                >
-                  165px
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setConsoleHeightPx(260);
-                  }}
-                  className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-600 text-cyan-300 font-mono"
-                >
-                  260px
-                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                <div className="text-[10px] uppercase font-bold text-[#64748b] px-2 pt-1">
+                  ⚡ 3D Algorithm Engine
+                </div>
+                {ALGORITHM_CATALOG.map((algo) => (
+                  <button
+                    key={algo.id}
+                    onClick={() => handleSelectAlgorithm(algo)}
+                    className={`w-full text-left px-2.5 py-1.5 rounded transition-colors text-xs flex items-center justify-between cursor-pointer ${
+                      selectedSample?.id === algo.id
+                        ? 'bg-[#1e2f47] text-[#38bdf8] font-bold border border-[#3b82f6]/40'
+                        : 'text-[#cbd5e1] hover:bg-[#142338] hover:text-[#f8fafc]'
+                    }`}
+                  >
+                    <span className="truncate">{algo.name}</span>
+                    <span className="text-[10px] text-[#64748b] font-mono">{algo.complexity?.time?.average || 'O(n)'}</span>
+                  </button>
+                ))}
+
+                <div className="text-[10px] uppercase font-bold text-[#64748b] px-2 pt-3 border-t border-[#26364a]">
+                  📂 Curriculum Topics
+                </div>
+                {SAMPLE_PROGRAMS.slice(0, 16).map((prog) => (
+                  <button
+                    key={prog.id}
+                    onClick={() => handleSelectProgram(prog)}
+                    className={`w-full text-left px-2.5 py-1.5 rounded transition-colors text-xs flex items-center justify-between cursor-pointer ${
+                      selectedSample?.id === prog.id
+                        ? 'bg-[#1e2f47] text-[#38bdf8] font-bold border border-[#3b82f6]/40'
+                        : 'text-[#cbd5e1] hover:bg-[#142338] hover:text-[#f8fafc]'
+                    }`}
+                  >
+                    <span className="truncate">{prog.title}</span>
+                    <span className="text-[10px] text-[#64748b] font-mono">{prog.difficulty}</span>
+                  </button>
+                ))}
               </div>
             </div>
           )}
 
-          {/* Integrated Output Console Box */}
-          {!isFull3DView && (
-            <div style={{ height: `${consoleHeightPx}px` }} className="shrink-0 overflow-hidden transition-all duration-75">
-              <OutputConsole
-                output={cumulativeOutput}
-                correctOutput={finalCorrectOutput}
-                isAtEnd={isAtEnd}
+          {/* Sidebar Width Drag Handle */}
+          {sidebarOpen && (
+            <ResizeHandle
+              orientation="horizontal"
+              onResize={handleResizeSidebar}
+              title="Drag to resize sidebar width"
+            />
+          )}
+        </div>
+
+        {/* ========================================================
+            CENTER & BOTTOM MAIN WORKSPACE
+            ======================================================== */}
+        <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+          {/* Top Half: Code Editor & 3D Visualization */}
+          <div className="flex-1 flex overflow-hidden min-h-0 relative">
+            {/* Center Left: Monaco Code Editor */}
+            {!editorCollapsed && (
+              <div
+                style={{
+                  width: sceneCollapsed ? '100%' : `${editorWidthPercent}%`,
+                }}
+                className={`h-full flex flex-col overflow-hidden shrink-0 ${
+                  fullscreenPanel === 'editor' ? 'fixed inset-0 z-50 bg-[#101c2d]' : ''
+                }`}
+              >
+                <EditorErrorBoundary>
+                  <EditorPanel
+                    code={code}
+                    onChangeCode={(val) => {
+                      setCode(val);
+                      if (syntaxErrorLine) setSyntaxErrorLine(null);
+                      if (executionError) setExecutionError(null);
+                    }}
+                    language={language}
+                    onChangeLanguage={handleLanguageChange}
+                    currentLineNumber={currentStep?.lineNumber || null}
+                    syntaxErrorLine={syntaxErrorLine}
+                    isPlaying={isPlaying}
+                    onRun={handleRunCode}
+                    onReset={handleResetCode}
+                    isExecuting={isExecuting}
+                    isCodeDirty={isCodeDirty}
+                    breakpoints={breakpoints}
+                    onToggleBreakpoint={toggleBreakpoint}
+                    onSelectLine={handleSelectLineFromEditor}
+                    isCollapsed={editorCollapsed}
+                    onToggleCollapse={() => setEditorCollapsed(true)}
+                    isFullscreen={fullscreenPanel === 'editor'}
+                    onToggleFullscreen={() =>
+                      setFullscreenPanel((prev) => (prev === 'editor' ? null : 'editor'))
+                    }
+                    onOpenCustomCode={() => setIsCustomCodeOpen(true)}
+                    onOpenCodeDoctor={() => setIsCodeDoctorOpen(true)}
+                    onOpenPersonalProblem={() => setIsCodeDoctorOpen(true)}
+                    onOpenStriverSheet={() => setIsStriverSheetOpen(true)}
+                  />
+                </EditorErrorBoundary>
+              </div>
+            )}
+
+            {/* Collapsed Editor Vertical Tab Bar */}
+            {editorCollapsed && (
+              <div
+                onClick={() => setEditorCollapsed(false)}
+                className="w-8 h-full bg-[#101c2d] border-r border-[#26364a] hover:bg-[#142338] transition-colors flex flex-col items-center py-3 cursor-pointer shrink-0"
+                title="Expand Code Editor"
+              >
+                <ChevronRight size={14} className="text-[#38bdf8] mb-2" />
+                <span className="panel-collapsed-tab text-[10px] font-mono tracking-widest text-[#94a3b8] uppercase">
+                  Code Editor
+                </span>
+              </div>
+            )}
+
+            {/* Draggable Divider between Code Editor and 3D Viewport */}
+            {!editorCollapsed && !sceneCollapsed && (
+              <ResizeHandle
+                orientation="horizontal"
+                onResize={handleResizeEditor}
+                title={`Drag to resize Code vs 3D Box (Current: ${editorWidthPercent}%)`}
               />
+            )}
+
+            {/* Center Right: 3D Visualization Canvas */}
+            {!sceneCollapsed && (
+              <div
+                className={`flex-1 h-full flex flex-col overflow-hidden min-w-[200px] ${
+                  fullscreenPanel === 'scene' ? 'fixed inset-0 z-50 bg-[#08111f]' : ''
+                }`}
+              >
+                {/* Interactive Array Input Generator Bar */}
+                <div className="shrink-0 border-b border-[#26364a] bg-[#0d1726]">
+                  <InputGenerator
+                    currentValues={extractNumbersFromCode(formInputValues) || [45, 12, 89, 23, 7, 64, 31]}
+                    currentTarget={23}
+                    showTarget={selectedSample?.category === 'Searching' || selectedSample?.id?.includes('search')}
+                    onGenerate={({ values, target }) => {
+                      const inputStr = values.join(', ');
+                      setFormInputValues(inputStr);
+
+                      const algo = ALGORITHM_CATALOG.find(
+                        (a) => a.id === selectedSample.id || `algo-${a.id}` === selectedSample.id
+                      );
+                      if (algo) {
+                        const res = algo.generator(values, target);
+                        setTrace(res.steps);
+                        reset();
+                        setTimeout(() => play(), 80);
+                        return;
+                      }
+
+                      applyNewValuesToCode(values);
+                    }}
+                  />
+                </div>
+
+                {/* 3D WebGL Scene Container */}
+                <div className="flex-1 relative overflow-hidden bg-[#08111f]">
+                  <VisualizerErrorBoundary onReset={reset}>
+                    <ScenePanel
+                      currentStep={currentStep}
+                      code={code}
+                      correctOutput={finalCorrectOutput}
+                      isAtEnd={isAtEnd}
+                      cumulativeOutput={cumulativeOutput}
+                      onSelectElement={handleSelectElementFrom3D}
+                      isCollapsed={sceneCollapsed}
+                      onToggleCollapse={() => setSceneCollapsed(true)}
+                      isFullscreen={fullscreenPanel === 'scene'}
+                      onToggleFullscreen={() =>
+                        setFullscreenPanel((prev) => (prev === 'scene' ? null : 'scene'))
+                      }
+                    >
+                      <DsaSceneDispatcher dataStructureState={currentStep?.dataStructureState} />
+                    </ScenePanel>
+                  </VisualizerErrorBoundary>
+                </div>
+              </div>
+            )}
+
+            {/* Collapsed 3D Scene Vertical Tab Bar */}
+            {sceneCollapsed && (
+              <div
+                onClick={() => setSceneCollapsed(false)}
+                className="w-8 h-full bg-[#08111f] border-l border-[#26364a] hover:bg-[#101c2d] transition-colors flex flex-col items-center py-3 cursor-pointer shrink-0"
+                title="Expand 3D Visualization"
+              >
+                <ChevronLeft size={14} className="text-[#14b8a6] mb-2" />
+                <span className="panel-collapsed-tab text-[10px] font-mono tracking-widest text-[#94a3b8] uppercase">
+                  3D Visualization
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Draggable Divider between Main Top Area and Bottom Dock */}
+          {!bottomPanelCollapsed && (
+            <ResizeHandle
+              orientation="vertical"
+              onResize={handleResizeBottomPanel}
+              title={`Drag to resize Bottom Panel Height (Current: ${bottomPanelHeightPx}px)`}
+            />
+          )}
+
+          {/* Bottom Dock: Output Console + Execution Timeline */}
+          {!bottomPanelCollapsed ? (
+            <div
+              style={{ height: `${bottomPanelHeightPx}px` }}
+              className={`shrink-0 flex flex-col overflow-hidden bg-[#08111f] border-t border-[#26364a] ${
+                fullscreenPanel === 'bottom' ? 'fixed inset-0 z-50 bg-[#08111f]' : ''
+              }`}
+            >
+              {/* Bottom Dock Header Tabs */}
+              <div className="h-7 bg-[#0d1726] border-b border-[#26364a] px-3 flex items-center justify-between text-xs select-none shrink-0">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setBottomPanelTab('console')}
+                    className={`h-5 px-2 rounded text-[11px] font-medium flex items-center gap-1 transition-colors cursor-pointer ${
+                      bottomPanelTab === 'console'
+                        ? 'bg-[#142338] text-[#38bdf8] font-bold border border-[#26364a]'
+                        : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                    }`}
+                  >
+                    <Terminal size={11} />
+                    <span>Console &amp; Output</span>
+                  </button>
+
+                  <button
+                    onClick={() => setBottomPanelTab('timeline')}
+                    className={`h-5 px-2 rounded text-[11px] font-medium flex items-center gap-1 transition-colors cursor-pointer ${
+                      bottomPanelTab === 'timeline'
+                        ? 'bg-[#142338] text-[#14b8a6] font-bold border border-[#26364a]'
+                        : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                    }`}
+                  >
+                    <Clock size={11} />
+                    <span>Timeline Scrubber</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() =>
+                      setFullscreenPanel((prev) => (prev === 'bottom' ? null : 'bottom'))
+                    }
+                    className="p-1 rounded hover:bg-[#1e2f47] text-[#94a3b8] hover:text-[#f8fafc] cursor-pointer"
+                    title={fullscreenPanel === 'bottom' ? 'Exit Fullscreen' : 'Expand Dock'}
+                  >
+                    {fullscreenPanel === 'bottom' ? <Minimize2 size={11} /> : <Maximize2 size={11} />}
+                  </button>
+
+                  <button
+                    onClick={() => setBottomPanelCollapsed(true)}
+                    className="p-1 rounded hover:bg-[#1e2f47] text-[#94a3b8] hover:text-[#f8fafc] cursor-pointer"
+                    title="Collapse Bottom Dock"
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Bottom Dock Content */}
+              <div className="flex-1 overflow-hidden">
+                {bottomPanelTab === 'console' ? (
+                  <OutputConsole
+                    output={cumulativeOutput}
+                    correctOutput={finalCorrectOutput}
+                    isAtEnd={isAtEnd}
+                    error={executionError}
+                  />
+                ) : (
+                  <Timeline
+                    currentStepIndex={currentStepIndex}
+                    totalSteps={totalSteps}
+                    isPlaying={isPlaying}
+                    playbackSpeed={playbackSpeed}
+                    setPlaybackSpeed={setPlaybackSpeed}
+                    onPlay={handleTimelinePlay}
+                    isCodeDirty={isCodeDirty}
+                    onPause={pause}
+                    onPrev={prevStep}
+                    onNext={nextStep}
+                    onReset={reset}
+                    onGoToStep={goToStep}
+                    isAtStart={isAtStart}
+                    isAtEnd={isAtEnd}
+                    currentStep={currentStep}
+                    trace={trace}
+                  />
+                )}
+              </div>
+            </div>
+          ) : (
+            /* Collapsed Bottom Bar */
+            <div className="h-7 bg-[#0d1726] border-t border-[#26364a] px-3 flex items-center justify-between text-xs text-[#94a3b8] shrink-0 select-none">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setBottomPanelCollapsed(false)}
+                  className="flex items-center gap-1.5 hover:text-[#f8fafc] cursor-pointer"
+                  title="Expand Bottom Dock"
+                >
+                  <Terminal size={12} className="text-[#38bdf8]" />
+                  <span>Output Console</span>
+                </button>
+                <span className="text-[#26364a]">|</span>
+                <span className="font-mono text-[11px]">
+                  Step {currentStepIndex + 1} / {Math.max(1, totalSteps)}
+                </span>
+              </div>
+
+              <button
+                onClick={() => setBottomPanelCollapsed(false)}
+                className="text-[10px] text-[#38bdf8] hover:underline cursor-pointer"
+              >
+                Expand Dock ↑
+              </button>
             </div>
           )}
         </div>
 
-        {/* Mouse-Resizable Splitter between Center View and Program State Panel (Part 3) */}
-        {!isFull3DView && showStatePanel && (
-          <div
-            onMouseDown={startStatePanelResize}
-            className={`hidden md:flex flex-col items-center justify-center w-2 relative group cursor-col-resize z-20 transition-colors shrink-0 ${
-              isResizingStatePanel
-                ? 'bg-cyan-500 shadow-lg shadow-cyan-500/50'
-                : isBright
-                ? 'bg-slate-200 hover:bg-cyan-400'
-                : 'bg-slate-800/80 hover:bg-cyan-500/80'
-            }`}
-            title={`Drag to resize Program State Panel (Current: ${statePanelWidthPx}px)`}
-          >
-            {/* Grip line */}
-            <div className="w-1 h-8 rounded-full bg-slate-400/50 group-hover:bg-slate-900 group-hover:scale-y-125 transition-all"></div>
-
-            {/* Quick preset buttons on hover */}
-            <div className="absolute top-2 right-3 hidden group-hover:flex items-center gap-1 backdrop-blur-md bg-slate-950/90 border border-slate-700 rounded-lg p-1 text-[10px] shadow-xl z-30 pointer-events-auto">
-              <span className="text-slate-400 font-mono px-1">State:</span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setStatePanelWidthPx(260);
-                  try { localStorage.setItem('code3d_state_panel_width', '260'); } catch {}
-                }}
-                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-600 text-cyan-300 font-mono"
-              >
-                260px
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setStatePanelWidthPx(320);
-                  try { localStorage.setItem('code3d_state_panel_width', '320'); } catch {}
-                }}
-                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-600 text-cyan-300 font-mono"
-              >
-                320px
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setStatePanelWidthPx(420);
-                  try { localStorage.setItem('code3d_state_panel_width', '420'); } catch {}
-                }}
-                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-600 text-cyan-300 font-mono"
-              >
-                420px
-              </button>
-            </div>
-          </div>
+        {/* Draggable Divider between Main Center Area and Right Inspector Panel */}
+        {!rightPanelCollapsed && (
+          <ResizeHandle
+            orientation="horizontal"
+            onResize={handleResizeRightPanel}
+            title={`Drag to resize Right Inspector (Current: ${rightPanelWidthPx}px)`}
+          />
         )}
 
-        {/* Right Column: Mouse-Resizable Program State Inspector */}
-        {!isFull3DView && showStatePanel && (
+        {/* ========================================================
+            RIGHT ZONE: RESIZABLE & COLLAPSIBLE INSPECTOR
+            ======================================================== */}
+        {!rightPanelCollapsed ? (
           <div
-            className={`${mobileTab === 'state' ? 'block w-full' : 'hidden'} md:block h-full overflow-hidden shrink-0 transition-all duration-75`}
-            style={{ width: `${statePanelWidthPx}px` }}
+            style={{ width: `${rightPanelWidthPx}px` }}
+            className={`h-full flex flex-col bg-[#101c2d] border-l border-[#26364a] shrink-0 overflow-hidden text-xs ${
+              fullscreenPanel === 'right' ? 'fixed inset-0 z-50 bg-[#101c2d]' : ''
+            }`}
           >
-            <VisualizerErrorBoundary onReset={reset}>
-              <StatePanel
-                currentStep={currentStep}
-                totalSteps={totalSteps}
-                correctOutput={finalCorrectOutput}
-                isAtEnd={isAtEnd}
-                complexity={selectedSample?.complexity}
-              />
-            </VisualizerErrorBoundary>
+            {/* Inspector Tab Bar */}
+            <div className="h-9 bg-[#142338] border-b border-[#26364a] px-2 flex items-center justify-between text-xs select-none shrink-0">
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setRightPanelTab('state')}
+                  className={`h-6 px-2 rounded text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
+                    rightPanelTab === 'state'
+                      ? 'bg-[#101c2d] text-[#38bdf8] border border-[#26364a]'
+                      : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                  }`}
+                  title="Program State & Execution Step"
+                >
+                  <Cpu size={12} />
+                  <span>State</span>
+                </button>
+
+                <button
+                  onClick={() => setRightPanelTab('variables')}
+                  className={`h-6 px-2 rounded text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
+                    rightPanelTab === 'variables'
+                      ? 'bg-[#101c2d] text-[#f59e0b] border border-[#26364a]'
+                      : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                  }`}
+                  title="Variables Inspector Table"
+                >
+                  <Variable size={12} />
+                  <span>Vars</span>
+                </button>
+
+                <button
+                  onClick={() => setRightPanelTab('condition')}
+                  className={`h-6 px-2 rounded text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
+                    rightPanelTab === 'condition'
+                      ? 'bg-[#101c2d] text-[#2dd4bf] border border-[#26364a]'
+                      : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                  }`}
+                  title="Condition Evaluation"
+                >
+                  <GitBranch size={12} />
+                  <span>Cond</span>
+                </button>
+
+                <button
+                  onClick={() => setRightPanelTab('ai')}
+                  className={`h-6 px-2 rounded text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
+                    rightPanelTab === 'ai'
+                      ? 'bg-[#101c2d] text-[#c084fc] border border-[#26364a]'
+                      : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                  }`}
+                  title="AI Tutor & Explanation"
+                >
+                  <Sparkles size={12} />
+                  <span>AI</span>
+                </button>
+              </div>
+
+              {/* Inspector Header Actions */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() =>
+                    setFullscreenPanel((prev) => (prev === 'right' ? null : 'right'))
+                  }
+                  className="p-1 rounded hover:bg-[#1e2f47] text-[#94a3b8] hover:text-[#f8fafc] cursor-pointer"
+                  title={fullscreenPanel === 'right' ? 'Exit Fullscreen' : 'Expand Inspector'}
+                >
+                  {fullscreenPanel === 'right' ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+                </button>
+
+                <button
+                  onClick={() => setRightPanelCollapsed(true)}
+                  className="p-1 rounded hover:bg-[#1e2f47] text-[#94a3b8] hover:text-[#f8fafc] cursor-pointer"
+                  title="Collapse Inspector"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            </div>
+
+            {/* Inspector Tab Content Area */}
+            <div className="flex-1 overflow-y-auto">
+              {rightPanelTab === 'state' && (
+                <div className="p-3 space-y-3">
+                  <StepInspector currentStep={currentStep} totalSteps={totalSteps} />
+                  {selectedSample?.complexity && (
+                    <ComplexityPanel
+                      complexity={selectedSample.complexity}
+                      algorithmName={selectedSample?.title || 'Algorithm'}
+                    />
+                  )}
+                  {currentStep?.condition && (
+                    <ConditionPanel
+                      condition={currentStep.condition}
+                      currentLine={currentStep.lineNumber}
+                      currentOperation={currentStep.operation}
+                    />
+                  )}
+                </div>
+              )}
+
+              {rightPanelTab === 'variables' && (
+                <VariablePanel
+                  variables={currentStep?.variables || {}}
+                  scope={currentStep?.scope || 'main'}
+                  changedVariable={currentStep?.changedVariable}
+                  previousValue={currentStep?.previousValue}
+                />
+              )}
+
+              {rightPanelTab === 'condition' && (
+                <div className="p-3 space-y-3">
+                  <ConditionPanel
+                    condition={currentStep?.condition}
+                    currentLine={currentStep?.lineNumber}
+                    currentOperation={currentStep?.operation}
+                  />
+                </div>
+              )}
+
+              {rightPanelTab === 'ai' && (
+                <AiPanel
+                  currentStep={currentStep}
+                  timeComplexity={timeComplexity}
+                  spaceComplexity={spaceComplexity}
+                  code={code}
+                  onOpenFullTutor={() => setIsAiOpen(true)}
+                />
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Collapsed Right Inspector Vertical Tab Bar */
+          <div
+            onClick={() => setRightPanelCollapsed(false)}
+            className="w-8 h-full bg-[#101c2d] border-l border-[#26364a] hover:bg-[#142338] transition-colors flex flex-col items-center py-3 cursor-pointer shrink-0"
+            title="Expand Inspector"
+          >
+            <ChevronLeft size={14} className="text-[#8b5cf6] mb-2" />
+            <span className="panel-collapsed-tab text-[10px] font-mono tracking-widest text-[#94a3b8] uppercase">
+              Inspector
+            </span>
           </div>
         )}
       </div>
 
-      {/* Bottom Full-Width Time Machine Timeline */}
-      <div className="w-full">
+      {/* Floating Bottom Full-Width Timeline (Always visible at very bottom) */}
+      <div className="w-full shrink-0 z-30">
         <Timeline
           currentStepIndex={currentStepIndex}
           totalSteps={totalSteps}
@@ -1390,15 +1203,17 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
           onGoToStep={goToStep}
           isAtStart={isAtStart}
           isAtEnd={isAtEnd}
+          currentStep={currentStep}
+          trace={trace}
         />
       </div>
 
-      {/* Modals */}
+      {/* Global Specialized Modals */}
       <AiAssistantModal
         isOpen={isAiOpen}
         onClose={() => setIsAiOpen(false)}
         code={code}
-        currentLineNumber={currentStep?.lineNumber || 6}
+        currentLineNumber={currentStep?.lineNumber || 1}
         currentStepNumber={currentStepIndex + 1}
       />
 
@@ -1418,7 +1233,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
       <CodeDoctorModal
         isOpen={isCodeDoctorOpen}
         onClose={() => setIsCodeDoctorOpen(false)}
-        onApplyCorrectedCode={handleApplyCorrectedCode}
+        onApplyCorrectedCode={handleApplyDoctorCode}
         currentLanguage={language}
         currentCode={code}
       />

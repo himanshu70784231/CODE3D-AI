@@ -1,0 +1,30 @@
+@import './visualizer.css';
+@import './dashboard.css';
+
+/* Global Theme Tokens */
+:root {
+  --bg-main: #08111f;
+  --bg-secondary: #0d1726;
+  --bg-panel: #101c2d;
+  --bg-panel-header: #142338;
+  --border-color: #26364a;
+  --border-subtle: #1e2c3d;
+
+  --color-primary: #3b82f6;
+  --color-secondary: #14b8a6;
+  --color-ai: #8b5cf6;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+
+  --text-main: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow: hidden;
+}

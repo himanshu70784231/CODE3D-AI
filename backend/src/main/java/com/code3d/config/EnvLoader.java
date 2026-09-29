@@ -65,15 +65,24 @@ public class EnvLoader {
     }
 
     private static void normalizeDatabaseProperties() {
-        String dbUrl = getPropertyOrEnv("DB_URL");
+        String dbUrl = getPropertyOrEnv("SPRING_DATASOURCE_URL");
+        if (dbUrl == null || dbUrl.isBlank()) {
+            dbUrl = getPropertyOrEnv("DB_URL");
+        }
         if (dbUrl == null || dbUrl.isBlank()) {
             dbUrl = getPropertyOrEnv("DATABASE_URL");
         }
-        String dbUser = getPropertyOrEnv("DB_USERNAME");
+        String dbUser = getPropertyOrEnv("SPRING_DATASOURCE_USERNAME");
+        if (dbUser == null || dbUser.isBlank()) {
+            dbUser = getPropertyOrEnv("DB_USERNAME");
+        }
         if (dbUser == null || dbUser.isBlank()) {
             dbUser = getPropertyOrEnv("DATABASE_USERNAME");
         }
-        String dbPass = getPropertyOrEnv("DB_PASSWORD");
+        String dbPass = getPropertyOrEnv("SPRING_DATASOURCE_PASSWORD");
+        if (dbPass == null || dbPass.isBlank()) {
+            dbPass = getPropertyOrEnv("DB_PASSWORD");
+        }
         if (dbPass == null || dbPass.isBlank()) {
             dbPass = getPropertyOrEnv("DATABASE_PASSWORD");
         }

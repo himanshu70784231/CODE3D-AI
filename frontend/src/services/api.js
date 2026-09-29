@@ -11,10 +11,13 @@ const DEFAULT_LOCAL_URL = 'http://localhost:8080/api';
 const isLocalhost = typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-export let API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
-  import.meta.env.VITE_API_URL ||
+const rawUrl = import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_NODE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_BACKEND_URL ||
   (isLocalhost ? SPRING_LOCAL_URL : LIVE_RENDER_URL);
+
+export let API_BASE_URL = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl;
 
 /**
  * Standardized HTTP request function

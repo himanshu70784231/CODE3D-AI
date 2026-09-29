@@ -21,16 +21,23 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'https://himanshu70784231.github.io',
+  'https://code-3-d-xyom7jxpa-himanshu70784231.vercel.app',
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
-      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.github.io')) {
-        callback(null, true);
+      // Allow requests with no origin (mobile apps, curl, or server-to-server)
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        origin.endsWith('.github.io') ||
+        origin.includes('localhost')
+      ) {
+        callback(null, origin || true);
       } else {
-        callback(null, true); // Permissive in dev/staging
+        callback(null, origin || true);
       }
     },
     credentials: true,
