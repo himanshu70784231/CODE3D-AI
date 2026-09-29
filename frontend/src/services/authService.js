@@ -42,6 +42,26 @@ export function getAuthToken() {
 }
 
 /**
+ * Creates an immediate authenticated guest/demo session.
+ */
+export function loginGuest(customName = 'Developer') {
+  const guestUser = {
+    id: 'demo-dev-' + Date.now().toString(36),
+    username: customName.toLowerCase().replace(/\s+/g, '_') || 'dev_guest',
+    email: 'developer@code3d.ai',
+    fullName: customName || 'Guest Developer',
+    role: 'Full-Stack Developer',
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+  };
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(guestUser));
+    localStorage.setItem(AUTH_TOKEN_KEY, 'demo-token-' + Date.now());
+  }
+  return { success: true, user: guestUser, token: 'demo-token' };
+}
+
+
+/**
  * Authenticates user credentials with the backend.
  * Accepts username or email in any naming format and passes both to the backend.
  */

@@ -22,14 +22,40 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 
 import ProtectedRoute from './components/ProtectedRoute';
+import AuthGateway from './components/AuthGateway';
 
 function MainAppContent() {
-  const { user } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const { isBright } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedConcept, setSelectedConcept] = useState(null);
   const [isDoctorOpen, setIsDoctorOpen] = useState(false);
+
+  // Loading Session Guard
+  if (loading) {
+    return (
+      <div className={`min-h-screen w-full flex flex-col items-center justify-center p-4 transition-colors ${
+        isBright ? 'bg-slate-100 text-slate-900' : 'bg-[#070b14] text-slate-100'
+      }`}>
+        <div className="relative flex items-center justify-center mb-4">
+          <div className="w-14 h-14 rounded-2xl border-2 border-cyan-500/20 border-t-cyan-400 animate-spin" />
+          <div className="absolute w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-slate-950 font-black text-xs shadow-lg shadow-cyan-500/30">
+            3D
+          </div>
+        </div>
+        <p className="text-xs font-mono text-cyan-400 font-semibold tracking-wider animate-pulse">
+          VERIFYING SESSION ENCRYPTION...
+        </p>
+      </div>
+    );
+  }
+
+  // Part 1: Authentication Gateway (Login Lock)
+  // Restrict access to main workspace, dashboard, and 3D visualizers until authenticated.
+  if (!isAuthenticated) {
+    return <AuthGateway />;
+  }
 
   const currentTab = location.pathname === '/' ? 'dashboard' : location.pathname.slice(1);
 

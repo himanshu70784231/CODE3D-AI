@@ -126,22 +126,36 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     finalCorrectOutput,
   } = useExecutionTimeline(trace);
 
-  // Dynamic Box Resizing State (Editor width % and Console height px)
+  // Dynamic Box Resizing State (Editor width %, Console height px, and State panel width px)
   const [editorWidthPercent, setEditorWidthPercent] = useState(35);
   const [consoleHeightPx, setConsoleHeightPx] = useState(165);
+  const [statePanelWidthPx, setStatePanelWidthPx] = useState(() => {
+    try {
+      const saved = localStorage.getItem('code3d_state_panel_width');
+      return saved ? Math.max(220, Math.min(650, parseInt(saved, 10))) : 320;
+    } catch {
+      return 320;
+    }
+  });
   const [isResizingEditor, setIsResizingEditor] = useState(false);
   const [isResizingConsole, setIsResizingConsole] = useState(false);
+  const [isResizingStatePanel, setIsResizingStatePanel] = useState(false);
 
   // Handle dragging horizontal splitter between Code Editor and 3D Viewport
   const startEditorResize = (e) => {
     e.preventDefault();
     setIsResizingEditor(true);
+    let rafId = null;
     const onMouseMove = (moveEvent) => {
-      const containerWidth = window.innerWidth;
-      const newPercent = Math.min(65, Math.max(20, (moveEvent.clientX / containerWidth) * 100));
-      setEditorWidthPercent(Math.round(newPercent));
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const containerWidth = window.innerWidth;
+        const newPercent = Math.min(65, Math.max(20, (moveEvent.clientX / containerWidth) * 100));
+        setEditorWidthPercent(Math.round(newPercent));
+      });
     };
     const onMouseUp = () => {
+      if (rafId) cancelAnimationFrame(rafId);
       setIsResizingEditor(false);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
@@ -154,19 +168,59 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
   const startConsoleResize = (e) => {
     e.preventDefault();
     setIsResizingConsole(true);
-    const startY = moveEvent => moveEvent.clientY;
     const initialHeight = consoleHeightPx;
     const initialY = e.clientY;
+    let rafId = null;
     const onMouseMove = (moveEvent) => {
-      const deltaY = initialY - moveEvent.clientY;
-      const newHeight = Math.min(380, Math.max(70, initialHeight + deltaY));
-      setConsoleHeightPx(Math.round(newHeight));
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const deltaY = initialY - moveEvent.clientY;
+        const newHeight = Math.min(380, Math.max(70, initialHeight + deltaY));
+        setConsoleHeightPx(Math.round(newHeight));
+      });
     };
     const onMouseUp = () => {
+      if (rafId) cancelAnimationFrame(rafId);
       setIsResizingConsole(false);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
     };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
+  // Handle dragging mouse-resizable splitter for Program State / Execution panel (Part 3)
+  const startStatePanelResize = (e) => {
+    e.preventDefault();
+    setIsResizingStatePanel(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    let rafId = null;
+    const onMouseMove = (moveEvent) => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const viewportWidth = window.innerWidth;
+        const newWidth = Math.max(220, Math.min(Math.round(viewportWidth * 0.48), viewportWidth - moveEvent.clientX));
+        setStatePanelWidthPx(newWidth);
+      });
+    };
+
+    const onMouseUp = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      setIsResizingStatePanel(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      try {
+        setStatePanelWidthPx((curr) => {
+          localStorage.setItem('code3d_state_panel_width', String(curr));
+          return curr;
+        });
+      } catch {}
+    };
+
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
   };
@@ -875,45 +929,6 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
             <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/30 text-amber-200 font-mono">182</span>
           </button>
 
-          {/* Algorithm Compare Mode Toggle Button */}
-          <button
-            onClick={() => setIsCompareOpen(true)}
-            className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition shadow-xs shrink-0 border cursor-pointer ${
-              isBright
-                ? 'bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100'
-                : 'bg-blue-950/40 text-blue-300 border-blue-800/60 hover:bg-blue-900/60 shadow-blue-950/20'
-            }`}
-            title="Algorithm Compare Mode: Benchmark 2 Algorithms Side-by-Side"
-          >
-            <Scale size={13} className="text-blue-400" />
-            <span>Compare ⚖️</span>
-          </button>
-        </div>
-
-        {/* Center: Execution State, Complexity Badges & Backend status */}
-        <div className="hidden lg:flex items-center gap-2 text-[11px] font-mono shrink-0">
-          <div className={`h-8 flex items-center border rounded-lg px-2.5 font-bold uppercase transition ${
-            executionState === 'RUNNING'
-              ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/50 animate-pulse'
-              : executionState === 'PAUSED'
-              ? 'bg-amber-500/20 text-amber-400 border-amber-500/50'
-              : executionState === 'COMPLETED'
-              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50'
-              : isBright ? 'bg-slate-50 border-slate-300 text-slate-600' : 'bg-slate-950/70 border-slate-800 text-slate-400'
-          }`}>
-            <span className="w-1.5 h-1.5 rounded-full mr-1.5 bg-current"></span>
-            {executionState}
-          </div>
-          <div className={`h-8 flex items-center border rounded-lg px-2.5 ${
-            isBright ? 'bg-slate-50 border-slate-300 text-slate-700' : 'bg-slate-950/70 border-slate-800'
-          }`}>
-            Time: <strong className={`ml-1 ${isBright ? 'text-cyan-700 font-bold' : 'text-cyan-400 font-bold'}`}>{timeComplexity}</strong>
-          </div>
-          <div className={`h-8 flex items-center border rounded-lg px-2.5 ${
-            isBright ? 'bg-slate-50 border-slate-300 text-slate-700' : 'bg-slate-950/70 border-slate-800'
-          }`}>
-            Space: <strong className={`ml-1 ${isBright ? 'text-emerald-700 font-bold' : 'text-emerald-400 font-bold'}`}>{spaceComplexity}</strong>
-          </div>
         </div>
 
         {/* Right Controls: AI Tutor, Quiz, Save, State Panel Toggle, Full 3D Theater Mode */}
@@ -1283,16 +1298,77 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
           )}
         </div>
 
-        {/* Right Column: Program State Inspector */}
+        {/* Mouse-Resizable Splitter between Center View and Program State Panel (Part 3) */}
         {!isFull3DView && showStatePanel && (
-          <div className={`${mobileTab === 'state' ? 'block w-full' : 'hidden'} md:block w-72 lg:w-80 h-full overflow-hidden shrink-0 transition-all duration-300`}>
-            <StatePanel
-              currentStep={currentStep}
-              totalSteps={totalSteps}
-              correctOutput={finalCorrectOutput}
-              isAtEnd={isAtEnd}
-              complexity={selectedSample?.complexity}
-            />
+          <div
+            onMouseDown={startStatePanelResize}
+            className={`hidden md:flex flex-col items-center justify-center w-2 relative group cursor-col-resize z-20 transition-colors shrink-0 ${
+              isResizingStatePanel
+                ? 'bg-cyan-500 shadow-lg shadow-cyan-500/50'
+                : isBright
+                ? 'bg-slate-200 hover:bg-cyan-400'
+                : 'bg-slate-800/80 hover:bg-cyan-500/80'
+            }`}
+            title={`Drag to resize Program State Panel (Current: ${statePanelWidthPx}px)`}
+          >
+            {/* Grip line */}
+            <div className="w-1 h-8 rounded-full bg-slate-400/50 group-hover:bg-slate-900 group-hover:scale-y-125 transition-all"></div>
+
+            {/* Quick preset buttons on hover */}
+            <div className="absolute top-2 right-3 hidden group-hover:flex items-center gap-1 backdrop-blur-md bg-slate-950/90 border border-slate-700 rounded-lg p-1 text-[10px] shadow-xl z-30 pointer-events-auto">
+              <span className="text-slate-400 font-mono px-1">State:</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setStatePanelWidthPx(260);
+                  try { localStorage.setItem('code3d_state_panel_width', '260'); } catch {}
+                }}
+                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-600 text-cyan-300 font-mono"
+              >
+                260px
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setStatePanelWidthPx(320);
+                  try { localStorage.setItem('code3d_state_panel_width', '320'); } catch {}
+                }}
+                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-600 text-cyan-300 font-mono"
+              >
+                320px
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setStatePanelWidthPx(420);
+                  try { localStorage.setItem('code3d_state_panel_width', '420'); } catch {}
+                }}
+                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-600 text-cyan-300 font-mono"
+              >
+                420px
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Right Column: Mouse-Resizable Program State Inspector */}
+        {!isFull3DView && showStatePanel && (
+          <div
+            className={`${mobileTab === 'state' ? 'block w-full' : 'hidden'} md:block h-full overflow-hidden shrink-0 transition-all duration-75`}
+            style={{ width: `${statePanelWidthPx}px` }}
+          >
+            <VisualizerErrorBoundary onReset={reset}>
+              <StatePanel
+                currentStep={currentStep}
+                totalSteps={totalSteps}
+                correctOutput={finalCorrectOutput}
+                isAtEnd={isAtEnd}
+                complexity={selectedSample?.complexity}
+              />
+            </VisualizerErrorBoundary>
           </div>
         )}
       </div>

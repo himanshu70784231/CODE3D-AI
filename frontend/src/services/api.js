@@ -13,6 +13,7 @@ const isLocalhost = typeof window !== 'undefined' &&
 
 export let API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_BACKEND_URL ||
   (isLocalhost ? SPRING_LOCAL_URL : LIVE_RENDER_URL);
 
 /**

@@ -3,6 +3,7 @@ import {
   login as apiLogin,
   register as apiRegister,
   logout as apiLogout,
+  loginGuest,
   getCurrentUser,
   getStoredUser,
 } from '../services/authService.js';
@@ -68,6 +69,14 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const loginAsGuest = (customName) => {
+    const res = loginGuest(customName);
+    if (res && res.success) {
+      setUser(res.user);
+    }
+    return res;
+  };
+
   const logout = async () => {
     try {
       await apiLogout();
@@ -98,6 +107,7 @@ export function AuthProvider({ children }) {
         isAuthenticated: !!user,
         login,
         register,
+        loginAsGuest,
         logout,
         isLoginModalOpen,
         authModalMode,

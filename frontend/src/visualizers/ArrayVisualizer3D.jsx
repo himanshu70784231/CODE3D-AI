@@ -537,8 +537,33 @@ export default function ArrayVisualizer3D({ dataStructureState, isXRayMode = fal
     : 0);
   const maxArea = waterVolume?.maxArea ?? pointers?.maxArea ?? null;
 
+  const groupRef = useRef(null);
+
+  React.useEffect(() => {
+    const currentGroup = groupRef.current;
+    return () => {
+      if (currentGroup) {
+        currentGroup.traverse((child) => {
+          if (child && child.isMesh) {
+            if (child.geometry && typeof child.geometry.dispose === 'function') {
+              child.geometry.dispose();
+            }
+            if (child.material) {
+              const mats = Array.isArray(child.material) ? child.material : [child.material];
+              mats.forEach((m) => {
+                if (m && typeof m.dispose === 'function') {
+                  m.dispose();
+                }
+              });
+            }
+          }
+        });
+      }
+    };
+  }, []);
+
   return (
-    <group position={[0, 0.8, 0]}>
+    <group ref={groupRef} position={[0, 0.8, 0]}>
       {/* Base Foundation Rail */}
       {values.length > 0 ? (
         <mesh position={[0, -0.75, 0]} receiveShadow>

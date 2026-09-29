@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # 1. CODE3D Frontend (React + Three.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: code3d-frontend
+    ports:
+      - "5173:80"
+    environment:
+      - VITE_API_URL=http://localhost:8080/api
+      - VITE_NODE_API_URL=http://localhost:5000/api
+    depends_on:
+      - spring-backend
+      - node-backend
+    restart: unless-stopped
+
+  # 2. CODE3D Spring Boot Backend (Java 21 + JavaParser + AST Engine)
+  spring-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: code3d-spring-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - SPRING_DATASOURCE_URL=${DATABASE_URL:-jdbc:postgresql://ep-lucky-meadow-b46euvhv-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require}
+      - SPRING_DATASOURCE_USERNAME=${DATABASE_USERNAME:-neondb_owner}
+      - SPRING_DATASOURCE_PASSWORD=${DATABASE_PASSWORD:-npg_jCIVv6eAiRD8}
+      - CORS_ORIGIN=http://localhost:5173
+    restart: unless-stopped
+
+  # 3. CODE3D Node.js Backend & 5-Language Execution Engine
+  node-backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: code3d-node-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      - DATABASE_URL=${NODE_DATABASE_URL:-postgresql://neondb_owner:npg_jCIVv6eAiRD8@ep-lucky-meadow-b46euvhv-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require}
+      - FRONTEND_URL=http://localhost:5173
+      - CORS_ORIGIN=http://localhost:5173
+    restart: unless-stopped

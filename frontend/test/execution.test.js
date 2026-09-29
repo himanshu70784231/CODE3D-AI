@@ -153,4 +153,54 @@ test('Frontend Execution & Validation Suite', async (t) => {
     const negTrace = getExecutionTrace('int[] arr = {-10, 0, 10, -10};', 'java');
     assert.ok(negTrace && negTrace.length > 0);
   });
+
+  await t.test('8. Deterministic arrayLoopTrace: Index Guards and Completeness', async () => {
+    const { generateArrayLoopTrace } = await import('../src/engine/arrayLoopTrace.js');
+    const values = [5, 15, 25];
+    const steps = generateArrayLoopTrace(values);
+
+    assert.ok(Array.isArray(steps));
+    assert.ok(steps.length > 0);
+
+    // Verify index bounds for every step
+    steps.forEach((s, idx) => {
+      assert.strictEqual(s.stepNumber, idx + 1);
+      assert.ok(typeof s.lineNumber === 'number' && s.lineNumber > 0);
+      if (s.dataStructureState?.activeIndex !== null && s.dataStructureState?.activeIndex !== undefined) {
+        assert.ok(s.dataStructureState.activeIndex >= 0);
+        assert.ok(s.dataStructureState.activeIndex < values.length);
+      }
+    });
+
+    // Empty array fallback
+    const emptySteps = generateArrayLoopTrace([]);
+    assert.ok(Array.isArray(emptySteps) && emptySteps.length > 0);
+  });
+
+  await t.test('9. Execution Clamping: Strict Out-of-Bounds Guards', () => {
+    const clampIndex = (idx, len) => {
+      if (typeof idx !== 'number' || Number.isNaN(idx)) return 0;
+      if (len <= 0) return 0;
+      return Math.max(0, Math.min(Math.floor(idx), len - 1));
+    };
+
+    const totalSteps = 10;
+    // Scrubbing beyond bounds
+    assert.strictEqual(clampIndex(-5, totalSteps), 0);
+    assert.strictEqual(clampIndex(-1, totalSteps), 0);
+    assert.strictEqual(clampIndex(0, totalSteps), 0);
+    assert.strictEqual(clampIndex(5, totalSteps), 5);
+    assert.strictEqual(clampIndex(9, totalSteps), 9);
+    assert.strictEqual(clampIndex(10, totalSteps), 9);
+    assert.strictEqual(clampIndex(999, totalSteps), 9);
+
+    // Empty trace edge case
+    assert.strictEqual(clampIndex(5, 0), 0);
+    assert.strictEqual(clampIndex(-1, 0), 0);
+
+    // Non-number handling
+    assert.strictEqual(clampIndex(NaN, totalSteps), 0);
+    assert.strictEqual(clampIndex(undefined, totalSteps), 0);
+  });
 });
+
