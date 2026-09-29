@@ -5,8 +5,8 @@
 import { solvePersonalProblem, correctPersonalCode } from './personalProblemSolver';
 
 const LIVE_RENDER_URL = 'https://code3d-ai.onrender.com/api';
-const LOCAL_URL_5000 = 'http://localhost:5000/api';
 const LOCAL_URL_8080 = 'http://localhost:8080/api';
+const LOCAL_URL_5000 = 'http://localhost:5000/api';
 
 // When accessed from phone, GitHub Pages, or Vercel, always use the live Render backend!
 const isLocalhost = typeof window !== 'undefined' && 
@@ -14,13 +14,7 @@ const isLocalhost = typeof window !== 'undefined' &&
 
 let BACKEND_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_BACKEND_URL || 
-  (isLocalhost ? LOCAL_URL_5000 : LIVE_RENDER_URL);
-
-if (isLocalhost && !import.meta.env.VITE_BACKEND_URL) {
-  fetch('http://localhost:8080/api/health', { method: 'GET' })
-    .then((r) => { if (r.ok) BACKEND_BASE_URL = LOCAL_URL_8080; })
-    .catch(() => {});
-}
+  (isLocalhost ? LOCAL_URL_8080 : LIVE_RENDER_URL);
 
 async function smartFetch(endpoint, options = {}) {
   const fetchOpts = {
@@ -474,6 +468,24 @@ export function clearExecutionHistory() {
     localStorage.removeItem(STORAGE_KEY_QUIZZES);
     smartFetch('/history', { method: 'DELETE' }).catch(() => {});
   } catch (e) {}
+}
+
+export async function deleteHistoryItem(id) {
+  try {
+    // Remove from local storage if present
+    const local = getLocalExecutions();
+    const updated = local.filter((item) => String(item.id) !== String(id));
+    saveLocalExecutions(updated);
+
+    // Call backend DELETE endpoint
+    if (id) {
+      await smartFetch(`/history/${id}`, { method: 'DELETE' }).catch(() => {});
+    }
+    return true;
+  } catch (e) {
+    console.warn('Failed to delete history item:', e);
+    return false;
+  }
 }
 
 // Personal Problem Solver & Auto-Correction API

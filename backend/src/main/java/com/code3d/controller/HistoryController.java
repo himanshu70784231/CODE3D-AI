@@ -55,23 +55,74 @@ public class HistoryController {
     @GetMapping
     public ResponseEntity<Map<String, Object>> getHistorySummary() {
         Map<String, Object> data = new HashMap<>();
-        data.put("recentExecutions", executionRepo.findTop20ByOrderByExecutedAtDesc());
+        List<ExecutionRecord> recent = executionRepo.findTop20ByOrderByExecutedAtDesc();
+        data.put("recentExecutions", recent);
+        data.put("items", recent);
         data.put("savedPrograms", programRepo.findTop20ByOrderByCreatedAtDesc());
         data.put("recentQuizzes", quizRepo.findTop20ByOrderByCompletedAtDesc());
         data.put("totalExecutionsCount", executionRepo.count());
         data.put("totalQuizzesTaken", quizRepo.count());
+        data.put("isBackendConnected", true);
         return ResponseEntity.ok(data);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ExecutionRecord> getHistoryById(@PathVariable Long id) {
+        return executionRepo.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping
+    public ResponseEntity<ExecutionRecord> createHistory(@RequestBody Map<String, Object> payload) {
+        String title = (String) payload.getOrDefault("programTitle", payload.getOrDefault("title", "Java Program"));
+        String conceptId = (String) payload.getOrDefault("conceptId", "custom");
+        String language = (String) payload.getOrDefault("language", "java");
+        String code = (String) payload.getOrDefault("code", "");
+        Integer steps = payload.get("totalSteps") instanceof Number ? ((Number) payload.get("totalSteps")).intValue() : 1;
+        String status = (String) payload.getOrDefault("status", "COMPLETED");
+        Long executionTimeMs = payload.get("executionTimeMs") instanceof Number ? ((Number) payload.get("executionTimeMs")).longValue() : 0L;
+        String error = (String) payload.get("error");
+
+        ExecutionRecord record = new ExecutionRecord(
+                null,
+                title,
+                conceptId,
+                language,
+                code,
+                steps,
+                status,
+                executionTimeMs,
+                error
+        );
+
+        return ResponseEntity.ok(executionRepo.save(record));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Map<String, Object>> deleteHistoryById(@PathVariable Long id) {
+        if (!executionRepo.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        executionRepo.deleteById(id);
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("success", true);
+        resp.put("message", "History record " + id + " deleted successfully.");
+        return ResponseEntity.ok(resp);
+    }
+
+    @DeleteMapping
+    public ResponseEntity<Map<String, Object>> clearAllHistory() {
+        executionRepo.deleteAll();
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("success", true);
+        resp.put("message", "All execution history records cleared.");
+        return ResponseEntity.ok(resp);
     }
 
     @PostMapping("/execution")
     public ResponseEntity<ExecutionRecord> recordExecution(@RequestBody Map<String, Object> payload) {
-        String title = (String) payload.getOrDefault("programTitle", "Java Program");
-        String conceptId = (String) payload.getOrDefault("conceptId", "custom");
-        Integer steps = (Integer) payload.getOrDefault("totalSteps", 1);
-        String status = (String) payload.getOrDefault("status", "COMPLETED");
-
-        ExecutionRecord record = executionRepo.save(new ExecutionRecord(title, conceptId, steps, status));
-        return ResponseEntity.ok(record);
+        return createHistory(payload);
     }
 
     @PostMapping("/quiz")

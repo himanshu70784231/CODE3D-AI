@@ -4,9 +4,10 @@ import * as THREE from 'three';
 
 export default function StackVisualizer3D({ dataStructureState }) {
   const [hoveredIdx, setHoveredIdx] = useState(null);
-  const { values = [], pointers = {} } = dataStructureState || {};
+  const { values = [], pointers = {}, operation = dataStructureState?.operation || pointers?.OP || null } = dataStructureState || {};
   const spacingY = 1.35;
   const maxHeight = Math.max(values.length * spacingY + 1.5, 6);
+  const topPosY = (values.length - 1) * spacingY + 0.7;
 
   return (
     <group position={[0, -1.8, 0]}>
@@ -36,6 +37,30 @@ export default function StackVisualizer3D({ dataStructureState }) {
         <boxGeometry args={[2.9, maxHeight, 0.04]} />
         <meshStandardMaterial color="#0284c7" transparent opacity={0.12} roughness={0.1} />
       </mesh>
+
+      {/* Operation Badge (push / pop / peek) */}
+      {operation && (
+        <Float speed={3} floatIntensity={0.15}>
+          <group position={[0, topPosY + 2.2, 0]}>
+            <Text fontSize={0.3} color="#f59e0b" fontWeight="bold">
+              {`OP: ${String(operation).toUpperCase()}`}
+            </Text>
+          </group>
+        </Float>
+      )}
+
+      {/* TOP Pointer Arrow pointing down into stack (Section 10) */}
+      {values.length > 0 && (
+        <group position={[0, topPosY + 1.2, 0]}>
+          <Text position={[0, 0.45, 0]} fontSize={0.3} color="#00f2fe" fontWeight="bold">
+            TOP
+          </Text>
+          <mesh position={[0, 0.1, 0]} rotation={[Math.PI, 0, 0]}>
+            <coneGeometry args={[0.18, 0.35, 16]} />
+            <meshStandardMaterial color="#00f2fe" emissive="#00f2fe" emissiveIntensity={0.9} />
+          </mesh>
+        </group>
+      )}
 
       {/* Stack Empty Message */}
       {values.length === 0 && (

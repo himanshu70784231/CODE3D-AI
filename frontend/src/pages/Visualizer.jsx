@@ -551,31 +551,31 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
 
   // Bidirectional interaction: 3D Element Click -> Seek Timeline & Code Line (Section 40)
   const handleSelectElementFrom3D = (index, value) => {
-    if (!timelineSteps || timelineSteps.length === 0) return;
-    const forwardStep = timelineSteps.findIndex((step, idx) => {
+    if (!trace || trace.length === 0) return;
+    const forwardStep = trace.findIndex((step, idx) => {
       if (idx < currentStepIndex) return false;
       const ds = step.dataStructureState;
       return ds?.activeIndex === index || (ds?.pointers && Object.values(ds.pointers).includes(index));
     });
     if (forwardStep !== -1) {
-      jumpToStep(forwardStep);
+      goToStep(forwardStep);
       return;
     }
-    const anyStep = timelineSteps.findIndex((step) => {
+    const anyStep = trace.findIndex((step) => {
       const ds = step.dataStructureState;
       return ds?.activeIndex === index || (ds?.pointers && Object.values(ds.pointers).includes(index));
     });
     if (anyStep !== -1) {
-      jumpToStep(anyStep);
+      goToStep(anyStep);
     }
   };
 
   // Bidirectional interaction: Code Editor Line Click -> Seek Timeline & 3D Scene (Section 40)
   const handleSelectLineFromEditor = (lineNumber) => {
-    if (!timelineSteps || timelineSteps.length === 0 || !lineNumber) return;
-    const matchedStep = timelineSteps.findIndex((step) => step.lineNumber === lineNumber);
+    if (!trace || trace.length === 0 || !lineNumber) return;
+    const matchedStep = trace.findIndex((step) => step.lineNumber === lineNumber);
     if (matchedStep !== -1) {
-      jumpToStep(matchedStep);
+      goToStep(matchedStep);
     }
   };
 

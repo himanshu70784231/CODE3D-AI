@@ -145,11 +145,25 @@ export default function LinkedListVisualizer3D({ dataStructureState }) {
               </group>
             )}
 
+            {/* Head Pointer Label & Arrow above node 0 (Section 9) */}
+            {idx === 0 && !isActive && (
+              <group position={[0, 1.35, 0]}>
+                <Text position={[0, 0.4, 0]} fontSize={0.28} color="#00f2fe" fontWeight="bold">
+                  HEAD
+                </Text>
+                <mesh position={[0, 0.08, 0]} rotation={[Math.PI, 0, 0]}>
+                  <coneGeometry args={[0.15, 0.3, 16]} />
+                  <meshStandardMaterial color="#00f2fe" emissive="#00f2fe" emissiveIntensity={0.8} />
+                </mesh>
+              </group>
+            )}
+
             {/* Floating Pointer Badges */}
             {isActive && (
               <Float speed={5} rotationIntensity={0.1} floatIntensity={0.25}>
-                <group position={[0, 1.25, 0]}>
-                  <Text fontSize={0.26} color="#38bdf8" fontWeight="bold">
+                <group position={[0, 1.35, 0]}>
+                  <Text position={[0, 0.4, 0]} fontSize={0.26} color="#38bdf8" fontWeight="bold">
+                    {idx === 0 ? 'HEAD • ' : ''}
                     {isSlow && isFast
                       ? 'COLLISION (Cycle!)'
                       : isSlow
@@ -158,7 +172,7 @@ export default function LinkedListVisualizer3D({ dataStructureState }) {
                       ? '🐇 FAST'
                       : 'CURR'}
                   </Text>
-                  <mesh position={[0, -0.32, 0]} rotation={[Math.PI, 0, 0]}>
+                  <mesh position={[0, 0.08, 0]} rotation={[Math.PI, 0, 0]}>
                     <coneGeometry args={[0.16, 0.32, 12]} />
                     <meshStandardMaterial color="#22d3ee" emissive="#06b6d4" />
                   </mesh>

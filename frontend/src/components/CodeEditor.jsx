@@ -1,6 +1,6 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import Editor from '@monaco-editor/react';
-import { Play, Pause, SkipBack, SkipForward, RotateCcw, FileCode, CheckCircle2, Code2, Sparkles, Trophy, BookOpen, Lightbulb, RefreshCw } from 'lucide-react';
+import { Play, Pause, Square, SkipBack, SkipForward, RotateCcw, FileCode, CheckCircle2, Code2, Sparkles, Trophy, BookOpen, Lightbulb, RefreshCw, AlignLeft, Map } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 const LANGUAGE_CONFIG = {
@@ -68,8 +68,15 @@ export default function CodeEditor({
   const monacoRef = useRef(null);
   const decorationsRef = useRef([]);
   const { isBright } = useTheme();
+  const [showMinimap, setShowMinimap] = useState(false);
 
   const currentLangConfig = LANGUAGE_CONFIG[language] || LANGUAGE_CONFIG.java;
+
+  const handleFormatCode = () => {
+    if (editorRef.current) {
+      editorRef.current.getAction('editor.action.formatDocument')?.run();
+    }
+  };
 
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
@@ -115,13 +122,18 @@ export default function CodeEditor({
 
     monaco.editor.setTheme(isBright ? 'code3dLight' : 'code3dDark');
 
-    // Register Ctrl+Enter / Cmd+Enter shortcut
+    // Register Ctrl+Enter / Cmd+Enter shortcut to run code
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
       if (onRunCode) {
         onRunCode();
       } else if (onPlay) {
         onPlay();
       }
+    });
+
+    // Register Ctrl+S / Cmd+S shortcut to format code
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      editor.getAction('editor.action.formatDocument')?.run();
     });
 
     // F5: Play / Resume execution
@@ -280,6 +292,20 @@ export default function CodeEditor({
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
+          {/* Minimap Toggle */}
+          <button
+            onClick={() => setShowMinimap(!showMinimap)}
+            className={`h-7 flex items-center gap-1 text-xs px-2 rounded-md border transition cursor-pointer shrink-0 ${
+              showMinimap
+                ? isBright ? 'bg-cyan-100 text-cyan-800 border-cyan-300' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                : isBright ? 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100' : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800'
+            }`}
+            title="Toggle Monaco Editor Minimap"
+          >
+            <Map size={12} />
+            <span className="hidden lg:inline text-[11px]">Minimap</span>
+          </button>
+
           {/* Striver SDE Sheet Button */}
           {(onOpenStriverSheet || onOpenLeetCode) && (
             <button
@@ -295,8 +321,6 @@ export default function CodeEditor({
               <span className="hidden xl:inline">Striver 📜</span>
             </button>
           )}
-
-
 
           {/* Direct "Input Any Code" Button */}
           {onOpenCustomCode && (
@@ -341,7 +365,7 @@ export default function CodeEditor({
             fontFamily: "'Fira Code', 'JetBrains Mono', Consolas, monospace",
             fontLigatures: true,
             lineNumbers: 'on',
-            minimap: { enabled: false },
+            minimap: { enabled: showMinimap },
             scrollBeyondLastLine: false,
             automaticLayout: true,
             tabSize: 4,
@@ -358,81 +382,96 @@ export default function CodeEditor({
       <div className={`border-t p-2 flex items-center justify-between gap-1.5 transition-colors overflow-hidden min-w-0 ${
         isBright ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/90 border-slate-800/80'
       }`}>
-        <div className="flex items-center gap-1 min-w-0 shrink">
-          {/* Play / Pause / Run */}
-          {isPlaying ? (
+        <div className="flex items-center gap-1 min-w-0 shrink flex-wrap">
+          {/* 1. Run Button */}
+          <button
+            onClick={() => {
+              if (isExecuting) return;
+              if (onRunCode) onRunCode();
+              else if (onPlay) onPlay();
+            }}
+            disabled={isExecuting}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-semibold transition shadow-sm cursor-pointer shrink-0 ${
+              isExecuting
+                ? 'opacity-70 cursor-not-allowed bg-cyan-700 text-cyan-200'
+                : isCodeDirty
+                  ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-bold ring-2 ring-cyan-400 shadow-lg shadow-cyan-500/40 animate-pulse'
+                  : isBright
+                    ? 'bg-cyan-600 text-white hover:bg-cyan-500 shadow-cyan-600/20'
+                    : 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-cyan-500/20'
+            }`}
+            title={isExecuting ? "Executing code..." : "Run Code (Ctrl+Enter)"}
+          >
+            {isExecuting ? (
+              <>
+                <RefreshCw size={12} className="animate-spin" />
+                <span>Compiling...</span>
+              </>
+            ) : (
+              <>
+                <Play size={12} className="fill-current" />
+                <span>Run</span>
+              </>
+            )}
+          </button>
+
+          {/* 2. Stop Button */}
+          {isPlaying && (
             <button
               onClick={onPause}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded border text-xs font-medium transition cursor-pointer shrink-0 ${
+              className={`flex items-center gap-1 px-2 py-1.5 rounded border text-xs font-medium transition cursor-pointer shrink-0 ${
                 isBright
                   ? 'bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200'
                   : 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
               }`}
-              title="Pause Simulation"
+              title="Stop / Pause Simulation"
             >
-              <Pause size={13} className="fill-current" />
-              <span>Pause</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => {
-                if (isExecuting) return;
-                if (onRunCode) onRunCode();
-                else if (onPlay) onPlay();
-              }}
-              disabled={isExecuting}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-semibold transition shadow-sm cursor-pointer shrink-0 ${
-                isExecuting
-                  ? 'opacity-70 cursor-not-allowed bg-cyan-700 text-cyan-200'
-                  : isCodeDirty
-                    ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-bold ring-2 ring-cyan-400 shadow-lg shadow-cyan-500/40 animate-pulse'
-                    : isBright
-                      ? 'bg-cyan-600 text-white hover:bg-cyan-500 shadow-cyan-600/20'
-                      : 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-cyan-500/20'
-              }`}
-              title={isExecuting ? "Executing code..." : "Run / Play Simulation (Ctrl+Enter)"}
-            >
-              {isExecuting ? (
-                <>
-                  <RefreshCw size={13} className="animate-spin" />
-                  <span className="hidden sm:inline">Compiling...</span>
-                  <span className="sm:hidden">Run</span>
-                </>
-              ) : (
-                <>
-                  <Play size={13} className="fill-current" />
-                  <span>{isCodeDirty ? 'Run ⚡' : isAtEnd ? 'Replay' : isAtStart ? 'Run' : 'Resume'}</span>
-                </>
-              )}
+              <Pause size={12} className="fill-current" />
+              <span>Stop</span>
             </button>
           )}
 
-          {/* Reset Simulation Step */}
+          {/* 3. Reset Button */}
           <button
             onClick={onReset}
-            className={`p-1.5 rounded transition cursor-pointer shrink-0 ${
+            className={`flex items-center gap-1 px-2 py-1.5 rounded border text-xs font-medium transition cursor-pointer shrink-0 ${
               isBright
-                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/80'
+                ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
+                : 'border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white'
             }`}
             title="Reset Simulation to Step 1"
           >
-            <RotateCcw size={14} />
+            <RotateCcw size={12} />
+            <span className="hidden sm:inline">Reset</span>
           </button>
 
-          {/* Reset Code to Template */}
+          {/* 4. Format Button */}
+          <button
+            onClick={handleFormatCode}
+            className={`flex items-center gap-1 px-2 py-1.5 rounded border text-xs font-medium transition cursor-pointer shrink-0 ${
+              isBright
+                ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
+                : 'border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white'
+            }`}
+            title="Format Code (Ctrl+S)"
+          >
+            <AlignLeft size={12} />
+            <span className="hidden md:inline">Format</span>
+          </button>
+
+          {/* 5. Restore Sample Button */}
           {onResetCode && (
             <button
               onClick={onResetCode}
-              className={`px-1.5 py-1 rounded transition cursor-pointer text-xs flex items-center gap-1 border shrink-0 ${
+              className={`flex items-center gap-1 px-2 py-1.5 rounded border text-xs font-medium transition cursor-pointer shrink-0 ${
                 isBright
                   ? 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   : 'border-slate-700/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/70'
               }`}
-              title="Reset Editor to Default Algorithm Code"
+              title="Restore Original Sample Code"
             >
-              <RotateCcw size={11} className="opacity-70 shrink-0" />
-              <span className="hidden sm:inline text-[11px] font-mono whitespace-nowrap">Reset Code</span>
+              <RefreshCw size={11} className="opacity-70" />
+              <span className="hidden sm:inline">Restore Sample</span>
             </button>
           )}
         </div>

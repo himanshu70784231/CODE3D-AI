@@ -1,7 +1,7 @@
 import React, { Suspense, useState, useEffect, useRef } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Center, Grid, Sparkles, ContactShadows, Text, Float } from '@react-three/drei';
-import { Compass, RotateCw, ZoomIn, ZoomOut, Maximize2, Minimize2, Camera, RefreshCw, Trophy, Sparkles as SparklesIcon, Cpu, Terminal, Eye, Layers, Box, ChevronDown, ChevronUp } from 'lucide-react';
+import { Compass, RotateCw, ZoomIn, ZoomOut, Maximize2, Minimize2, Camera, RefreshCw, Trophy, Sparkles as SparklesIcon, Cpu, Terminal, Eye, Layers, Box, ChevronDown, ChevronUp, Play, Pause } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import OutputHologram3D from './OutputHologram3D';
 import DryRunHologram3D from './DryRunHologram3D';
@@ -208,9 +208,9 @@ function VariableHologram3D({ variables = {}, changedVariable = null, visible = 
 }
 
 /**
- * Handles smooth dynamic camera transitions to preset viewpoints (Top, Front, Isometric, Reset, Zoom In/Out).
+ * Handles smooth dynamic camera transitions to preset viewpoints (Top, Front, Isometric, Reset, Zoom In/Out, Fit View).
  */
-function CameraPresetHandler({ preset, onApplied, controlsRef }) {
+function CameraPresetHandler({ preset, onApplied, controlsRef, count = 4 }) {
   const { camera } = useThree();
 
   useEffect(() => {
@@ -228,6 +228,15 @@ function CameraPresetHandler({ preset, onApplied, controlsRef }) {
       camera.position.multiplyScalar(0.8);
     } else if (preset === 'zoom-out') {
       camera.position.multiplyScalar(1.25);
+    } else if (preset === 'fit') {
+      const n = Math.max(1, count || 4);
+      const spacing = 2.1;
+      const width = Math.max(5.5, (n - 1) * spacing + 3.0);
+      const dist = (width / 2) / Math.tan((camera.fov * Math.PI) / 360) * 1.35;
+      camera.position.set(0, 3.8, Math.max(8.5, dist));
+      if (controlsRef?.current) {
+        controlsRef.current.target.set(0, 0, 0);
+      }
     } else if (preset === 'reset') {
       camera.position.set(0, 4.5, 11);
       if (controlsRef?.current) {
@@ -240,7 +249,7 @@ function CameraPresetHandler({ preset, onApplied, controlsRef }) {
       controlsRef.current.update();
     }
     onApplied();
-  }, [preset, camera, onApplied, controlsRef]);
+  }, [preset, camera, onApplied, controlsRef, count]);
 
   return null;
 }
@@ -306,6 +315,8 @@ export default function SceneContainer({
 }) {
   const { isBright } = useTheme();
   const [cameraPreset, setCameraPreset] = useState(null);
+  const [isAutoRotating, setIsAutoRotating] = useState(false);
+  const [isAnimationPaused, setIsAnimationPaused] = useState(false);
   const [showHologram, setShowHologram] = useState(true);
   const [showDryRunHologram, setShowDryRunHologram] = useState(false); // Default OFF so 3D objects are 100% visible and unobstructed
   const [isXRayMode, setIsXRayMode] = useState(false);
@@ -505,6 +516,16 @@ export default function SceneContainer({
           >
             Top
           </button>
+          {/* Fit View Button (Section 7) */}
+          <button
+            onClick={() => setCameraPreset('fit')}
+            className="px-1.5 py-0.5 rounded text-[11px] font-semibold transition hover:text-cyan-500 flex items-center gap-0.5 cursor-pointer text-slate-400 hover:text-cyan-400"
+            title="Fit View: Auto-frame scene to fit all elements"
+          >
+            <Maximize2 size={11} />
+            <span className="hidden sm:inline text-[10px]">Fit</span>
+          </button>
+          {/* Zoom In Button */}
           <button
             onClick={() => setCameraPreset('zoom-in')}
             className="p-1 rounded text-[11px] transition hover:text-cyan-500 text-slate-400 cursor-pointer"
@@ -512,6 +533,7 @@ export default function SceneContainer({
           >
             <ZoomIn size={11} />
           </button>
+          {/* Zoom Out Button */}
           <button
             onClick={() => setCameraPreset('zoom-out')}
             className="p-1 rounded text-[11px] transition hover:text-cyan-500 text-slate-400 cursor-pointer"
@@ -519,12 +541,35 @@ export default function SceneContainer({
           >
             <ZoomOut size={11} />
           </button>
+          {/* Reset Camera Button */}
           <button
             onClick={() => setCameraPreset('reset')}
             className="p-1 rounded text-[11px] transition hover:text-cyan-500 text-slate-400 cursor-pointer"
-            title="Reset Camera View"
+            title="Reset Camera to Default Position"
           >
             <RefreshCw size={11} />
+          </button>
+          {/* Rotate 360 Toggle (Section 7) */}
+          <button
+            onClick={() => setIsAutoRotating(!isAutoRotating)}
+            className={`px-1.5 py-0.5 rounded text-[11px] font-semibold transition flex items-center gap-0.5 cursor-pointer ${
+              isAutoRotating ? 'bg-cyan-500/20 text-cyan-400 font-bold' : 'text-slate-400 hover:text-cyan-400'
+            }`}
+            title="Toggle Continuous 360 Rotation"
+          >
+            <RotateCw size={11} className={isAutoRotating ? 'animate-spin' : ''} />
+            <span className="hidden sm:inline text-[10px]">Rotate</span>
+          </button>
+          {/* Pause Animation Toggle (Section 7) */}
+          <button
+            onClick={() => setIsAnimationPaused(!isAnimationPaused)}
+            className={`px-1.5 py-0.5 rounded text-[11px] font-semibold transition flex items-center gap-0.5 cursor-pointer ${
+              isAnimationPaused ? 'bg-amber-500/20 text-amber-400 font-bold' : 'text-slate-400 hover:text-amber-400'
+            }`}
+            title="Pause / Resume 3D Scene Animations"
+          >
+            {isAnimationPaused ? <Play size={11} /> : <Pause size={11} />}
+            <span className="hidden sm:inline text-[10px]">Anim</span>
           </button>
         </div>
 
@@ -652,6 +697,7 @@ export default function SceneContainer({
           <Suspense fallback={null}>
             <CameraPresetHandler
               preset={cameraPreset}
+              count={elementCount}
               onApplied={() => setCameraPreset(null)}
               controlsRef={controlsRef}
             />
@@ -785,6 +831,8 @@ export default function SceneContainer({
             minDistance={1.8}
             maxDistance={45}
             maxPolarAngle={Math.PI / 2 - 0.02}
+            autoRotate={isAutoRotating}
+            autoRotateSpeed={1.8}
           />
         </Canvas>
       )}

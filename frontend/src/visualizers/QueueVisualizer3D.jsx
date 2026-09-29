@@ -3,10 +3,10 @@ import { Text, Float } from '@react-three/drei';
 import * as THREE from 'three';
 
 export default function QueueVisualizer3D({ dataStructureState }) {
-  const { values = [] } = dataStructureState || {};
-  const spacingX = 2.4;
+  const { values = [], operation = dataStructureState?.operation || null } = dataStructureState || {};
+  const spacingX = 2.5;
   const count = Math.max(values.length, 1);
-  const totalWidth = Math.max(count * spacingX + 2.5, 9);
+  const totalWidth = Math.max(count * spacingX + 4.5, 10);
   const startX = -((values.length - 1) * spacingX) / 2;
 
   return (
@@ -27,10 +27,21 @@ export default function QueueVisualizer3D({ dataStructureState }) {
         <meshBasicMaterial color="#06b6d4" />
       </mesh>
 
+      {/* Operation Badge */}
+      {operation && (
+        <Float speed={3} floatIntensity={0.15}>
+          <group position={[0, 2.1, 0]}>
+            <Text fontSize={0.32} color="#f59e0b" fontWeight="bold">
+              {`OP: ${String(operation).toUpperCase()}`}
+            </Text>
+          </group>
+        </Float>
+      )}
+
       {/* FIFO Direction Arrow in center of conveyor */}
       <group position={[0, -0.62, 0]}>
         <Text fontSize={0.28} color="#0284c7" fontWeight="bold">
-          FIFO FLOW: [REAR / ENTRY]  ➔ ➔ ➔  [FRONT / EXIT]
+          FIFO FLOW: [FRONT / DEQUEUE]  ➔ ➔ ➔  [REAR / ENQUEUE]
         </Text>
       </group>
 
@@ -38,7 +49,7 @@ export default function QueueVisualizer3D({ dataStructureState }) {
       {values.length === 0 && (
         <group position={[0, 0.5, 0]}>
           <Text fontSize={0.38} color="#94a3b8" fontWeight="bold">
-            [QUEUE EMPTY]
+            [QUEUE EMPTY (Size: 0)]
           </Text>
         </group>
       )}
@@ -84,7 +95,33 @@ export default function QueueVisualizer3D({ dataStructureState }) {
               {String(val)}
             </Text>
 
-            {/* FRONT Pointer Banner */}
+            {/* FRONT Pointer (Section 11: FRONT ->) */}
+            {isFront && (
+              <group position={[-1.55, 0, 0]}>
+                <Text position={[-0.75, 0, 0]} fontSize={0.28} color="#10b981" fontWeight="bold">
+                  FRONT
+                </Text>
+                <mesh position={[0, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
+                  <coneGeometry args={[0.14, 0.3, 16]} />
+                  <meshStandardMaterial color="#10b981" emissive="#10b981" emissiveIntensity={0.9} />
+                </mesh>
+              </group>
+            )}
+
+            {/* REAR Pointer (Section 11: <- REAR) */}
+            {isRear && (
+              <group position={[1.55, 0, 0]}>
+                <mesh position={[0, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+                  <coneGeometry args={[0.14, 0.3, 16]} />
+                  <meshStandardMaterial color="#3b82f6" emissive="#3b82f6" emissiveIntensity={0.9} />
+                </mesh>
+                <Text position={[0.75, 0, 0]} fontSize={0.28} color="#60a5fa" fontWeight="bold">
+                  REAR
+                </Text>
+              </group>
+            )}
+
+            {/* FRONT Top Pointer Banner */}
             {isFront && (
               <Float speed={5} rotationIntensity={0.1} floatIntensity={0.2}>
                 <group position={[0, 1.35, 0]}>
@@ -99,7 +136,7 @@ export default function QueueVisualizer3D({ dataStructureState }) {
               </Float>
             )}
 
-            {/* REAR Pointer Banner */}
+            {/* REAR Bottom Pointer Banner */}
             {isRear && (
               <Float speed={5} rotationIntensity={0.1} floatIntensity={0.2}>
                 <group position={[0, -1.35, 0]}>

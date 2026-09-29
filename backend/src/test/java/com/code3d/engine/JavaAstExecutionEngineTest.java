@@ -260,6 +260,97 @@ public class JavaAstExecutionEngineTest {
     }
 
     @Test
+    public void testArithmeticOperations() {
+        String code = """
+            int a = 15;
+            int b = 4;
+            int sum = a + b;
+            int diff = a - b;
+            int prod = a * b;
+            int quot = a / b;
+            int rem = a % b;
+            """;
+        ExecuteResponse response = engine.execute(code);
+        assertNotNull(response);
+        assertEquals("SUCCESS", response.getStatus());
+
+        ExecutionStep last = response.getSteps().get(response.getSteps().size() - 1);
+        assertEquals(19L, ((Number) last.getVariables().get("sum")).longValue());
+        assertEquals(11L, ((Number) last.getVariables().get("diff")).longValue());
+        assertEquals(60L, ((Number) last.getVariables().get("prod")).longValue());
+        assertEquals(3L, ((Number) last.getVariables().get("quot")).longValue());
+        assertEquals(3L, ((Number) last.getVariables().get("rem")).longValue());
+    }
+
+    @Test
+    public void testWhileLoop() {
+        String code = """
+            int count = 0;
+            while (count < 4) {
+                count++;
+            }
+            """;
+        ExecuteResponse response = engine.execute(code);
+        assertNotNull(response);
+        assertEquals("SUCCESS", response.getStatus());
+
+        ExecutionStep last = response.getSteps().get(response.getSteps().size() - 1);
+        assertEquals(4L, ((Number) last.getVariables().get("count")).longValue());
+    }
+
+    @Test
+    public void testReturnValue() {
+        String code = """
+            public class Main {
+                static int square(int x) {
+                    return x * x;
+                }
+                public static void main(String[] args) {
+                    int val = square(5);
+                    System.out.println(val);
+                }
+            }
+            """;
+        ExecuteResponse response = engine.execute(code);
+        assertNotNull(response);
+        assertEquals("SUCCESS", response.getStatus());
+
+        ExecutionStep last = response.getSteps().get(response.getSteps().size() - 1);
+        assertEquals(25L, ((Number) last.getVariables().get("val")).longValue());
+        assertTrue(last.getOutput().contains("25"));
+    }
+
+    @Test
+    public void testNestedLoop() {
+        String code = """
+            int total = 0;
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 2; j++) {
+                    total++;
+                }
+            }
+            """;
+        ExecuteResponse response = engine.execute(code);
+        assertNotNull(response);
+        assertEquals("SUCCESS", response.getStatus());
+
+        ExecutionStep last = response.getSteps().get(response.getSteps().size() - 1);
+        assertEquals(6L, ((Number) last.getVariables().get("total")).longValue());
+    }
+
+    @Test
+    public void testInvalidJavaCode() {
+        String invalidCode = "public class Main { void broken( { }";
+        ExecuteResponse response = engine.execute(invalidCode);
+        assertNotNull(response);
+        assertEquals("ERROR", response.getStatus());
+        assertNotNull(response.getMessage());
+        assertTrue(response.getMessage().toLowerCase().contains("syntax") ||
+                   response.getMessage().toLowerCase().contains("unable") ||
+                   response.getMessage().toLowerCase().contains("parse"));
+    }
+
+    @Test
     public void testSecurityProtection() {
         String maliciousCode = """
             public class Main {

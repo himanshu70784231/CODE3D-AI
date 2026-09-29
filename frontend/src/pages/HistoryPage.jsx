@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { History, CheckCircle, Award, Code2, Database, Clock, RefreshCw, Trash2, Play, Zap } from 'lucide-react';
+import { History, CheckCircle, Award, Code2, Database, Clock, RefreshCw, Trash2, Play, Zap, Eye, X } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { getExecutionHistory, clearExecutionHistory } from '../services/apiService';
+import { getExecutionHistory, clearExecutionHistory, deleteHistoryItem } from '../services/apiService';
 
 export default function HistoryPage({ onRerunProgram }) {
   const { isBright } = useTheme();
@@ -9,6 +9,7 @@ export default function HistoryPage({ onRerunProgram }) {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('ALL');
+  const [viewCodeRecord, setViewCodeRecord] = useState(null);
 
   const filteredExecutions = (historyData?.recentExecutions || []).filter((rec) => {
     const matchesLang = selectedLanguage === 'ALL' || (rec.language || 'java').toLowerCase() === selectedLanguage.toLowerCase();
@@ -31,6 +32,14 @@ export default function HistoryPage({ onRerunProgram }) {
   const handleClear = () => {
     if (window.confirm('Are you sure you want to clear all execution and quiz history?')) {
       clearExecutionHistory();
+      loadHistory();
+    }
+  };
+
+  const handleDelete = async (id, e) => {
+    e.stopPropagation();
+    if (window.confirm(`Delete execution #${id}?`)) {
+      await deleteHistoryItem(id);
       loadHistory();
     }
   };
@@ -189,57 +198,106 @@ export default function HistoryPage({ onRerunProgram }) {
               }`}>
                 <tr>
                   <th className="py-2.5 px-3">Run ID</th>
-                  <th className="py-2.5 px-3">Program / Concept</th>
+                  <th className="py-2.5 px-3">Program Name</th>
                   <th className="py-2.5 px-3">Language</th>
-                  <th className="py-2.5 px-3">Steps</th>
+                  <th className="py-2.5 px-3">Type</th>
+                  <th className="py-2.5 px-3">Duration</th>
                   <th className="py-2.5 px-3">Status</th>
-                  <th className="py-2.5 px-3">Timestamp</th>
-                  <th className="py-2.5 px-3 text-right">Action</th>
+                  <th className="py-2.5 px-3">Date / Time</th>
+                  <th className="py-2.5 px-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className={`divide-y ${isBright ? 'divide-slate-200' : 'divide-slate-800/60'}`}>
-                {filteredExecutions.map((rec, idx) => (
-                  <tr key={idx} className={`transition ${isBright ? 'hover:bg-slate-50' : 'hover:bg-slate-800/30'}`}>
-                    <td className={`py-2.5 px-3 font-bold ${isBright ? 'text-cyan-700' : 'text-cyan-400'}`}>#{String(rec.id).slice(-6)}</td>
-                    <td className={`py-2.5 px-3 font-sans font-medium ${isBright ? 'text-slate-900' : 'text-white'}`}>
-                      {rec.programTitle}
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono uppercase font-semibold ${
-                        isBright ? 'bg-slate-100 text-slate-700 border border-slate-200' : 'bg-slate-800 text-cyan-300'
-                      }`}>
-                        {rec.language || 'java'}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3">{rec.totalSteps} steps</td>
-                    <td className="py-2.5 px-3">
-                      <span className={`text-[10px] px-2 py-0.5 rounded font-bold border ${
-                        rec.status === 'COMPLETED'
-                          ? isBright ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-emerald-950/60 border-emerald-800/60 text-emerald-400'
-                          : isBright ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-amber-950/60 border-amber-800/60 text-amber-400'
-                      }`}>
-                        {rec.status}
-                      </span>
-                    </td>
-                    <td className={`py-2.5 px-3 text-[11px] ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>{String(rec.executedAt).slice(0, 22)}</td>
-                    <td className="py-2.5 px-3 text-right">
-                      {onRerunProgram && (
-                        <button
-                          onClick={() => onRerunProgram(rec)}
-                          className={`px-2.5 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1 ml-auto transition cursor-pointer ${
-                            isBright
-                              ? 'bg-cyan-100 hover:bg-cyan-200 text-cyan-800 border border-cyan-300'
-                              : 'bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30'
-                          }`}
-                          title="Load code and re-simulate in 3D Studio"
-                        >
-                          <Zap size={11} className="fill-current" />
-                          <span>Re-run 3D</span>
-                        </button>
-                      )}
+                {filteredExecutions.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-6 text-center text-slate-500 italic">
+                      No matching executions found. Run code in the Code Playground or 3D Visualizer to log entries.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredExecutions.map((rec, idx) => (
+                    <tr key={idx} className={`transition ${isBright ? 'hover:bg-slate-50' : 'hover:bg-slate-800/30'}`}>
+                      <td className={`py-2.5 px-3 font-bold ${isBright ? 'text-cyan-700' : 'text-cyan-400'}`}>#{String(rec.id).slice(-6)}</td>
+                      <td className={`py-2.5 px-3 font-sans font-medium ${isBright ? 'text-slate-900' : 'text-white'}`}>
+                        {rec.programTitle}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono uppercase font-semibold ${
+                          isBright ? 'bg-slate-100 text-slate-700 border border-slate-200' : 'bg-slate-800 text-cyan-300'
+                        }`}>
+                          {rec.language || 'java'}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                          isBright ? 'bg-slate-100 text-slate-600' : 'bg-slate-800/60 text-slate-300'
+                        }`}>
+                          {rec.conceptId || 'custom'}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-[11px] text-slate-400">
+                        {rec.executionTimeMs ? `${rec.executionTimeMs}ms` : '<10ms'}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-bold border ${
+                          rec.status === 'COMPLETED'
+                            ? isBright ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-emerald-950/60 border-emerald-800/60 text-emerald-400'
+                            : isBright ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-amber-950/60 border-amber-800/60 text-amber-400'
+                        }`}>
+                          {rec.status}
+                        </span>
+                      </td>
+                      <td className={`py-2.5 px-3 text-[11px] ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>{String(rec.executedAt).slice(0, 19).replace('T', ' ')}</td>
+                      <td className="py-2.5 px-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* Open / View Code */}
+                          {rec.code && (
+                            <button
+                              onClick={() => setViewCodeRecord(rec)}
+                              className={`p-1.5 rounded transition cursor-pointer border ${
+                                isBright
+                                  ? 'border-slate-300 text-slate-600 hover:bg-slate-100'
+                                  : 'border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white'
+                              }`}
+                              title="View Source Code"
+                            >
+                              <Eye size={12} />
+                            </button>
+                          )}
+
+                          {/* Re-run 3D */}
+                          {onRerunProgram && (
+                            <button
+                              onClick={() => onRerunProgram(rec)}
+                              className={`px-2 py-1 rounded text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer ${
+                                isBright
+                                  ? 'bg-cyan-100 hover:bg-cyan-200 text-cyan-800 border border-cyan-300'
+                                  : 'bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30'
+                              }`}
+                              title="Load code and re-run in 3D Visualizer"
+                            >
+                              <Zap size={11} className="fill-current" />
+                              <span className="hidden sm:inline">Rerun</span>
+                            </button>
+                          )}
+
+                          {/* Delete */}
+                          <button
+                            onClick={(e) => handleDelete(rec.id, e)}
+                            className={`p-1.5 rounded transition cursor-pointer border ${
+                              isBright
+                                ? 'border-rose-200 text-rose-600 hover:bg-rose-50'
+                                : 'border-rose-900/50 text-rose-400 hover:bg-rose-950/40'
+                            }`}
+                            title="Delete this execution record"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -286,7 +344,7 @@ export default function HistoryPage({ onRerunProgram }) {
                         <span>{q.accuracy}%</span>
                       </div>
                     </td>
-                    <td className={`py-2.5 px-3 ${isBright ? 'text-slate-500' : 'text-slate-500'}`}>{String(q.completedAt).slice(0, 19)}</td>
+                    <td className={`py-2.5 px-3 ${isBright ? 'text-slate-500' : 'text-slate-500'}`}>{String(q.completedAt).slice(0, 19).replace('T', ' ')}</td>
                   </tr>
                 ))}
               </tbody>
@@ -294,6 +352,60 @@ export default function HistoryPage({ onRerunProgram }) {
           </div>
         </div>
       </div>
+
+      {/* Code Inspection Modal */}
+      {viewCodeRecord && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className={`w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[85vh] ${
+            isBright ? 'bg-white border-slate-300' : 'bg-slate-900 border-slate-800 text-slate-100'
+          }`}>
+            <div className={`px-5 py-3 border-b flex items-center justify-between ${
+              isBright ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/70 border-slate-800'
+            }`}>
+              <div>
+                <h3 className="font-bold text-sm">{viewCodeRecord.programTitle}</h3>
+                <span className="text-xs text-slate-400 font-mono">
+                  {viewCodeRecord.language} • {viewCodeRecord.conceptId || 'custom'}
+                </span>
+              </div>
+              <button
+                onClick={() => setViewCodeRecord(null)}
+                className="p-1 rounded-lg hover:bg-slate-800/50 text-slate-400 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-4 flex-1 overflow-auto bg-slate-950">
+              <pre className="text-xs font-mono text-cyan-300 whitespace-pre leading-relaxed">
+                {viewCodeRecord.code}
+              </pre>
+            </div>
+            <div className={`px-5 py-3 border-t flex items-center justify-between ${
+              isBright ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/70 border-slate-800'
+            }`}>
+              <button
+                onClick={() => setViewCodeRecord(null)}
+                className="px-3 py-1.5 text-xs rounded border border-slate-700 text-slate-300 hover:bg-slate-800"
+              >
+                Close
+              </button>
+              {onRerunProgram && (
+                <button
+                  onClick={() => {
+                    const rec = viewCodeRecord;
+                    setViewCodeRecord(null);
+                    onRerunProgram(rec);
+                  }}
+                  className="px-4 py-1.5 text-xs rounded bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold flex items-center gap-1.5"
+                >
+                  <Zap size={13} className="fill-current" />
+                  <span>Re-run in 3D Visualizer</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

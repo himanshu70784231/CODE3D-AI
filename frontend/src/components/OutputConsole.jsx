@@ -1,16 +1,35 @@
-import React, { useState } from 'react';
-import { Terminal, Copy, Check, Trophy, Sparkles } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Terminal, Copy, Check, Trophy, Trash2, ArrowDown } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
-export default function OutputConsole({ output = [], correctOutput = null, isAtEnd = false }) {
+export default function OutputConsole({ output = [], correctOutput = null, isAtEnd = false, onClearOutput = null }) {
   const { isBright } = useTheme();
   const [copied, setCopied] = useState(false);
+  const [autoScroll, setAutoScroll] = useState(true);
+  const [clearedLength, setClearedLength] = useState(0);
+  const scrollContainerRef = useRef(null);
+
+  // Filter output lines if cleared locally
+  const activeOutput = output.slice(clearedLength);
+
+  useEffect(() => {
+    if (autoScroll && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    }
+  }, [activeOutput, autoScroll, correctOutput]);
 
   const handleCopy = () => {
-    const textToCopy = [...output, correctOutput ? `Correct Output: ${correctOutput}` : ''].filter(Boolean).join('\n');
+    const textToCopy = [...activeOutput, correctOutput ? `Correct Output: ${correctOutput}` : ''].filter(Boolean).join('\n');
     navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleClear = () => {
+    setClearedLength(output.length);
+    if (onClearOutput) {
+      onClearOutput();
+    }
   };
 
   return (
@@ -36,10 +55,43 @@ export default function OutputConsole({ output = [], correctOutput = null, isAtE
             </span>
           )}
         </div>
+
         <div className="flex items-center gap-2">
           <span className={`text-[10px] ${isBright ? 'text-slate-500' : 'text-slate-500'}`}>
-            {output.length} line(s) printed
+            {activeOutput.length} line(s)
           </span>
+
+          {/* Auto-scroll toggle */}
+          <button
+            onClick={() => setAutoScroll(!autoScroll)}
+            className={`px-1.5 py-0.5 rounded transition text-[10px] flex items-center gap-1 border ${
+              autoScroll
+                ? isBright
+                  ? 'bg-cyan-50 border-cyan-300 text-cyan-700'
+                  : 'bg-cyan-950/60 border-cyan-800 text-cyan-300'
+                : isBright
+                  ? 'bg-slate-100 border-slate-200 text-slate-400'
+                  : 'bg-slate-800/40 border-slate-700 text-slate-500'
+            }`}
+            title="Toggle Auto-scroll to bottom"
+          >
+            <ArrowDown size={10} className={autoScroll ? 'text-cyan-400' : ''} />
+            <span className="hidden sm:inline">Auto-scroll</span>
+          </button>
+
+          {/* Clear Button */}
+          <button
+            onClick={handleClear}
+            className={`p-1 rounded transition flex items-center gap-1 text-[10px] ${
+              isBright ? 'hover:bg-slate-100 text-slate-500 hover:text-rose-600' : 'hover:bg-slate-800 text-slate-400 hover:text-rose-400'
+            }`}
+            title="Clear output console"
+          >
+            <Trash2 size={11} />
+            <span className="hidden sm:inline">Clear</span>
+          </button>
+
+          {/* Copy Button */}
           <button
             onClick={handleCopy}
             className={`p-1 rounded transition hover:text-cyan-400 flex items-center gap-1 text-[10px] ${
@@ -54,19 +106,22 @@ export default function OutputConsole({ output = [], correctOutput = null, isAtE
       </div>
 
       {/* Output Content Stream */}
-      <div className={`flex-1 p-3 overflow-y-auto space-y-1.5 font-mono select-text transition-colors ${
-        isBright ? 'bg-white' : 'bg-[#070b14]'
-      }`}>
+      <div
+        ref={scrollContainerRef}
+        className={`flex-1 p-3 overflow-y-auto space-y-1.5 font-mono select-text transition-colors ${
+          isBright ? 'bg-white' : 'bg-[#070b14]'
+        }`}
+      >
         <div className={`text-[11px] select-none ${isBright ? 'text-slate-400' : 'text-slate-600'}`}>
           $ code3d-run --target=3D --interactive
         </div>
 
-        {output.length === 0 && !correctOutput ? (
+        {activeOutput.length === 0 && !correctOutput ? (
           <div className={`italic text-[11px] py-1 ${isBright ? 'text-slate-400' : 'text-slate-600'}`}>
             Program executing in 3D WebGL space... No standard output lines produced yet.
           </div>
         ) : (
-          output.map((line, idx) => (
+          activeOutput.map((line, idx) => (
             <div key={idx} className={`flex items-start gap-2 text-xs leading-relaxed ${
               isBright ? 'text-slate-800 font-medium' : 'text-slate-200'
             }`}>
