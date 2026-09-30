@@ -202,19 +202,20 @@ export function useExecution(trace = [], isLoading = false, hasError = false) {
     return 'READY';
   }, [hasError, isLoading, totalSteps, isPlaying, isAtEnd, safeIndex]);
 
-  // Cumulative standard output lines
+  // Cumulative standard output lines — always string[]
   const cumulativeOutput = useMemo(() => {
     if (totalSteps === 0) return [];
     if (currentStep && Array.isArray(currentStep.output)) {
-      return currentStep.output;
+      return currentStep.output.map(item => typeof item === 'string' ? item : String(item));
     }
     const result = [];
     for (let i = 0; i <= safeIndex && i < totalSteps; i++) {
       const stepOut = safeTrace[i]?.output;
       if (Array.isArray(stepOut)) {
         for (const line of stepOut) {
-          if (typeof line === 'string' && line.trim()) {
-            result.push(line);
+          const lineStr = typeof line === 'string' ? line : String(line);
+          if (lineStr.trim()) {
+            result.push(lineStr);
           }
         }
       }
@@ -222,20 +223,26 @@ export function useExecution(trace = [], isLoading = false, hasError = false) {
     return result;
   }, [totalSteps, currentStep, safeIndex, safeTrace]);
 
-  // Verified correct final output
+  // Verified correct final output — always a string or null
   const finalCorrectOutput = useMemo(() => {
     if (totalSteps === 0) return null;
     const lastStep = safeTrace[totalSteps - 1];
     if (!lastStep) return null;
 
     if (Array.isArray(lastStep.output) && lastStep.output.length > 0) {
-      return lastStep.output.join('\n');
+      return lastStep.output.map(item => 
+        typeof item === 'string' ? item : (typeof item === 'number' ? String(item) : JSON.stringify(item))
+      ).join('\n');
     }
-    if (lastStep.returnValue !== undefined) {
+    if (lastStep.returnValue !== undefined && lastStep.returnValue !== null) {
+      if (typeof lastStep.returnValue === 'object') {
+        try { return JSON.stringify(lastStep.returnValue); } catch { return '[Object]'; }
+      }
       return String(lastStep.returnValue);
     }
     if (lastStep.dataStructureState?.values) {
-      return `[${lastStep.dataStructureState.values.join(', ')}]`;
+      const vals = lastStep.dataStructureState.values;
+      return `[${Array.isArray(vals) ? vals.join(', ') : String(vals)}]`;
     }
     return null;
   }, [totalSteps, safeTrace]);

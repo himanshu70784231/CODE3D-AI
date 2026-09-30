@@ -79,6 +79,19 @@ export function ScenePanel({
       {/* 3D WebGL Canvas Viewport */}
       {!isCollapsed && (
         <div className="flex-1 relative overflow-hidden bg-[#08111f]">
+          {/* Empty State Overlay when no program is loaded */}
+          {(!code || !code.trim() || (!currentStep && !statusLabel)) && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 bg-[#070b14]/80 backdrop-blur-xs text-center select-none pointer-events-auto">
+              <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-3 shadow-lg shadow-cyan-500/10 animate-pulse">
+                <Box size={28} className="stroke-[2]" />
+              </div>
+              <h3 className="text-sm font-bold text-white mb-1">Your 3D workspace is waiting.</h3>
+              <p className="text-xs text-slate-400 max-w-xs leading-relaxed mb-4">
+                Paste code or select an algorithm template to generate your interactive 3D visualization.
+              </p>
+            </div>
+          )}
+
           <SceneContainer
             currentStep={currentStep}
             code={code}

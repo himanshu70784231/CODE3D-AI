@@ -81,3 +81,22 @@ html.bright ::-webkit-scrollbar-thumb:hover {
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f59e0b'%3E%3Ccircle cx='12' cy='12' r='8' stroke='%23ef4444' stroke-width='3'/%3E%3C/svg%3E") no-repeat center center;
   background-size: 13px 13px;
 }
+
+/* Accessibility: Visible Focus Rings */
+*:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+
+/* Accessibility: Reduced Motion Support (Phase 12) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+    scroll-behavior: auto !important;
+  }
+}
+

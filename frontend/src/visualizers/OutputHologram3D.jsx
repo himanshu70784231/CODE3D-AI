@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Text, Float } from '@react-three/drei';
 import * as THREE from 'three';
+import { safeString } from '../utils/safeRender';
 
 /**
  * OutputHologram3D
@@ -27,7 +28,7 @@ export default function OutputHologram3D({
     }
   });
 
-  const displayText = correctOutput || recentLine || 'Execution in progress...';
+  const displayText = safeString(correctOutput) || safeString(recentLine) || 'Execution in progress...';
   const cleanDisplay = displayText.length > 48 ? displayText.slice(0, 45) + '...' : displayText;
 
   return (

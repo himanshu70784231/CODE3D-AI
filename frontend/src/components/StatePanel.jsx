@@ -1,6 +1,7 @@
 import React from 'react';
 import { Variable, CheckCircle2, XCircle, Sparkles, Layers, Cpu, ArrowRight } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { safeString, safeDisplay } from '../utils/safeRender';
 import StepInspector from './StepInspector';
 import ComplexityPanel from './ComplexityPanel';
 import VariableInspector from './VariableInspector';
@@ -78,7 +79,7 @@ export default function StatePanel({ currentStep, totalSteps, correctOutput = nu
               </span>
             </div>
             <div className="font-mono text-xs font-bold break-all">
-              {correctOutput}
+              {safeDisplay(correctOutput)}
             </div>
           </div>
         )}
@@ -126,15 +127,15 @@ export default function StatePanel({ currentStep, totalSteps, correctOutput = nu
                 : 'bg-slate-950/70 border-slate-800 text-slate-300'
             }`}>
               <div className={isBright ? 'text-slate-600' : 'text-slate-400'}>
-                Expression: <span className={`font-medium ${isBright ? 'text-slate-900' : 'text-slate-200'}`}>{condition.expression}</span>
+                Expression: <span className={`font-medium ${isBright ? 'text-slate-900' : 'text-slate-200'}`}>{safeString(condition.expression)}</span>
               </div>
               <div className={isBright ? 'text-slate-600' : 'text-slate-400'}>
-                Evaluation: <span className={`font-semibold ${isBright ? 'text-cyan-700' : 'text-cyan-300'}`}>{condition.evaluation}</span>
+                Evaluation: <span className={`font-semibold ${isBright ? 'text-cyan-700' : 'text-cyan-300'}`}>{safeString(condition.evaluation)}</span>
               </div>
               <div className={`text-[10px] mt-1 pt-1 border-t ${
                 isBright ? 'border-slate-100 text-slate-500' : 'border-slate-800/60 text-slate-500'
               }`}>
-                Branch: <span className={isBright ? 'text-slate-800 font-semibold' : 'text-slate-300'}>{condition.branch}</span>
+                Branch: <span className={isBright ? 'text-slate-800 font-semibold' : 'text-slate-300'}>{safeString(condition.branch)}</span>
               </div>
             </div>
           </div>
@@ -177,7 +178,7 @@ export default function StatePanel({ currentStep, totalSteps, correctOutput = nu
                   >
                     <span className="flex items-center gap-1.5">
                       <span className="text-[10px] opacity-60">#{idx + 1}</span>
-                      <span>{typeof frame === 'string' ? (frame.includes('(') ? frame : `${frame}()`) : (frame?.name || 'anonymous()')}</span>
+                      <span>{typeof frame === 'string' ? (frame.includes('(') ? frame : `${frame}()`) : safeString(frame?.name, 'anonymous()')}</span>
                     </span>
                     <span className={`text-[10px] ${isTop ? (isBright ? 'text-cyan-700 font-bold' : 'text-cyan-400 font-bold') : 'opacity-60'}`}>
                       {isTop ? `line ${lineNumber}` : (frame?.line ? `line ${frame.line}` : '')}
@@ -217,7 +218,7 @@ export default function StatePanel({ currentStep, totalSteps, correctOutput = nu
           <p className={`text-[11.5px] leading-relaxed font-sans ${
             isBright ? 'text-slate-700' : 'text-slate-300'
           }`}>
-            {explanation}
+            {safeString(explanation, 'Analyzing execution step...')}
           </p>
 
           {aiHint && (
@@ -227,7 +228,7 @@ export default function StatePanel({ currentStep, totalSteps, correctOutput = nu
                 : 'border-cyan-900/30 text-slate-400'
             }`}>
               <span className={`font-bold ${isBright ? 'text-cyan-700' : 'text-cyan-400'}`}>Hint:</span>
-              <span>{aiHint}</span>
+              <span>{safeString(aiHint)}</span>
             </div>
           )}
         </div>

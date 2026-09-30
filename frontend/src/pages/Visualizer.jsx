@@ -611,7 +611,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
         <div className="px-4 py-2 text-xs flex items-center justify-between border-b border-[#ef4444]/40 bg-rose-950/50 text-[#fca5a5] shrink-0 z-20">
           <div className="flex items-center gap-2">
             <span className="font-bold text-[#ef4444]">Diagnostic:</span>
-            <span>{executionError}</span>
+            <span>{typeof executionError === 'string' ? executionError : (executionError?.message || String(executionError))}</span>
           </div>
           <button
             onClick={() => setExecutionError(null)}

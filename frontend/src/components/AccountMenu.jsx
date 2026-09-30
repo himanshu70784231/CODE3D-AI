@@ -130,7 +130,7 @@ export default function AccountMenu({ onClose }) {
             onClick={() =>
               handleAction(async () => {
                 await logout();
-                navigate('/');
+                navigate('/login');
               })
             }
             className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-rose-500/10 text-rose-500 flex items-center gap-2 cursor-pointer transition font-medium"

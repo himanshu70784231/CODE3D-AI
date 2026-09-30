@@ -20,12 +20,10 @@ import CodeDoctorModal from './components/CodeDoctorModal';
 import { AppErrorBoundary } from './components/ErrorBoundaries';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
-
 import ProtectedRoute from './components/ProtectedRoute';
-import AuthGateway from './components/AuthGateway';
 
 function MainAppContent() {
-  const { user, isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const { isBright } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -51,10 +49,21 @@ function MainAppContent() {
     );
   }
 
-  // Part 1: Authentication Gateway (Login Lock)
-  // Restrict access to main workspace, dashboard, and 3D visualizers until authenticated.
-  if (!isAuthenticated) {
-    return <AuthGateway />;
+  // Public Standalone Auth Routes: Render dedicated, distraction-free screens
+  const isAuthRoute =
+    location.pathname === '/login' ||
+    location.pathname === '/register' ||
+    location.pathname === '/signup';
+
+  if (isAuthRoute) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/signup" element={<RegisterPage />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
   }
 
   const currentTab = location.pathname === '/' ? 'dashboard' : location.pathname.slice(1);
@@ -96,7 +105,7 @@ function MainAppContent() {
     <div className={`flex flex-col h-[100dvh] w-full overflow-hidden transition-colors duration-200 ${
       isBright ? 'bg-slate-50 text-slate-900' : 'bg-[#070b14] text-slate-100'
     }`}>
-      {/* Top Application Navbar */}
+      {/* Top Application Navbar — visible to authenticated users in workspace */}
       <Navbar
         activeTab={currentTab}
         setActiveTab={(id) => navigate(id === 'dashboard' ? '/' : `/${id}`)}
@@ -107,33 +116,131 @@ function MainAppContent() {
       {/* Main View Container */}
       <main className="flex-1 flex flex-col overflow-hidden pb-14 md:pb-0">
         <Routes>
-          <Route path="/" element={<Dashboard onNavigate={(tab) => navigate(tab === 'dashboard' ? '/' : `/${tab}`)} />} />
-          <Route path="/dashboard" element={<Dashboard onNavigate={(tab) => navigate(tab === 'dashboard' ? '/' : `/${tab}`)} />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/signup" element={<RegisterPage />} />
-          <Route path="/visualizer" element={<Visualizer initialConcept={selectedConcept} />} />
-          <Route path="/visualize" element={<Visualizer initialConcept={selectedConcept} />} />
-          <Route path="/algorithms" element={<DsaHub initialTab="algorithms" onSelectConcept={handleLaunchConcept} />} />
-          <Route path="/ai" element={<AiTutorPage onSendToVisualizer={handleLaunchConcept} />} />
-          <Route path="/dsa" element={<DsaHub initialTab="curriculum" onSelectConcept={handleLaunchConcept} />} />
-          <Route path="/dsa/:problemSlug" element={<DsaProblemPage onVisualizeProblem={handleLaunchConcept} />} />
-          <Route path="/sheets" element={<SheetsPage onSelectProblem={handleLaunchConcept} />} />
-          <Route path="/sheets/:sheetSlug" element={<SheetsPage onSelectProblem={handleLaunchConcept} />} />
-          <Route path="/striver" element={<DsaHub initialTab="striver" onSelectConcept={handleLaunchConcept} />} />
+          {/* Root Route: If authenticated go to dashboard, else redirect to login */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Dashboard onNavigate={(tab) => navigate(tab === 'dashboard' ? '/' : `/${tab}`)} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard onNavigate={(tab) => navigate(tab === 'dashboard' ? '/' : `/${tab}`)} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/workspace"
+            element={
+              <ProtectedRoute>
+                <Visualizer initialConcept={selectedConcept} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projects"
+            element={
+              <ProtectedRoute>
+                <Dashboard onNavigate={(tab) => navigate(tab === 'dashboard' ? '/' : `/${tab}`)} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/visualizer"
+            element={
+              <ProtectedRoute>
+                <Visualizer initialConcept={selectedConcept} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/visualize"
+            element={
+              <ProtectedRoute>
+                <Visualizer initialConcept={selectedConcept} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/algorithms"
+            element={
+              <ProtectedRoute>
+                <DsaHub initialTab="algorithms" onSelectConcept={handleLaunchConcept} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ai"
+            element={
+              <ProtectedRoute>
+                <AiTutorPage onSendToVisualizer={handleLaunchConcept} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dsa"
+            element={
+              <ProtectedRoute>
+                <DsaHub initialTab="curriculum" onSelectConcept={handleLaunchConcept} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dsa/:problemSlug"
+            element={
+              <ProtectedRoute>
+                <DsaProblemPage onVisualizeProblem={handleLaunchConcept} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sheets"
+            element={
+              <ProtectedRoute>
+                <SheetsPage onSelectProblem={handleLaunchConcept} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sheets/:sheetSlug"
+            element={
+              <ProtectedRoute>
+                <SheetsPage onSelectProblem={handleLaunchConcept} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/striver"
+            element={
+              <ProtectedRoute>
+                <DsaHub initialTab="striver" onSelectConcept={handleLaunchConcept} />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/saved"
             element={
-              <ProtectedRoute title="Saved Visualizations" message="Please sign in to view and manage your saved 3D algorithm visualizations.">
+              <ProtectedRoute>
                 <SavedVisualizationsPage onReplay={handleLaunchConcept} />
               </ProtectedRoute>
             }
           />
-          <Route path="/quiz" element={<QuizArena />} />
+          <Route
+            path="/quiz"
+            element={
+              <ProtectedRoute>
+                <QuizArena />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/history"
             element={
-              <ProtectedRoute title="Execution History" message="Please sign in to view your saved execution history, simulation logs, and quiz results.">
+              <ProtectedRoute>
                 <HistoryPage onRerunProgram={handleRerunFromHistory} />
               </ProtectedRoute>
             }
@@ -141,17 +248,25 @@ function MainAppContent() {
           <Route
             path="/profile"
             element={
-              <ProtectedRoute title="Developer Profile" message="Please sign in to view your account profile and learning analytics.">
+              <ProtectedRoute>
                 <ProfilePage />
               </ProtectedRoute>
             }
           />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <SettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* Unknown routes show 404 page */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
 
-      {/* Mobile Bottom Navigation Bar */}
+      {/* Mobile Bottom Navigation Bar for authenticated workspace */}
       <nav className={`md:hidden fixed bottom-0 left-0 right-0 h-14 backdrop-blur-xl border-t px-2 flex items-center justify-around z-40 select-none transition-colors ${
         isBright
           ? 'bg-white/95 border-slate-200 shadow-lg text-slate-700'
@@ -160,7 +275,7 @@ function MainAppContent() {
         <button
           onClick={() => navigate('/')}
           className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition ${
-            location.pathname === '/'
+            location.pathname === '/' || location.pathname === '/dashboard'
               ? 'text-cyan-600 font-bold dark:text-cyan-400'
               : isBright ? 'text-slate-500 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
           }`}
@@ -172,7 +287,7 @@ function MainAppContent() {
         <button
           onClick={() => navigate('/visualizer')}
           className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition ${
-            location.pathname === '/visualizer'
+            location.pathname === '/visualizer' || location.pathname === '/workspace'
               ? 'text-cyan-600 font-bold dark:text-cyan-400'
               : isBright ? 'text-slate-500 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
           }`}

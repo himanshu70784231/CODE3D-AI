@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Terminal, Copy, Check, Trash2, ArrowDown, AlertTriangle, AlertCircle, CheckCircle, Maximize2, Minimize2 } from 'lucide-react';
+import { safeString, safeDisplay, safeErrorMessage } from '../utils/safeRender';
 
 /**
  * CODE3D-AI - OutputConsole Component
@@ -34,9 +35,9 @@ export function OutputConsole({
     if (activeTab === 'console') {
       textToCopy = activeOutput.join('\n');
     } else if (activeTab === 'output') {
-      textToCopy = correctOutput || activeOutput[activeOutput.length - 1] || 'No output recorded';
+      textToCopy = safeString(correctOutput) || safeString(activeOutput[activeOutput.length - 1]) || 'No output recorded';
     } else if (activeTab === 'errors') {
-      textToCopy = error || 'No errors reported';
+      textToCopy = safeErrorMessage(error, 'No errors reported');
     }
     navigator.clipboard.writeText(textToCopy);
     setCopied(true);
@@ -174,7 +175,7 @@ export function OutputConsole({
                   <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-[#142338] text-[#38bdf8] select-none shrink-0 border border-[#26364a]">
                     INFO
                   </span>
-                  <span className="break-all">{line}</span>
+                  <span className="break-all">{safeString(line)}</span>
                 </div>
               ))
             )}
@@ -198,11 +199,11 @@ export function OutputConsole({
 
             {correctOutput ? (
               <div className="p-2.5 rounded bg-[#101c2d] border border-[#22c55e]/40 text-[#22c55e] font-bold text-xs break-all">
-                {correctOutput}
+                {safeDisplay(correctOutput)}
               </div>
             ) : activeOutput.length > 0 ? (
               <div className="p-2.5 rounded bg-[#101c2d] border border-[#26364a] text-[#f8fafc] break-all">
-                {activeOutput[activeOutput.length - 1]}
+                {safeString(activeOutput[activeOutput.length - 1])}
               </div>
             ) : (
               <div className="text-[#64748b] italic">
@@ -220,7 +221,7 @@ export function OutputConsole({
                   <AlertTriangle size={13} />
                   <span>Execution Diagnostic:</span>
                 </div>
-                <div className="text-xs break-all">{error}</div>
+                <div className="text-xs break-all">{safeErrorMessage(error)}</div>
               </div>
             ) : (
               <div className="text-[#22c55e] flex items-center gap-1.5 py-1">

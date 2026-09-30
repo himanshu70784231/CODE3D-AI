@@ -1,5 +1,6 @@
 import React from 'react';
 import { GitBranch, CheckCircle2, XCircle } from 'lucide-react';
+import { safeString } from '../utils/safeRender';
 
 /**
  * CODE3D-AI - ConditionPanel Component
@@ -53,7 +54,7 @@ export function ConditionPanel({
 
         {currentOperation && (
           <div className="text-[#94a3b8]">
-            Operation: <span className="text-[#38bdf8] font-medium">{currentOperation}</span>
+            Operation: <span className="text-[#38bdf8] font-medium">{safeString(currentOperation)}</span>
           </div>
         )}
 
@@ -62,7 +63,7 @@ export function ConditionPanel({
             <div className="text-[#94a3b8]">
               Expression:{' '}
               <span className="text-[#f8fafc] font-semibold bg-[#0d1726] px-1.5 py-0.5 rounded border border-[#26364a]">
-                {condition.expression}
+                {safeString(condition.expression)}
               </span>
             </div>
 
@@ -70,7 +71,7 @@ export function ConditionPanel({
               <div className="text-[#94a3b8]">
                 Evaluation:{' '}
                 <span className="text-[#2dd4bf] font-medium">
-                  {condition.evaluation}
+                  {safeString(condition.evaluation)}
                 </span>
               </div>
             )}
@@ -79,7 +80,7 @@ export function ConditionPanel({
               <div className="text-[#94a3b8]">
                 Branch:{' '}
                 <span className="text-[#c084fc] font-medium">
-                  {condition.branch}
+                  {safeString(condition.branch)}
                 </span>
               </div>
             )}

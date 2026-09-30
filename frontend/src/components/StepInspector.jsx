@@ -1,6 +1,7 @@
 import React from 'react';
 import { Cpu, Variable, Layers, CheckCircle2, ArrowRight, CornerDownRight } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { safeString, safeDisplay } from '../utils/safeRender';
 
 export default function StepInspector({ currentStep, totalSteps }) {
   const { isBright } = useTheme();
@@ -110,8 +111,8 @@ export default function StepInspector({ currentStep, totalSteps }) {
             Comparison Evaluation
           </div>
           <div className="flex items-center justify-between text-[11px]">
-            <span>{condition.expression}</span>
-            <span className="font-bold text-cyan-400">{condition.evaluation}</span>
+            <span>{safeString(condition.expression)}</span>
+            <span className="font-bold text-cyan-400">{safeString(condition.evaluation)}</span>
           </div>
           <div className="text-[10px] mt-1 pt-1 border-t border-amber-300/30 flex items-center justify-between">
             <span className="opacity-75">Result:</span>
@@ -137,7 +138,7 @@ export default function StepInspector({ currentStep, totalSteps }) {
                   isBright ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-slate-950 border-slate-800 text-slate-300'
                 }`}
               >
-                <span className="text-cyan-500 font-semibold">{k}</span> = {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+                <span className="text-cyan-500 font-semibold">{k}</span> = {safeDisplay(v)}
               </span>
             ))}
         </div>
@@ -166,7 +167,7 @@ export default function StepInspector({ currentStep, totalSteps }) {
 
               return (
                 <div key={idx} className={`px-1.5 py-0.5 rounded border transition ${style}`}>
-                  <span className="opacity-60">[{idx}]:</span> {val}
+                  <span className="opacity-60">[{idx}]:</span> {safeDisplay(val)}
                 </div>
               );
             })}

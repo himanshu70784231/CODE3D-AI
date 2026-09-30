@@ -15,5 +15,18 @@ export default defineConfig(({ command, mode }) => ({
     port: 5173,
     open: false,
   },
+  build: {
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'three-vendor': ['three', '@react-three/fiber', '@react-three/drei'],
+          'monaco-vendor': ['@monaco-editor/react'],
+          'router-vendor': ['react-router-dom'],
+          'lucide-vendor': ['lucide-react'],
+        },
+      },
+    },
+  },
 }));
 
