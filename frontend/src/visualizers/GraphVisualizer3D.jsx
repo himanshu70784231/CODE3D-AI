@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text, Float } from '@react-three/drei';
 import * as THREE from 'three';
+import { safeIncludes, safeArray } from '../utils/safeRender';
 
 function GraphEdge({ start, end, isActive, weight }) {
   if (!start || !end) return null;
@@ -103,7 +104,7 @@ export default function GraphVisualizer3D({ dataStructureState }) {
       {/* 3D Graph Nodes */}
       {vertices.map((v) => {
         const isActive = activeIndex === v.id;
-        const isVisited = (swappedIndices && swappedIndices.includes(v.id)) || (v.dist !== null && v.dist < 900);
+        const isVisited = safeIncludes(swappedIndices, v.id) || (v.dist !== null && v.dist < 900);
 
         let color = '#1e293b';
         let emissive = '#0f172a';

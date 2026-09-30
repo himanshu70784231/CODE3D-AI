@@ -9,6 +9,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from 'lucide-react';
+import { formatOperation } from '../utils/safeRender';
 
 /**
  * CODE3D-AI - Timeline Component
@@ -203,7 +204,7 @@ export function Timeline({
               {lineNum && <span className="text-[#64748b]">L{lineNum}</span>}
               {operation && (
                 <span className="hidden md:inline truncate max-w-[70px] text-[#94a3b8]">
-                  {operation}
+                  {formatOperation(operation)}
                 </span>
               )}
             </button>

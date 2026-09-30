@@ -11,8 +11,10 @@ export default function LinkedListVisualizer3D({ dataStructureState }) {
     type = '',
   } = dataStructureState || {};
 
-  const isDoubly = type.includes('doubly') || pointers?.PREV !== undefined;
-  const isCircular = type.includes('circular') || dataStructureState?.label?.toLowerCase().includes('circular');
+  const safeType = typeof type === 'string' ? type.toLowerCase() : '';
+  const safeLabel = typeof dataStructureState?.label === 'string' ? dataStructureState.label.toLowerCase() : '';
+  const isDoubly = safeType.includes('doubly') || pointers?.PREV !== undefined;
+  const isCircular = safeType.includes('circular') || safeLabel.includes('circular');
 
   const sourceList = (rawNodes && rawNodes.length > 0)
     ? rawNodes

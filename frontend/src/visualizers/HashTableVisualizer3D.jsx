@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Text, Float } from '@react-three/drei';
 import * as THREE from 'three';
+import { safeIncludes, safeArray } from '../utils/safeRender';
 
 /**
  * 3D Key-Value Memory Block slotted inside a Hash Bucket
@@ -104,12 +105,15 @@ function HashBucketSlot({ slotIndex, entries = [], isTargetSlot }) {
  */
 export default function HashTableVisualizer3D({ dataStructureState }) {
   const {
-    values = [],
+    values: rawValues = [],
     hashTable = {},
     activeIndex = null,
-    comparedIndices = [],
+    comparedIndices: rawCompared = [],
     target = null,
   } = dataStructureState || {};
+
+  const values = safeArray(rawValues);
+  const comparedIndices = safeArray(rawCompared);
 
   // Map entries into 8 fixed bucket slots using simple modulo hash
   const NUM_SLOTS = 8;
@@ -121,7 +125,7 @@ export default function HashTableVisualizer3D({ dataStructureState }) {
       ? Math.abs(k.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0)) % NUM_SLOTS
       : Math.abs(numKey) % NUM_SLOTS;
 
-    const isMatched = comparedIndices && comparedIndices.includes(v);
+    const isMatched = safeIncludes(comparedIndices, v);
     buckets[slot].push({ key: k, value: v, isMatched });
   });
 
@@ -141,7 +145,7 @@ export default function HashTableVisualizer3D({ dataStructureState }) {
         {values.map((val, idx) => {
           const posX = (idx - (values.length - 1) / 2) * 1.6;
           const isActive = activeIndex === idx;
-          const isMatched = comparedIndices && comparedIndices.includes(idx);
+          const isMatched = safeIncludes(comparedIndices, idx);
 
           return (
             <group key={`val-${idx}`} position={[posX, isActive ? 0.3 : 0, 0]}>

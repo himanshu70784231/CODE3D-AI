@@ -1,7 +1,7 @@
 import React from 'react';
 import { Cpu, Variable, Layers, CheckCircle2, ArrowRight, CornerDownRight } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { safeString, safeDisplay } from '../utils/safeRender';
+import { safeString, safeDisplay, formatOperation, safeIncludes, safeArray } from '../utils/safeRender';
 
 export default function StepInspector({ currentStep, totalSteps }) {
   const { isBright } = useTheme();
@@ -19,9 +19,10 @@ export default function StepInspector({ currentStep, totalSteps }) {
     output = [],
   } = currentStep;
 
-  const operation = metadata?.operation || eventType || 'STEP';
-  const comparedIndices = metadata?.comparedIndices || dataStructure?.comparedIndices || [];
-  const swappedIndices = metadata?.swappedIndices || dataStructure?.swappedIndices || [];
+  const rawOperation = metadata?.operation || eventType || 'STEP';
+  const operation = formatOperation(rawOperation);
+  const comparedIndices = safeArray(metadata?.comparedIndices || dataStructure?.comparedIndices);
+  const swappedIndices = safeArray(metadata?.swappedIndices || dataStructure?.swappedIndices);
   const activeIndex = metadata?.activeIndex ?? dataStructure?.activeIndex ?? null;
   const values = Array.isArray(dataStructure?.values) ? dataStructure.values : [];
 
@@ -152,8 +153,8 @@ export default function StepInspector({ currentStep, totalSteps }) {
           </div>
           <div className="flex flex-wrap gap-1 font-mono text-[10px]">
             {values.map((val, idx) => {
-              const isComp = comparedIndices.includes(idx);
-              const isSwap = swappedIndices.includes(idx);
+              const isComp = safeIncludes(comparedIndices, idx);
+              const isSwap = safeIncludes(swappedIndices, idx);
               const isAct = activeIndex === idx;
 
               let style = isBright ? 'bg-slate-100 border-slate-200 text-slate-600' : 'bg-slate-950 border-slate-800 text-slate-400';

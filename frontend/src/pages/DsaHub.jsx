@@ -88,11 +88,12 @@ export default function DsaHub({ onSelectConcept, initialTab = 'algorithms' }) {
   const filteredAlgorithms = useMemo(() => {
     return ALGORITHM_CATALOG.filter((a) => {
       const matchesCategory = algoCategory === 'All' || a.category === algoCategory;
+      const q = algoSearch.trim().toLowerCase();
       const matchesSearch =
-        algoSearch.trim() === '' ||
-        a.name.toLowerCase().includes(algoSearch.toLowerCase()) ||
-        a.description.toLowerCase().includes(algoSearch.toLowerCase()) ||
-        a.category.toLowerCase().includes(algoSearch.toLowerCase());
+        q === '' ||
+        String(a.name || '').toLowerCase().includes(q) ||
+        String(a.description || '').toLowerCase().includes(q) ||
+        String(a.category || '').toLowerCase().includes(q);
       return matchesCategory && matchesSearch;
     });
   }, [algoCategory, algoSearch]);
@@ -119,11 +120,12 @@ export default function DsaHub({ onSelectConcept, initialTab = 'algorithms' }) {
   const filteredCurriculum = useMemo(() => {
     return SAMPLE_PROGRAMS.filter((p) => {
       const matchesCategory = activeCategory === 'All' || p.category === activeCategory;
+      const q = curriculumSearch.trim().toLowerCase();
       const matchesSearch =
-        curriculumSearch.trim() === '' ||
-        p.title.toLowerCase().includes(curriculumSearch.toLowerCase()) ||
-        p.description.toLowerCase().includes(curriculumSearch.toLowerCase()) ||
-        p.category.toLowerCase().includes(curriculumSearch.toLowerCase());
+        q === '' ||
+        String(p.title || '').toLowerCase().includes(q) ||
+        String(p.description || '').toLowerCase().includes(q) ||
+        String(p.category || '').toLowerCase().includes(q);
       return matchesCategory && matchesSearch;
     });
   }, [activeCategory, curriculumSearch]);
@@ -139,11 +141,11 @@ export default function DsaHub({ onSelectConcept, initialTab = 'algorithms' }) {
       }
       if (striverSearch.trim()) {
         const q = striverSearch.toLowerCase().trim();
-        const matchesId = p.id.toString() === q;
-        const matchesTitle = p.title.toLowerCase().includes(q);
-        const matchesDesc = p.description.toLowerCase().includes(q);
-        const matchesDay = p.day.toLowerCase().includes(q);
-        const matchesCat = p.category.toLowerCase().includes(q);
+        const matchesId = String(p.id || '') === q;
+        const matchesTitle = String(p.title || '').toLowerCase().includes(q);
+        const matchesDesc = String(p.description || '').toLowerCase().includes(q);
+        const matchesDay = String(p.day || '').toLowerCase().includes(q);
+        const matchesCat = String(p.category || '').toLowerCase().includes(q);
         return matchesId || matchesTitle || matchesDesc || matchesDay || matchesCat;
       }
       return true;

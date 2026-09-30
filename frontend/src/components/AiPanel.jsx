@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, Send, HelpCircle, Check, Lightbulb, Clock, Database } from 'lucide-react';
+import { formatOperation, safeString, safeDisplay } from '../utils/safeRender';
 
 /**
  * CODE3D-AI - AiPanel Component
@@ -21,9 +22,9 @@ export function AiPanel({
   ]);
   const [isAsking, setIsAsking] = useState(false);
 
-  const explanation = currentStep?.explanation || 'Executing algorithm step. Watch spatial memory and variable mutations.';
+  const explanation = safeString(currentStep?.explanation, 'Executing algorithm step. Watch spatial memory and variable mutations.');
   const currentOperation = currentStep?.operation || currentStep?.eventType || (currentStep?.changedVariable ? `Mutate ${currentStep.changedVariable}` : 'Step Execution');
-  const aiHint = currentStep?.aiHint || 'Keep track of loop boundaries to avoid index out of bounds exceptions.';
+  const aiHint = safeString(currentStep?.aiHint, 'Keep track of loop boundaries to avoid index out of bounds exceptions.');
 
   const handleSendQuestion = (e) => {
     e?.preventDefault();
@@ -78,7 +79,7 @@ export function AiPanel({
           </div>
 
           <div className="font-semibold text-xs text-[#38bdf8]">
-            {currentOperation}
+            {formatOperation(currentOperation)}
           </div>
 
           <div className="text-[11px] text-[#f8fafc] font-sans pt-1 border-t border-[#1e2c3d]">

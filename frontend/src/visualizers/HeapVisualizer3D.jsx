@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Text, Float } from '@react-three/drei';
 import * as THREE from 'three';
+import { safeIncludes, safeArray } from '../utils/safeRender';
 
 /**
  * 3D Laser Branch connecting parent and child heap nodes
@@ -67,15 +68,19 @@ function ActiveHoloRing({ position, color = '#00f2fe' }) {
  */
 export default function HeapVisualizer3D({ dataStructureState }) {
   const {
-    values = [10, 15, 20, 17, 25, 30, 40],
+    values: rawValues = [10, 15, 20, 17, 25, 30, 40],
     activeIndex = null,
     parentIndex = null,
-    comparedIndices = [],
-    swappedIndices = [],
+    comparedIndices: rawCompared = [],
+    swappedIndices: rawSwapped = [],
     heapType = 'Min-Heap',
     label,
     focusInfo
   } = dataStructureState || {};
+
+  const values = safeArray(rawValues, [10, 15, 20, 17, 25, 30, 40]);
+  const comparedIndices = safeArray(rawCompared);
+  const swappedIndices = safeArray(rawSwapped);
 
   // Standard hierarchical positions for up to 7-15 heap nodes
   const treePositions = [
@@ -119,8 +124,8 @@ export default function HeapVisualizer3D({ dataStructureState }) {
         const start = treePositions[pIdx];
         const end = treePositions[idx];
         const isActive = (activeIndex === idx && parentIndex === pIdx) ||
-                         (comparedIndices.includes(idx) && comparedIndices.includes(pIdx));
-        const isSwapping = swappedIndices.includes(idx) && swappedIndices.includes(pIdx);
+                         (safeIncludes(comparedIndices, idx) && safeIncludes(comparedIndices, pIdx));
+        const isSwapping = safeIncludes(swappedIndices, idx) && safeIncludes(swappedIndices, pIdx);
 
         return (
           <HeapBranch
@@ -138,8 +143,8 @@ export default function HeapVisualizer3D({ dataStructureState }) {
         const pos = treePositions[idx];
         const isActive = activeIndex === idx;
         const isParent = parentIndex === idx;
-        const isCompared = comparedIndices.includes(idx);
-        const isSwapped = swappedIndices.includes(idx);
+        const isCompared = safeIncludes(comparedIndices, idx);
+        const isSwapped = safeIncludes(swappedIndices, idx);
 
         let nodeColor = '#0284c7';
         let emissiveColor = '#0369a1';
@@ -234,7 +239,7 @@ export default function HeapVisualizer3D({ dataStructureState }) {
           const xPos = (idx - (items.length - 1) / 2) * 1.35;
           const isActive = activeIndex === idx;
           const isParent = parentIndex === idx;
-          const isSwapped = swappedIndices.includes(idx);
+          const isSwapped = safeIncludes(swappedIndices, idx);
 
           return (
             <group key={`array-slot-${idx}`} position={[xPos, 0, 0]}>

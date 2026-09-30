@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Text, Float } from '@react-three/drei';
 import * as THREE from 'three';
+import { safeIncludes } from '../utils/safeRender';
 
 /**
  * 3D Laser Arch connecting two compared pillars
@@ -102,9 +103,9 @@ export default function SortingVisualizer3D({ dataStructureState }) {
       {values.map((val, idx) => {
         const height = computeHeight(val);
         const posX = startX + idx * spacing;
-        const isCompared = comparedIndices && comparedIndices.includes(idx);
-        const isSwapped = swappedIndices && swappedIndices.includes(idx);
-        const isSorted = sortedIndices && sortedIndices.includes(idx);
+        const isCompared = safeIncludes(comparedIndices, idx);
+        const isSwapped = safeIncludes(swappedIndices, idx);
+        const isSorted = safeIncludes(sortedIndices, idx);
         const isActive = activeIndex === idx || mid === idx;
         const isPivot = pivot === idx;
         const vState = visualStates[idx];

@@ -15,9 +15,10 @@ export default function HistoryPage({ onRerunProgram }) {
 
   const filteredExecutions = (historyData?.recentExecutions || []).filter((rec) => {
     const matchesLang = selectedLanguage === 'ALL' || (rec.language || 'java').toLowerCase() === selectedLanguage.toLowerCase();
-    const matchesQuery = !searchQuery ||
-      (rec.programTitle && rec.programTitle.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (rec.conceptId && rec.conceptId.toLowerCase().includes(searchQuery.toLowerCase()));
+    const q = searchQuery.toLowerCase().trim();
+    const matchesQuery = !q ||
+      String(rec.programTitle || '').toLowerCase().includes(q) ||
+      String(rec.conceptId || '').toLowerCase().includes(q);
     return matchesLang && matchesQuery;
   });
 

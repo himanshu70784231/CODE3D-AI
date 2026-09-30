@@ -135,3 +135,49 @@ export function validColor(color, defaultColor = '#38bdf8') {
   if (/^[a-zA-Z]+$/.test(color)) return color;
   return defaultColor;
 }
+
+/**
+ * Safely checks if a collection (array, string, set, object) includes an item.
+ * Never throws "X.includes is not a function".
+ */
+export function safeIncludes(collection, item) {
+  if (collection === null || collection === undefined) return false;
+  if (Array.isArray(collection)) return collection.includes(item);
+  if (typeof collection === 'string') return collection.includes(String(item));
+  if (collection instanceof Set) return collection.has(item);
+  if (typeof collection === 'object') {
+    try {
+      return Object.values(collection).includes(item);
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+/**
+ * Guarantees a safe array. If input is not an array, returns fallback or empty array.
+ */
+export function safeArray(val, fallback = []) {
+  return Array.isArray(val) ? val : fallback;
+}
+
+/**
+ * Formats AST execution operation objects into readable human/developer strings.
+ * Prevents React Error #31 when operation objects { type, target, value } are rendered in JSX.
+ */
+export function formatOperation(op, fallback = 'Step Execution') {
+  if (!op) return fallback;
+  if (typeof op === 'string') return op;
+  if (typeof op === 'object') {
+    if (op.type && op.target !== undefined) {
+      const valStr = op.value !== undefined ? ` = ${safeString(op.value)}` : '';
+      return `${op.type}: ${op.target}${valStr}`;
+    }
+    if (op.type) return String(op.type);
+    if (op.name) return String(op.name);
+    return safeString(op, fallback);
+  }
+  return String(op);
+}
+

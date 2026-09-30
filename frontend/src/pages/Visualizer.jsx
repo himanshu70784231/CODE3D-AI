@@ -28,6 +28,7 @@ import { DEFAULT_JAVA_CODE, SAMPLE_PROGRAMS, LANGUAGE_DEFAULTS, CURRICULUM_CATEG
 import { STRIVER_PROBLEMS } from '../utils/striverCatalog.js';
 import { executeProgram, analyzeCode, checkBackendHealth, recordExecutionHistory, saveProgram } from '../services/apiService.js';
 import { executionManager } from '../execution/index.js';
+import { safeIncludes } from '../utils/safeRender.js';
 
 import {
   Layers,
@@ -484,7 +485,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     const forwardStep = trace.findIndex((step, idx) => {
       if (idx < currentStepIndex) return false;
       const ds = step.dataStructureState;
-      return ds?.activeIndex === index || (ds?.pointers && Object.values(ds.pointers).includes(index));
+      return ds?.activeIndex === index || (ds?.pointers && safeIncludes(Object.values(ds.pointers), index));
     });
     if (forwardStep !== -1) {
       goToStep(forwardStep);
@@ -492,7 +493,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     }
     const anyStep = trace.findIndex((step) => {
       const ds = step.dataStructureState;
-      return ds?.activeIndex === index || (ds?.pointers && Object.values(ds.pointers).includes(index));
+      return ds?.activeIndex === index || (ds?.pointers && safeIncludes(Object.values(ds.pointers), index));
     });
     if (anyStep !== -1) {
       goToStep(anyStep);
@@ -838,7 +839,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
                   <InputGenerator
                     currentValues={extractNumbersFromCode(formInputValues) || [45, 12, 89, 23, 7, 64, 31]}
                     currentTarget={23}
-                    showTarget={selectedSample?.category === 'Searching' || selectedSample?.id?.includes('search')}
+                    showTarget={selectedSample?.category === 'Searching' || safeIncludes(selectedSample?.id, 'search')}
                     onGenerate={({ values, target }) => {
                       const inputStr = values.join(', ');
                       setFormInputValues(inputStr);

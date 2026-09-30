@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Text, Float } from '@react-three/drei';
 import * as THREE from 'three';
+import { safeArray, safeIncludes } from '../utils/safeRender';
 
 const POINTER_COLORS = {
   i: '#38bdf8',
@@ -500,11 +501,14 @@ export default function ArrayVisualizer3D({ dataStructureState, isXRayMode = fal
     window = null,
     type = 'array',
     waterVolume = null,
-    trappedWater = [],
+    trappedWater: rawTrappedWater = [],
     dpValues = [],
-    lisIndices = [],
+    lisIndices: rawLisIndices = [],
     targetFound = false,
   } = dataStructureState || {};
+
+  const trappedWater = safeArray(rawTrappedWater);
+  const lisIndices = safeArray(rawLisIndices);
 
   const isTrappingRainWater = type === 'trapping-rain-water' || (trappedWater && trappedWater.length > 0);
   const isContainerWater = type === 'container-water' || type === 'most-water' || (waterVolume !== null && !isTrappingRainWater);
@@ -645,7 +649,7 @@ export default function ArrayVisualizer3D({ dataStructureState, isXRayMode = fal
         const isInWindow = windowStart !== null && windowEnd !== null && idx >= windowStart && idx <= windowEnd;
         const cellPointers = pointersByIndex[idx] || [];
         const isCellTargetFound = targetFound && (pointers?.target === idx || activeIndex === idx);
-        const isCellLisActive = lisIndices && lisIndices.includes(idx);
+        const isCellLisActive = safeIncludes(lisIndices, idx);
         const cellTrappedWater = isTrappingRainWater && trappedWater ? (trappedWater[idx] || 0) : null;
         const cellDpValue = dpValues && dpValues[idx] !== undefined ? dpValues[idx] : null;
 

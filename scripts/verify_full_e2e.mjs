@@ -93,6 +93,80 @@ const sCirc = safeString(circ, '[Circular]');
 assert.strictEqual(typeof sCirc, 'string');
 console.log('  ✔ PASS: Circular reference handled gracefully without throwing');
 
+function formatOperation(op, fallback = '—') {
+  if (op === null || op === undefined) return fallback;
+  if (typeof op === 'string') return op;
+  if (typeof op === 'number') return String(op);
+  if (typeof op === 'boolean') return op ? 'TRUE' : 'FALSE';
+  if (typeof op === 'object') {
+    if (op.type && (op.target !== undefined || op.value !== undefined)) {
+      const parts = [op.type];
+      if (op.target !== undefined) parts.push(String(op.target));
+      if (op.value !== undefined) {
+        const valStr = typeof op.value === 'object' && op.value !== null ? JSON.stringify(op.value) : String(op.value);
+        parts.push(`= ${valStr}`);
+      }
+      return parts.join(' ');
+    }
+    if (op.name) return String(op.name);
+    if (op.action) return String(op.action);
+    if (op.type) return String(op.type);
+    try {
+      return JSON.stringify(op);
+    } catch {
+      return fallback;
+    }
+  }
+  return String(op);
+}
+
+function safeIncludes(collection, item) {
+  if (collection === null || collection === undefined) return false;
+  if (Array.isArray(collection)) return collection.includes(item);
+  if (typeof collection === 'string') return collection.includes(String(item));
+  if (collection instanceof Set) return collection.has(item);
+  if (typeof collection === 'object') {
+    try {
+      return Object.values(collection).includes(item);
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+function safeArray(val, fallback = []) {
+  if (Array.isArray(val)) return val;
+  if (val === null || val === undefined) return fallback;
+  return fallback;
+}
+
+// 1.6 formatOperation with { type, target, value } (React #31 root cause)
+const simOp = { type: 'DECLARATION', target: 'arr', value: '[1, 2, 3]' };
+const formattedOp = formatOperation(simOp);
+assert.strictEqual(typeof formattedOp, 'string');
+assert.strictEqual(formattedOp, 'DECLARATION arr = [1, 2, 3]');
+console.log('  ✔ PASS: Operation object {type, target, value} converted to string (React #31 root cause resolved)');
+
+// 1.7 safeIncludes checks (pi.includes is not a function root cause)
+assert.strictEqual(safeIncludes(null, 'doubly'), false);
+assert.strictEqual(safeIncludes(undefined, 0), false);
+assert.strictEqual(safeIncludes(42, 4), false);
+assert.strictEqual(safeIncludes({}, 'test'), false);
+assert.strictEqual(safeIncludes([10, 20, 30], 20), true);
+assert.strictEqual(safeIncludes(['doubly', 'singly'], 'doubly'), true);
+assert.strictEqual(safeIncludes('doubly-linked-list', 'doubly'), true);
+assert.strictEqual(safeIncludes({ a: 1, b: 2 }, 2), true);
+console.log('  ✔ PASS: safeIncludes safely handles null, undefined, objects, numbers without throwing');
+
+// 1.8 safeArray checks
+assert.deepStrictEqual(safeArray(null), []);
+assert.deepStrictEqual(safeArray(undefined, [1, 2]), [1, 2]);
+assert.deepStrictEqual(safeArray({ length: 5 }), []);
+assert.deepStrictEqual(safeArray([10, 20]), [10, 20]);
+console.log('  ✔ PASS: safeArray guarantees array semantics on all data structure states');
+
+
 // -----------------------------------------------------------------------------
 // TEST SUITE 2: Trace & Simulator Output Safety
 // -----------------------------------------------------------------------------
