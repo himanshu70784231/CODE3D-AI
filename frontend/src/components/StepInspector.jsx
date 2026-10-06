@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cpu, Variable, Layers, CheckCircle2, ArrowRight, CornerDownRight } from 'lucide-react';
+import { Cpu, Variable, Layers, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { safeString, safeDisplay, formatOperation, safeIncludes, safeArray } from '../utils/safeRender';
 
@@ -29,105 +29,78 @@ export default function StepInspector({ currentStep, totalSteps }) {
   const getOperationBadgeColor = (op) => {
     switch (op) {
       case 'COMPARE':
-        return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+        return isBright ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-amber-950/60 text-amber-300 border-amber-600/40';
       case 'SWAP':
       case 'PARTITION_SWAP':
-        return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
-      case 'SELECT':
-      case 'SET_MIN':
-      case 'PICK_KEY':
-        return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
-      case 'INSERT':
-      case 'INSERT_KEY':
-      case 'SHIFT':
-        return 'bg-purple-500/20 text-purple-300 border-purple-500/40';
-      case 'MERGE':
-      case 'BEGIN_MERGE':
-      case 'MERGE_WRITE':
-        return 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40';
-      case 'PARTITION':
-      case 'SELECT_PIVOT':
-      case 'PLACE_PIVOT':
-        return 'bg-violet-500/20 text-violet-300 border-violet-500/40';
-      case 'SORTED':
+        return isBright ? 'bg-orange-100 text-orange-900 border-orange-300' : 'bg-orange-950/60 text-orange-300 border-orange-600/40';
       case 'COMPLETE':
-        return 'bg-green-500/20 text-green-300 border-green-500/40';
+      case 'SORTED':
       case 'FOUND':
-        return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
+        return isBright ? 'bg-emerald-100 text-emerald-900 border-emerald-300' : 'bg-emerald-950/60 text-emerald-300 border-emerald-600/40';
       case 'NOT_FOUND':
-        return 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+        return isBright ? 'bg-rose-100 text-rose-900 border-rose-300' : 'bg-rose-950/60 text-rose-300 border-rose-600/40';
       default:
-        return 'bg-slate-800 text-slate-300 border-slate-700';
+        return isBright ? 'bg-stone-100 text-stone-800 border-stone-300' : 'bg-stone-800 text-stone-200 border-stone-700';
     }
   };
 
   return (
-    <div className={`border rounded-xl p-3.5 space-y-3 select-none transition-colors text-xs ${
-      isBright ? 'bg-white border-slate-200 text-slate-800 shadow-xs' : 'bg-slate-900/60 border-slate-800 text-slate-200'
-    }`}>
+    <div className="space-y-3 select-none text-xs">
       {/* Header Bar */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pb-2 border-b border-inherit">
         <div className="flex items-center gap-2">
-          <Cpu size={14} className={isBright ? 'text-cyan-600' : 'text-cyan-400'} />
-          <span className="font-bold text-xs uppercase tracking-wider">Step Inspector</span>
+          <Cpu size={13} className="text-amber-500" />
+          <span className="font-bold text-xs uppercase tracking-wider font-mono">Step Inspector</span>
         </div>
-        <div className="flex items-center gap-2 font-mono">
-          <span className={`px-2 py-0.5 rounded font-bold border text-[10px] ${
-            isBright ? 'bg-cyan-50 border-cyan-300 text-cyan-800' : 'bg-cyan-950/70 border-cyan-800 text-cyan-300'
-          }`}>
-            STEP {stepNumber} / {totalSteps}
-          </span>
-        </div>
+        <span className={`px-2 py-0.5 rounded font-mono font-bold border text-[10px] ${
+          isBright ? 'bg-amber-50 border-amber-300 text-amber-900' : 'bg-amber-950/50 border-amber-700/50 text-amber-400'
+        }`}>
+          Step {stepNumber} / {totalSteps}
+        </span>
       </div>
 
       {/* Operation & Line Number row */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className={`p-2 rounded-lg border ${
-          isBright ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/60 border-slate-800'
-        }`}>
-          <div className="text-[10px] text-slate-500 uppercase font-sans">Operation</div>
-          <div className="mt-1">
-            <span className={`px-2 py-0.5 rounded font-mono font-bold text-[11px] border inline-block ${getOperationBadgeColor(operation)}`}>
-              {operation}
-            </span>
-          </div>
+      <div className="flex items-center justify-between py-1 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="text-stone-500 text-[11px]">Operation:</span>
+          <span className={`px-2 py-0.5 rounded font-mono font-bold text-[11px] border ${getOperationBadgeColor(operation)}`}>
+            {operation}
+          </span>
         </div>
 
-        <div className={`p-2 rounded-lg border ${
-          isBright ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/60 border-slate-800'
-        }`}>
-          <div className="text-[10px] text-slate-500 uppercase font-sans">Source Line</div>
-          <div className={`font-mono font-bold text-xs mt-1 ${isBright ? 'text-cyan-700' : 'text-cyan-400'}`}>
+        <div className="flex items-center gap-2 font-mono">
+          <span className="text-stone-500 text-[11px]">Source:</span>
+          <span className={`font-bold text-xs ${isBright ? 'text-stone-900' : 'text-stone-100'}`}>
             {lineNumber ? `Line ${lineNumber}` : 'N/A'}
-          </div>
+          </span>
         </div>
       </div>
 
       {/* Comparison Detail if Active */}
       {condition && (
-        <div className={`p-2.5 rounded-lg border font-mono ${
-          isBright ? 'bg-amber-50/70 border-amber-200 text-slate-800' : 'bg-amber-950/20 border-amber-500/30 text-amber-200'
+        <div className={`p-2.5 rounded-md border font-mono text-[11px] ${
+          isBright ? 'bg-amber-50/70 border-amber-200 text-stone-900' : 'bg-amber-950/20 border-amber-600/30 text-amber-200'
         }`}>
           <div className="text-[10px] font-sans font-semibold uppercase text-amber-600 dark:text-amber-400 mb-1">
             Comparison Evaluation
           </div>
-          <div className="flex items-center justify-between text-[11px]">
+          <div className="flex items-center justify-between">
             <span>{safeString(condition.expression)}</span>
-            <span className="font-bold text-cyan-400">{safeString(condition.evaluation)}</span>
+            <span className="font-bold text-amber-500">{safeString(condition.evaluation)}</span>
           </div>
           <div className="text-[10px] mt-1 pt-1 border-t border-amber-300/30 flex items-center justify-between">
             <span className="opacity-75">Result:</span>
-            <span className={`font-bold ${condition.result ? 'text-emerald-400' : 'text-rose-400'}`}>
+            <span className={`font-bold ${condition.result ? 'text-emerald-500' : 'text-rose-500'}`}>
               {condition.result ? 'TRUE' : 'FALSE'} ({condition.branch || ''})
             </span>
           </div>
         </div>
       )}
 
-      {/* Variables & Indices */}
-      <div className="space-y-1">
-        <div className="text-[10px] text-slate-500 uppercase font-sans font-semibold flex items-center gap-1">
-          <Variable size={11} /> Variables in Scope
+      {/* Variables in Scope */}
+      <div className="space-y-1.5 pt-1">
+        <div className="text-[10px] text-stone-500 uppercase font-sans font-semibold flex items-center gap-1">
+          <Variable size={11} className="text-amber-500" /> Variables in Scope
         </div>
         <div className="flex flex-wrap gap-1.5 font-mono text-[11px]">
           {Object.entries(variables)
@@ -136,59 +109,14 @@ export default function StepInspector({ currentStep, totalSteps }) {
               <span
                 key={k}
                 className={`px-2 py-0.5 rounded border ${
-                  isBright ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-slate-950 border-slate-800 text-slate-300'
+                  isBright ? 'bg-stone-100 border-stone-200 text-stone-800' : 'bg-[#181c22] border-stone-700 text-stone-200'
                 }`}
               >
-                <span className="text-cyan-500 font-semibold">{k}</span> = {safeDisplay(v)}
+                <span className="text-amber-500 font-semibold">{k}</span> = {safeDisplay(v)}
               </span>
             ))}
         </div>
       </div>
-
-      {/* Active Array Slots */}
-      {values.length > 0 && (
-        <div className="space-y-1">
-          <div className="text-[10px] text-slate-500 uppercase font-sans font-semibold flex items-center gap-1">
-            <Layers size={11} /> Array State ({values.length} items)
-          </div>
-          <div className="flex flex-wrap gap-1 font-mono text-[10px]">
-            {values.map((val, idx) => {
-              const isComp = safeIncludes(comparedIndices, idx);
-              const isSwap = safeIncludes(swappedIndices, idx);
-              const isAct = activeIndex === idx;
-
-              let style = isBright ? 'bg-slate-100 border-slate-200 text-slate-600' : 'bg-slate-950 border-slate-800 text-slate-400';
-              if (isSwap) {
-                style = 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold';
-              } else if (isComp) {
-                style = 'bg-amber-500/20 border-amber-500 text-amber-300 font-bold';
-              } else if (isAct) {
-                style = 'bg-cyan-500/20 border-cyan-500 text-cyan-300 font-bold';
-              }
-
-              return (
-                <div key={idx} className={`px-1.5 py-0.5 rounded border transition ${style}`}>
-                  <span className="opacity-60">[{idx}]:</span> {safeDisplay(val)}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Terminal Output */}
-      {Array.isArray(output) && output.length > 0 && (
-        <div className="space-y-1">
-          <div className="text-[10px] text-slate-500 uppercase font-sans font-semibold">Terminal Output</div>
-          <div className={`p-2 rounded font-mono text-[10px] border ${
-            isBright ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-black/60 border-slate-800 text-emerald-400'
-          }`}>
-            {output.map((line, idx) => (
-              <div key={idx}>&gt; {line}</div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

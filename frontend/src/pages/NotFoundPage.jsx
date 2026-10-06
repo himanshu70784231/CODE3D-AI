@@ -9,45 +9,45 @@ export default function NotFoundPage() {
 
   return (
     <div className={`flex-1 flex items-center justify-center p-6 select-none transition-colors duration-200 ${
-      isBright ? 'bg-slate-50 text-slate-900' : 'bg-[#070b14] text-slate-100'
+      isBright ? 'bg-[#f7f6f3] text-stone-900' : 'bg-[#0e1013] text-stone-100'
     }`}>
       <div className="max-w-md w-full text-center space-y-6">
         <div className="relative inline-block">
-          <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-slate-950 shadow-2xl shadow-cyan-500/30 mx-auto">
-            <Box size={48} className="stroke-[2.5]" />
+          <div className="w-20 h-20 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 shadow-xl shadow-amber-500/10 mx-auto">
+            <Box size={40} className="stroke-[2]" />
           </div>
-          <div className="absolute -bottom-2 -right-2 px-2.5 py-0.5 rounded-full bg-rose-500 text-white font-mono font-bold text-xs shadow-md">
+          <div className="absolute -bottom-1 -right-1 px-2 py-0.5 rounded-full bg-amber-500 text-stone-950 font-mono font-bold text-xs shadow-md">
             404
           </div>
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-3xl font-extrabold tracking-tight font-sans">
-            Page Not Found
+          <h1 className="text-2xl font-bold tracking-tight font-sans">
+            Memory Address Not Found
           </h1>
-          <p className={`text-sm ${isBright ? 'text-slate-600' : 'text-slate-400'}`}>
-            The memory address you requested does not exist in CODE3D-AI space. It may have been moved or garbage-collected.
+          <p className={`text-xs leading-relaxed ${isBright ? 'text-stone-600' : 'text-stone-400'}`}>
+            The memory address or route you requested does not exist in Code3D AI space. It may have been deallocated or moved to a new namespace.
           </p>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
           <button
             onClick={() => navigate('/')}
-            className="w-full sm:w-auto bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-lg shadow-cyan-500/20"
+            className="w-full sm:w-auto bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold px-5 py-2.5 rounded-lg text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-md shadow-amber-500/20 active:translate-y-px"
           >
-            <Home size={15} />
+            <Home size={14} />
             <span>Return to Home</span>
           </button>
 
           <button
             onClick={() => navigate('/visualizer')}
-            className={`w-full sm:w-auto border font-semibold px-5 py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer ${
+            className={`w-full sm:w-auto border font-semibold px-5 py-2.5 rounded-lg text-xs flex items-center justify-center gap-2 transition cursor-pointer active:translate-y-px ${
               isBright
-                ? 'border-slate-300 hover:bg-slate-100 text-slate-800'
-                : 'border-slate-700 hover:bg-slate-800 text-slate-200'
+                ? 'bg-white border-[#e2dfd8] hover:bg-[#edebe5] text-stone-800'
+                : 'bg-[#181c23] border-[#252932] hover:bg-[#222731] text-stone-200'
             }`}
           >
-            <Play size={14} className="text-cyan-400" />
+            <Play size={13} className="text-amber-500" />
             <span>Launch Visualizer</span>
           </button>
         </div>

@@ -86,7 +86,7 @@ export default function DryRunHologram3D({
           <Text
             position={[-2.3, topY, 0.05]}
             fontSize={0.14}
-            color="#38bdf8"
+            color="#f59e0b"
             anchorX="left"
             anchorY="middle"
             fontWeight="bold"

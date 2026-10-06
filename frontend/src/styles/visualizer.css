@@ -1,29 +1,8 @@
-/* CODE3D-AI Visualizer Workspace Styles */
-
-:root {
-  --bg-main: #08111f;
-  --bg-secondary: #0d1726;
-  --bg-panel: #101c2d;
-  --bg-panel-header: #142338;
-  --border-color: #26364a;
-  --border-subtle: #1e2c3d;
-  
-  --color-primary: #3b82f6;
-  --color-primary-hover: #2563eb;
-  --color-secondary: #14b8a6;
-  --color-ai: #8b5cf6;
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
-  
-  --text-main: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-}
+/* CODE3D-AI Visualizer Workspace Styles (Restrained, Technical, Amber & Charcoal) */
 
 /* Resizable divider styles */
 .resize-handle-h {
-  width: 6px;
+  width: 5px;
   cursor: col-resize;
   background-color: var(--border-color);
   transition: background-color 150ms ease, box-shadow 150ms ease;
@@ -37,11 +16,11 @@
 .resize-handle-h:hover,
 .resize-handle-h.active {
   background-color: var(--color-primary);
-  box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 6px var(--color-accent-glow);
 }
 
 .resize-handle-v {
-  height: 6px;
+  height: 5px;
   cursor: row-resize;
   background-color: var(--border-color);
   transition: background-color 150ms ease, box-shadow 150ms ease;
@@ -55,7 +34,7 @@
 .resize-handle-v:hover,
 .resize-handle-v.active {
   background-color: var(--color-primary);
-  box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 6px var(--color-accent-glow);
 }
 
 /* Subtle micro-animations (150-250ms) */
@@ -69,7 +48,7 @@
 
 @keyframes varHighlight {
   0% {
-    background-color: rgba(245, 158, 11, 0.35);
+    background-color: var(--color-accent-subtle);
   }
   100% {
     background-color: transparent;

@@ -15,12 +15,11 @@ import {
   Lightbulb,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext.jsx';
 
 /**
  * CODE3D-AI - Professional IDE Top Toolbar
- * 
- * Central command bar with Project name, Language selector, primary Run action,
- * Explain with AI, 3D Visualize, Save, Share, and Settings.
+ * Clean technical neutral foundation with prominent Amber execution triggers.
  */
 export function TopNav({
   projectName = 'Array Traversal & Iteration',
@@ -40,7 +39,10 @@ export function TopNav({
   onOpenStriverSheet = null,
 }) {
   const navigate = useNavigate();
+  const { isBright, currentAccent } = useTheme();
   const [copiedLink, setCopiedLink] = useState(false);
+
+  const accentHex = isBright ? currentAccent.bright : currentAccent.dark;
 
   const handleShareClick = () => {
     if (onShare) {
@@ -53,7 +55,11 @@ export function TopNav({
   };
 
   return (
-    <header className="h-11 bg-[#0d1726] border-b border-[#26364a] px-3 flex items-center justify-between text-xs text-[#f8fafc] select-none shrink-0 z-30">
+    <header className={`h-11 border-b px-3 flex items-center justify-between text-xs select-none shrink-0 z-30 transition-colors duration-150 ${
+      isBright
+        ? 'bg-white border-[#e2ded5] text-stone-900 shadow-2xs'
+        : 'bg-[#121419] border-[#242831] text-stone-100'
+    }`}>
       {/* Left: Brand + Project Name */}
       <div className="flex items-center gap-3 min-w-0">
         <button
@@ -61,22 +67,28 @@ export function TopNav({
           className="flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer shrink-0"
           title="Return to Dashboard"
         >
-          <div className="w-7 h-7 rounded bg-gradient-to-tr from-blue-600 to-teal-500 flex items-center justify-center shadow-xs">
-            <Box size={16} className="text-white" />
+          <div className="w-5.5 h-5.5 rounded-md bg-amber-500 flex items-center justify-center text-stone-950 font-bold shadow-2xs">
+            <Box size={13} className="text-stone-950 stroke-[2.5]" />
           </div>
-          <span className="font-bold text-sm tracking-wide hidden sm:inline text-[#f8fafc]">
-            CODE<span className="text-[#3b82f6]">3D</span>-AI
+          <span className={`font-bold text-xs tracking-wide hidden sm:inline ${
+            isBright ? 'text-stone-900' : 'text-stone-100'
+          }`}>
+            CODE<span className="text-amber-500">3D</span>
           </span>
         </button>
 
-        <span className="text-[#26364a] hidden sm:inline">|</span>
+        <span className={isBright ? 'text-stone-300 hidden sm:inline' : 'text-stone-700 hidden sm:inline'}>/</span>
 
         {/* Project Title with Indicator */}
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-[#94a3b8] font-medium hidden md:inline shrink-0">
-            Project:
+          <span className={`font-medium hidden md:inline shrink-0 ${
+            isBright ? 'text-stone-500' : 'text-stone-400'
+          }`}>
+            Program:
           </span>
-          <span className="font-semibold text-xs text-[#f8fafc] truncate max-w-[140px] sm:max-w-[220px] md:max-w-[280px]">
+          <span className={`font-semibold text-xs truncate max-w-[130px] sm:max-w-[200px] md:max-w-[260px] ${
+            isBright ? 'text-stone-900' : 'text-stone-100'
+          }`}>
             {projectName}
           </span>
         </div>
@@ -86,7 +98,11 @@ export function TopNav({
           <select
             value={language}
             onChange={(e) => onChangeLanguage(e.target.value)}
-            className="h-7 bg-[#101c2d] border border-[#26364a] rounded px-2 text-[11px] font-mono text-[#38bdf8] focus:outline-none focus:border-[#3b82f6] cursor-pointer"
+            className={`h-6.5 border rounded-md px-2 text-[11px] font-mono focus:outline-none focus:border-amber-500 cursor-pointer transition-colors ${
+              isBright
+                ? 'bg-stone-50 border-stone-300 text-stone-800'
+                : 'bg-[#181c22] border-stone-700 text-stone-200'
+            }`}
             title="Programming Language"
             aria-label="Select Programming Language"
           >
@@ -101,27 +117,30 @@ export function TopNav({
 
       {/* Center / Action Buttons: Run, Explain, Visualize */}
       <div className="flex items-center gap-1.5 sm:gap-2">
-        {/* Primary Run Action */}
+        {/* Primary Run Action — Warm Amber Flame (Core Interaction) */}
         <button
           id="ide-top-run-btn"
           onClick={onRun}
           disabled={isRunning}
-          className={`h-7 px-3.5 rounded text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+          style={{
+            backgroundColor: isPlaying ? undefined : accentHex,
+          }}
+          className={`h-7 px-3.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95 text-stone-950 ${
             isPlaying
-              ? 'bg-[#f59e0b] hover:bg-[#d97706] text-slate-950 font-bold'
-              : 'bg-[#3b82f6] hover:bg-[#2563eb] text-white shadow-blue-500/20 active:scale-[0.98]'
+              ? 'bg-amber-600 hover:bg-amber-500 text-white'
+              : 'hover:brightness-105'
           } ${isRunning ? 'opacity-50 cursor-not-allowed' : ''}`}
           title="Run Code (Ctrl + Enter)"
         >
           {isPlaying ? (
             <>
-              <Pause size={13} className="fill-current" />
+              <Pause size={12} className="fill-current" />
               <span>Pause</span>
             </>
           ) : (
             <>
-              <Play size={13} className="fill-current" />
-              <span>Run</span>
+              <Play size={12} className="fill-current" />
+              <span>Run Execution</span>
             </>
           )}
         </button>
@@ -130,11 +149,15 @@ export function TopNav({
         {onExplainAi && (
           <button
             onClick={onExplainAi}
-            className="h-7 px-2.5 rounded bg-[#101c2d] hover:bg-[#1e2f47] border border-[#8b5cf6]/40 text-[#c084fc] text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+            className={`h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
+              isBright
+                ? 'bg-stone-100 hover:bg-stone-200/80 border-stone-300 text-stone-800'
+                : 'bg-[#181c22] hover:bg-stone-800 border-stone-700 text-stone-200'
+            }`}
             title="Explain current execution step with AI"
           >
-            <Sparkles size={13} className="text-[#a855f7]" />
-            <span className="hidden sm:inline">Explain with AI</span>
+            <Sparkles size={12} className="text-amber-500" />
+            <span className="hidden sm:inline">Explain AI</span>
           </button>
         )}
 
@@ -142,11 +165,15 @@ export function TopNav({
         {onVisualize && (
           <button
             onClick={onVisualize}
-            className="h-7 px-2.5 rounded bg-[#101c2d] hover:bg-[#1e2f47] border border-[#14b8a6]/40 text-[#2dd4bf] text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+            className={`h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
+              isBright
+                ? 'bg-stone-100 hover:bg-stone-200/80 border-stone-300 text-stone-800'
+                : 'bg-[#181c22] hover:bg-stone-800 border-stone-700 text-stone-200'
+            }`}
             title="Focus 3D Viewport"
           >
-            <Layers size={13} className="text-[#14b8a6]" />
-            <span className="hidden sm:inline">Visualize</span>
+            <Layers size={12} className={isBright ? 'text-stone-700' : 'text-stone-300'} />
+            <span className="hidden sm:inline">3D Viewport</span>
           </button>
         )}
 
@@ -154,11 +181,15 @@ export function TopNav({
         {onOpenStriverSheet && (
           <button
             onClick={onOpenStriverSheet}
-            className="h-7 px-2.5 rounded bg-[#101c2d] hover:bg-[#1e2f47] border border-[#26364a] text-[#f59e0b] text-xs font-medium hidden lg:flex items-center gap-1.5 transition-colors cursor-pointer"
+            className={`h-7 px-2.5 rounded-md border text-xs font-medium hidden lg:flex items-center gap-1.5 transition-colors cursor-pointer ${
+              isBright
+                ? 'bg-stone-100 hover:bg-stone-200/80 border-stone-300 text-stone-800'
+                : 'bg-[#181c22] hover:bg-stone-800 border-stone-700 text-stone-200'
+            }`}
             title="Striver SDE Sheet"
           >
-            <BookOpen size={13} className="text-[#f59e0b]" />
-            <span>Striver Sheet</span>
+            <BookOpen size={12} className="text-amber-500" />
+            <span>SDE Sheet</span>
           </button>
         )}
 
@@ -166,10 +197,14 @@ export function TopNav({
         {onOpenCodeDoctor && (
           <button
             onClick={onOpenCodeDoctor}
-            className="h-7 px-2.5 rounded bg-[#101c2d] hover:bg-[#1e2f47] border border-[#26364a] text-[#fbbf24] text-xs font-medium hidden xl:flex items-center gap-1.5 transition-colors cursor-pointer"
+            className={`h-7 px-2.5 rounded-md border text-xs font-medium hidden xl:flex items-center gap-1.5 transition-colors cursor-pointer ${
+              isBright
+                ? 'bg-stone-100 hover:bg-stone-200/80 border-stone-300 text-stone-800'
+                : 'bg-[#181c22] hover:bg-stone-800 border-stone-700 text-stone-200'
+            }`}
             title="Personal Problem Solver"
           >
-            <Lightbulb size={13} className="text-[#fbbf24]" />
+            <Lightbulb size={12} className="text-amber-500" />
             <span>Problem Solver</span>
           </button>
         )}
@@ -182,14 +217,18 @@ export function TopNav({
           <button
             onClick={onSave}
             disabled={isSaving}
-            className={`h-7 px-2.5 rounded border text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
+            className={`h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
               saveSuccess
-                ? 'bg-emerald-950/60 border-emerald-500 text-emerald-400'
-                : 'bg-[#101c2d] hover:bg-[#1e2f47] border-[#26364a] text-[#f8fafc]'
+                ? isBright
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                  : 'bg-emerald-950/60 border-emerald-500 text-emerald-400'
+                : isBright
+                  ? 'bg-white hover:bg-stone-100 border-stone-300 text-stone-800'
+                  : 'bg-[#181c22] hover:bg-stone-800 border-stone-700 text-stone-200'
             }`}
             title="Save code to project collection"
           >
-            {saveSuccess ? <Check size={13} /> : <Save size={13} className="text-[#94a3b8]" />}
+            {saveSuccess ? <Check size={12} /> : <Save size={12} className={isBright ? 'text-stone-500' : 'text-stone-400'} />}
             <span className="hidden md:inline">
               {saveSuccess ? 'Saved' : isSaving ? 'Saving...' : 'Save'}
             </span>
@@ -199,22 +238,35 @@ export function TopNav({
         {/* Share Button */}
         <button
           onClick={handleShareClick}
-          className="h-7 px-2 sm:px-2.5 rounded bg-[#101c2d] hover:bg-[#1e2f47] border border-[#26364a] text-[#94a3b8] hover:text-[#f8fafc] text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
-          title="Share workspace link"
+          className={`h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
+            copiedLink
+              ? isBright
+                ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                : 'bg-emerald-950/60 border-emerald-500 text-emerald-400'
+              : isBright
+                ? 'bg-white hover:bg-stone-100 border-stone-300 text-stone-800'
+                : 'bg-[#181c22] hover:bg-stone-800 border-stone-700 text-stone-200'
+          }`}
+          title="Copy project share URL"
         >
-          {copiedLink ? <Check size={13} className="text-emerald-400" /> : <Share2 size={13} />}
+          {copiedLink ? <Check size={12} /> : <Share2 size={12} className={isBright ? 'text-stone-500' : 'text-stone-400'} />}
           <span className="hidden md:inline">{copiedLink ? 'Copied' : 'Share'}</span>
         </button>
 
         {/* Settings Button */}
-        <button
-          onClick={onOpenSettings || (() => navigate('/settings'))}
-          className="h-7 w-7 rounded bg-[#101c2d] hover:bg-[#1e2f47] border border-[#26364a] text-[#94a3b8] hover:text-[#f8fafc] flex items-center justify-center transition-colors cursor-pointer"
-          title="Workspace Settings"
-          aria-label="Workspace Settings"
-        >
-          <Settings size={13} />
-        </button>
+        {onOpenSettings && (
+          <button
+            onClick={onOpenSettings}
+            className={`p-1.5 rounded-md border transition-colors cursor-pointer ${
+              isBright
+                ? 'bg-white hover:bg-stone-100 border-stone-300 text-stone-700'
+                : 'bg-[#181c22] hover:bg-stone-800 border-stone-700 text-stone-300'
+            }`}
+            title="Open Visualizer Settings"
+          >
+            <Settings size={13} />
+          </button>
+        )}
       </div>
     </header>
   );

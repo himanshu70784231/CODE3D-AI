@@ -61,7 +61,7 @@ export default function OutputHologram3D({
             ]}
           />
           <lineBasicMaterial
-            color={isAtEnd ? '#34d399' : '#38bdf8'}
+            color={isAtEnd ? '#34d399' : '#f59e0b'}
             linewidth={2}
           />
         </lineSegments>
@@ -133,7 +133,7 @@ export default function OutputHologram3D({
       <mesh ref={beaconRef} position={[0, -1.2, 0]}>
         <cylinderGeometry args={[0.025, 0.025, 2.6, 12]} />
         <meshStandardMaterial
-          color={isAtEnd ? '#34d399' : '#38bdf8'}
+          color={isAtEnd ? '#34d399' : '#f59e0b'}
           emissive={isAtEnd ? '#10b981' : '#0284c7'}
           emissiveIntensity={2.2}
           transparent

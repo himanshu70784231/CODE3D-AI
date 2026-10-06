@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import Website3D from './pages/Website3D';
 import Dashboard from './pages/Dashboard';
 import Visualizer from './pages/Visualizer';
 import DsaHub from './pages/DsaHub';
@@ -34,16 +35,16 @@ function MainAppContent() {
   if (loading) {
     return (
       <div className={`min-h-screen w-full flex flex-col items-center justify-center p-4 transition-colors ${
-        isBright ? 'bg-slate-100 text-slate-900' : 'bg-[#070b14] text-slate-100'
+        isBright ? 'bg-[#f7f6f3] text-stone-900' : 'bg-[#0e1013] text-stone-100'
       }`}>
         <div className="relative flex items-center justify-center mb-4">
-          <div className="w-14 h-14 rounded-2xl border-2 border-cyan-500/20 border-t-cyan-400 animate-spin" />
-          <div className="absolute w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-slate-950 font-black text-xs shadow-lg shadow-cyan-500/30">
+          <div className="w-12 h-12 rounded-xl border-2 border-amber-500/20 border-t-amber-500 animate-spin" />
+          <div className="absolute w-7 h-7 rounded-lg bg-amber-500 flex items-center justify-center text-stone-950 font-mono font-bold text-xs shadow-sm">
             3D
           </div>
         </div>
-        <p className="text-xs font-mono text-cyan-400 font-semibold tracking-wider animate-pulse">
-          VERIFYING SESSION ENCRYPTION...
+        <p className="text-xs font-mono text-amber-500 font-medium tracking-wider animate-pulse">
+          SYNCHRONIZING ENVIRONMENT...
         </p>
       </div>
     );
@@ -116,124 +117,76 @@ function MainAppContent() {
       {/* Main View Container */}
       <main className="flex-1 flex flex-col overflow-hidden pb-14 md:pb-0">
         <Routes>
-          {/* Root Route: If authenticated go to dashboard, else redirect to login */}
+          {/* Core Educational Platform Experience */}
           <Route
             path="/"
-            element={
-              <ProtectedRoute>
-                <Dashboard onNavigate={(tab) => navigate(tab === 'dashboard' ? '/' : `/${tab}`)} />
-              </ProtectedRoute>
-            }
+            element={<Dashboard onNavigate={(tab) => navigate(tab === 'dashboard' ? '/' : `/${tab}`)} onLaunchConcept={handleLaunchConcept} />}
           />
           <Route
             path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard onNavigate={(tab) => navigate(tab === 'dashboard' ? '/' : `/${tab}`)} />
-              </ProtectedRoute>
-            }
+            element={<Dashboard onNavigate={(tab) => navigate(tab === 'dashboard' ? '/' : `/${tab}`)} onLaunchConcept={handleLaunchConcept} />}
           />
           <Route
             path="/workspace"
-            element={
-              <ProtectedRoute>
-                <Visualizer initialConcept={selectedConcept} />
-              </ProtectedRoute>
-            }
+            element={<Visualizer initialConcept={selectedConcept} />}
           />
           <Route
             path="/projects"
-            element={
-              <ProtectedRoute>
-                <Dashboard onNavigate={(tab) => navigate(tab === 'dashboard' ? '/' : `/${tab}`)} />
-              </ProtectedRoute>
-            }
+            element={<Dashboard onNavigate={(tab) => navigate(tab === 'dashboard' ? '/' : `/${tab}`)} onLaunchConcept={handleLaunchConcept} />}
           />
           <Route
             path="/visualizer"
-            element={
-              <ProtectedRoute>
-                <Visualizer initialConcept={selectedConcept} />
-              </ProtectedRoute>
-            }
+            element={<Visualizer initialConcept={selectedConcept} />}
           />
           <Route
             path="/visualize"
-            element={
-              <ProtectedRoute>
-                <Visualizer initialConcept={selectedConcept} />
-              </ProtectedRoute>
-            }
+            element={<Visualizer initialConcept={selectedConcept} />}
+          />
+          <Route
+            path="/showcase"
+            element={<Website3D onLaunchConcept={handleLaunchConcept} />}
           />
           <Route
             path="/algorithms"
-            element={
-              <ProtectedRoute>
-                <DsaHub initialTab="algorithms" onSelectConcept={handleLaunchConcept} />
-              </ProtectedRoute>
-            }
+            element={<DsaHub initialTab="algorithms" onSelectConcept={handleLaunchConcept} />}
           />
           <Route
             path="/ai"
-            element={
-              <ProtectedRoute>
-                <AiTutorPage onSendToVisualizer={handleLaunchConcept} />
-              </ProtectedRoute>
-            }
+            element={<AiTutorPage onSendToVisualizer={handleLaunchConcept} />}
           />
           <Route
             path="/dsa"
-            element={
-              <ProtectedRoute>
-                <DsaHub initialTab="curriculum" onSelectConcept={handleLaunchConcept} />
-              </ProtectedRoute>
-            }
+            element={<DsaHub initialTab="curriculum" onSelectConcept={handleLaunchConcept} />}
           />
           <Route
             path="/dsa/:problemSlug"
-            element={
-              <ProtectedRoute>
-                <DsaProblemPage onVisualizeProblem={handleLaunchConcept} />
-              </ProtectedRoute>
-            }
+            element={<DsaProblemPage onVisualizeProblem={handleLaunchConcept} />}
           />
           <Route
             path="/sheets"
-            element={
-              <ProtectedRoute>
-                <SheetsPage onSelectProblem={handleLaunchConcept} />
-              </ProtectedRoute>
-            }
+            element={<SheetsPage onSelectProblem={handleLaunchConcept} />}
           />
           <Route
             path="/sheets/:sheetSlug"
-            element={
-              <ProtectedRoute>
-                <SheetsPage onSelectProblem={handleLaunchConcept} />
-              </ProtectedRoute>
-            }
+            element={<SheetsPage onSelectProblem={handleLaunchConcept} />}
           />
           <Route
             path="/striver"
-            element={
-              <ProtectedRoute>
-                <DsaHub initialTab="striver" onSelectConcept={handleLaunchConcept} />
-              </ProtectedRoute>
-            }
+            element={<DsaHub initialTab="striver" onSelectConcept={handleLaunchConcept} />}
+          />
+          <Route
+            path="/quiz"
+            element={<QuizArena />}
+          />
+          <Route
+            path="/settings"
+            element={<SettingsPage />}
           />
           <Route
             path="/saved"
             element={
               <ProtectedRoute>
                 <SavedVisualizationsPage onReplay={handleLaunchConcept} />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/quiz"
-            element={
-              <ProtectedRoute>
-                <QuizArena />
               </ProtectedRoute>
             }
           />
@@ -253,14 +206,6 @@ function MainAppContent() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <SettingsPage />
-              </ProtectedRoute>
-            }
-          />
           {/* Unknown routes show 404 page */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
@@ -276,8 +221,8 @@ function MainAppContent() {
           onClick={() => navigate('/')}
           className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition ${
             location.pathname === '/' || location.pathname === '/dashboard'
-              ? 'text-cyan-600 font-bold dark:text-cyan-400'
-              : isBright ? 'text-slate-500 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
+              ? 'text-amber-600 font-semibold dark:text-amber-400'
+              : isBright ? 'text-stone-500 hover:text-stone-900' : 'text-stone-400 hover:text-stone-200'
           }`}
         >
           <span className="text-lg">🏠</span>
@@ -288,8 +233,8 @@ function MainAppContent() {
           onClick={() => navigate('/visualizer')}
           className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition ${
             location.pathname === '/visualizer' || location.pathname === '/workspace'
-              ? 'text-cyan-600 font-bold dark:text-cyan-400'
-              : isBright ? 'text-slate-500 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
+              ? 'text-amber-600 font-semibold dark:text-amber-400'
+              : isBright ? 'text-stone-500 hover:text-stone-900' : 'text-stone-400 hover:text-stone-200'
           }`}
         >
           <span className="text-lg">🧊</span>
@@ -300,8 +245,8 @@ function MainAppContent() {
           onClick={() => navigate('/quiz')}
           className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition ${
             location.pathname === '/quiz'
-              ? 'text-cyan-600 font-bold dark:text-cyan-400'
-              : isBright ? 'text-slate-500 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
+              ? 'text-amber-600 font-semibold dark:text-amber-400'
+              : isBright ? 'text-stone-500 hover:text-stone-900' : 'text-stone-400 hover:text-stone-200'
           }`}
         >
           <span className="text-lg">🎯</span>
@@ -312,8 +257,8 @@ function MainAppContent() {
           onClick={() => navigate('/ai')}
           className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition ${
             location.pathname === '/ai'
-              ? 'text-purple-600 font-bold dark:text-purple-400'
-              : isBright ? 'text-slate-500 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
+              ? 'text-amber-600 font-semibold dark:text-amber-400'
+              : isBright ? 'text-stone-500 hover:text-stone-900' : 'text-stone-400 hover:text-stone-200'
           }`}
         >
           <span className="text-lg">🤖</span>
@@ -324,8 +269,8 @@ function MainAppContent() {
           onClick={() => navigate('/dsa')}
           className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition ${
             location.pathname === '/dsa' || location.pathname === '/striver'
-              ? 'text-cyan-600 font-bold dark:text-cyan-400'
-              : isBright ? 'text-slate-500 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
+              ? 'text-amber-600 font-semibold dark:text-amber-400'
+              : isBright ? 'text-stone-500 hover:text-stone-900' : 'text-stone-400 hover:text-stone-200'
           }`}
         >
           <span className="text-lg">📚</span>

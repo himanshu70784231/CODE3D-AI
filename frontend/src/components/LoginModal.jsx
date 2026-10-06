@@ -185,7 +185,7 @@ export default function LoginModal() {
   return (
     <div
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/80 backdrop-blur-md animate-fadeIn"
       role="dialog"
       aria-modal="true"
       aria-labelledby="auth-modal-title"
@@ -193,33 +193,33 @@ export default function LoginModal() {
       <div
         className={`relative w-full max-w-md border rounded-2xl shadow-2xl overflow-hidden flex flex-col transition-all duration-200 ${
           isBright
-            ? 'bg-white border-slate-300 text-slate-900 shadow-slate-300'
-            : 'bg-[#090d16] border-cyan-500/30 text-white shadow-cyan-950/60'
+            ? 'bg-white border-stone-200 text-stone-900 shadow-stone-300'
+            : 'bg-[#13161b] border-stone-800 text-stone-100 shadow-stone-950/80'
         }`}
       >
         {/* Modal Header */}
         <div
           className={`p-5 border-b flex items-center justify-between transition-colors ${
             isBright
-              ? 'bg-gradient-to-r from-slate-50 via-cyan-50/40 to-blue-50/40 border-slate-200'
-              : 'bg-gradient-to-r from-slate-900 via-slate-900 to-cyan-950/40 border-slate-800'
+              ? 'bg-stone-50/80 border-stone-200'
+              : 'bg-[#171a21] border-stone-800'
           }`}
         >
           <div className="flex items-center gap-3">
             <div
               className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
                 isBright
-                  ? 'bg-cyan-100 border-cyan-300 text-cyan-800'
-                  : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'
+                  ? 'bg-amber-50 border-amber-200 text-amber-700'
+                  : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
               }`}
             >
               <ShieldCheck size={20} />
             </div>
             <div>
-              <h3 id="auth-modal-title" className={`text-base font-bold tracking-wide ${isBright ? 'text-slate-900' : 'text-white'}`}>
+              <h3 id="auth-modal-title" className={`text-base font-semibold tracking-wide ${isBright ? 'text-stone-900' : 'text-stone-100'}`}>
                 {isRegister ? 'Create CODE3D Account' : 'Sign in to CODE3D AI'}
               </h3>
-              <p className={`text-xs ${isBright ? 'text-slate-600' : 'text-slate-400'}`}>
+              <p className={`text-xs ${isBright ? 'text-stone-600' : 'text-stone-400'}`}>
                 {isRegister ? 'Save code executions, 3D traces & track progress' : 'Access your saved execution history and account'}
               </p>
             </div>
@@ -229,7 +229,7 @@ export default function LoginModal() {
             disabled={loading}
             aria-label="Close modal"
             className={`p-1.5 rounded-lg transition cursor-pointer disabled:opacity-50 ${
-              isBright ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              isBright ? 'text-stone-500 hover:text-stone-900 hover:bg-stone-100' : 'text-stone-400 hover:text-stone-100 hover:bg-stone-800'
             }`}
           >
             <X size={18} />
@@ -273,11 +273,11 @@ export default function LoginModal() {
             /* ================= LOGIN FORM ================= */
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <div>
-                <label className={`block text-xs font-semibold mb-1.5 ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
+                <label className={`block text-xs font-semibold mb-1.5 ${isBright ? 'text-stone-700' : 'text-stone-300'}`}>
                   Username or Email
                 </label>
                 <div className="relative">
-                  <User size={15} className={`absolute left-3 top-3 ${isBright ? 'text-slate-400' : 'text-slate-500'}`} />
+                  <User size={15} className={`absolute left-3 top-3 ${isBright ? 'text-stone-400' : 'text-stone-500'}`} />
                   <input
                     id="login-identifier-input"
                     type="text"
@@ -290,19 +290,19 @@ export default function LoginModal() {
                     }}
                     className={`w-full border rounded-xl pl-9 pr-3 py-2.5 text-xs focus:outline-none transition-colors ${
                       isBright
-                        ? 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600'
-                        : 'bg-[#050811] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500'
+                        ? 'bg-stone-50 border-stone-300 text-stone-900 placeholder-stone-400 focus:border-amber-600 focus:ring-1 focus:ring-amber-600'
+                        : 'bg-[#0e1013] border-stone-800 text-stone-100 placeholder-stone-600 focus:border-amber-500 focus:ring-1 focus:ring-amber-500'
                     }`}
                   />
                 </div>
               </div>
 
               <div>
-                <label className={`block text-xs font-semibold mb-1.5 ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
+                <label className={`block text-xs font-semibold mb-1.5 ${isBright ? 'text-stone-700' : 'text-stone-300'}`}>
                   Password
                 </label>
                 <div className="relative">
-                  <Lock size={15} className={`absolute left-3 top-3 ${isBright ? 'text-slate-400' : 'text-slate-500'}`} />
+                  <Lock size={15} className={`absolute left-3 top-3 ${isBright ? 'text-stone-400' : 'text-stone-500'}`} />
                   <input
                     id="login-password-input"
                     type="password"
@@ -314,8 +314,8 @@ export default function LoginModal() {
                     }}
                     className={`w-full border rounded-xl pl-9 pr-3 py-2.5 text-xs focus:outline-none transition-colors ${
                       isBright
-                        ? 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600'
-                        : 'bg-[#050811] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500'
+                        ? 'bg-stone-50 border-stone-300 text-stone-900 placeholder-stone-400 focus:border-amber-600 focus:ring-1 focus:ring-amber-600'
+                        : 'bg-[#0e1013] border-stone-800 text-stone-100 placeholder-stone-600 focus:border-amber-500 focus:ring-1 focus:ring-amber-500'
                     }`}
                   />
                 </div>
@@ -324,11 +324,7 @@ export default function LoginModal() {
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-xs transition duration-150 shadow-md cursor-pointer disabled:opacity-50 mt-2 ${
-                  isBright
-                    ? 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-cyan-600/25'
-                    : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-cyan-500/25'
-                }`}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-semibold text-xs transition duration-150 bg-amber-500 hover:bg-amber-400 text-stone-950 shadow-xs cursor-pointer disabled:opacity-50 mt-2"
               >
                 {loading ? (
                   <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -342,11 +338,11 @@ export default function LoginModal() {
             /* ================= REGISTRATION FORM ================= */
             <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
               <div>
-                <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
-                  Username <span className="text-cyan-500">*</span>
+                <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-stone-700' : 'text-stone-300'}`}>
+                  Username <span className="text-amber-500">*</span>
                 </label>
                 <div className="relative">
-                  <User size={14} className={`absolute left-3 top-2.5 ${isBright ? 'text-slate-400' : 'text-slate-500'}`} />
+                  <User size={14} className={`absolute left-3 top-2.5 ${isBright ? 'text-stone-400' : 'text-stone-500'}`} />
                   <input
                     type="text"
                     placeholder="e.g. himanshu"
@@ -357,19 +353,19 @@ export default function LoginModal() {
                     }}
                     className={`w-full border rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none transition-colors ${
                       isBright
-                        ? 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-600'
-                        : 'bg-[#050811] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-500'
+                        ? 'bg-stone-50 border-stone-300 text-stone-900 placeholder-stone-400 focus:border-amber-600'
+                        : 'bg-[#0e1013] border-stone-800 text-stone-100 placeholder-stone-600 focus:border-amber-500'
                     }`}
                   />
                 </div>
               </div>
 
               <div>
-                <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
-                  Email Address <span className="text-cyan-500">*</span>
+                <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-stone-700' : 'text-stone-300'}`}>
+                  Email Address <span className="text-amber-500">*</span>
                 </label>
                 <div className="relative">
-                  <Mail size={14} className={`absolute left-3 top-2.5 ${isBright ? 'text-slate-400' : 'text-slate-500'}`} />
+                  <Mail size={14} className={`absolute left-3 top-2.5 ${isBright ? 'text-stone-400' : 'text-stone-500'}`} />
                   <input
                     type="email"
                     placeholder="name@example.com"
@@ -380,8 +376,8 @@ export default function LoginModal() {
                     }}
                     className={`w-full border rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none transition-colors ${
                       isBright
-                        ? 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-600'
-                        : 'bg-[#050811] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-500'
+                        ? 'bg-stone-50 border-stone-300 text-stone-900 placeholder-stone-400 focus:border-amber-600'
+                        : 'bg-[#0e1013] border-stone-800 text-stone-100 placeholder-stone-600 focus:border-amber-500'
                     }`}
                   />
                 </div>
@@ -389,11 +385,11 @@ export default function LoginModal() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
-                    Password <span className="text-cyan-500">*</span>
+                  <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-stone-700' : 'text-stone-300'}`}>
+                    Password <span className="text-amber-500">*</span>
                   </label>
                   <div className="relative">
-                    <Lock size={14} className={`absolute left-3 top-2.5 ${isBright ? 'text-slate-400' : 'text-slate-500'}`} />
+                    <Lock size={14} className={`absolute left-3 top-2.5 ${isBright ? 'text-stone-400' : 'text-stone-500'}`} />
                     <input
                       type="password"
                       placeholder="Min 6 chars"
@@ -404,19 +400,19 @@ export default function LoginModal() {
                       }}
                       className={`w-full border rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none transition-colors ${
                         isBright
-                          ? 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-600'
-                          : 'bg-[#050811] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-500'
+                          ? 'bg-stone-50 border-stone-300 text-stone-900 placeholder-stone-400 focus:border-amber-600'
+                          : 'bg-[#0e1013] border-stone-800 text-stone-100 placeholder-stone-600 focus:border-amber-500'
                       }`}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
-                    Confirm <span className="text-cyan-500">*</span>
+                  <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-stone-700' : 'text-stone-300'}`}>
+                    Confirm <span className="text-amber-500">*</span>
                   </label>
                   <div className="relative">
-                    <Lock size={14} className={`absolute left-3 top-2.5 ${isBright ? 'text-slate-400' : 'text-slate-500'}`} />
+                    <Lock size={14} className={`absolute left-3 top-2.5 ${isBright ? 'text-stone-400' : 'text-stone-500'}`} />
                     <input
                       type="password"
                       placeholder="Repeat password"
@@ -427,8 +423,8 @@ export default function LoginModal() {
                       }}
                       className={`w-full border rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none transition-colors ${
                         isBright
-                          ? 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-600'
-                          : 'bg-[#050811] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-500'
+                          ? 'bg-stone-50 border-stone-300 text-stone-900 placeholder-stone-400 focus:border-amber-600'
+                          : 'bg-[#0e1013] border-stone-800 text-stone-100 placeholder-stone-600 focus:border-amber-500'
                       }`}
                     />
                   </div>
@@ -436,7 +432,7 @@ export default function LoginModal() {
               </div>
 
               <div>
-                <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
+                <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-stone-700' : 'text-stone-300'}`}>
                   Full Name (Optional)
                 </label>
                 <input
@@ -446,14 +442,14 @@ export default function LoginModal() {
                   onChange={(e) => setFullName(e.target.value)}
                   className={`w-full border rounded-xl px-3 py-2 text-xs focus:outline-none transition-colors ${
                     isBright
-                      ? 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-600'
-                      : 'bg-[#050811] border-slate-800 text-white placeholder-slate-600 focus:border-cyan-500'
+                      ? 'bg-stone-50 border-stone-300 text-stone-900 placeholder-stone-400 focus:border-amber-600'
+                      : 'bg-[#0e1013] border-stone-800 text-stone-100 placeholder-stone-600 focus:border-amber-500'
                   }`}
                 />
               </div>
 
               <div>
-                <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
+                <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-stone-700' : 'text-stone-300'}`}>
                   Role
                 </label>
                 <select
@@ -461,8 +457,8 @@ export default function LoginModal() {
                   onChange={(e) => setRole(e.target.value)}
                   className={`w-full border rounded-xl px-3 py-2 text-xs font-medium focus:outline-none transition-colors ${
                     isBright
-                      ? 'bg-slate-50 border-slate-300 text-slate-800 focus:border-cyan-600'
-                      : 'bg-[#050811] border-slate-800 text-cyan-300 focus:border-cyan-500'
+                      ? 'bg-stone-50 border-stone-300 text-stone-800 focus:border-amber-600'
+                      : 'bg-[#0e1013] border-stone-800 text-stone-200 focus:border-amber-500'
                   }`}
                 >
                   <option value="Student Developer">Student Developer</option>
@@ -475,11 +471,7 @@ export default function LoginModal() {
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-xs transition duration-150 shadow-md cursor-pointer disabled:opacity-50 mt-2 ${
-                  isBright
-                    ? 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-cyan-600/25'
-                    : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-cyan-500/25'
-                }`}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-semibold text-xs transition duration-150 bg-amber-500 hover:bg-amber-400 text-stone-950 shadow-xs cursor-pointer disabled:opacity-50 mt-2"
               >
                 {loading ? (
                   <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -492,7 +484,7 @@ export default function LoginModal() {
           )}
 
           {/* Switcher Footer */}
-          <div className="pt-2 border-t border-slate-800/40 text-center">
+          <div className="pt-2 border-t border-stone-800/40 text-center">
             <button
               type="button"
               onClick={() => {
@@ -502,8 +494,8 @@ export default function LoginModal() {
               }}
               className={`text-xs transition cursor-pointer font-medium ${
                 isBright
-                  ? 'text-cyan-700 hover:text-cyan-900 underline underline-offset-2'
-                  : 'text-cyan-400 hover:text-cyan-300 underline underline-offset-2'
+                  ? 'text-amber-700 hover:text-amber-900 underline underline-offset-2'
+                  : 'text-amber-400 hover:text-amber-300 underline underline-offset-2'
               }`}
             >
               {isRegister ? 'Already have an account? Sign In' : "Don't have an account? Create one"}

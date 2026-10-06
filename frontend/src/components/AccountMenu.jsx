@@ -23,43 +23,43 @@ export default function AccountMenu({ onClose }) {
   return (
     <div
       className={`w-56 border rounded-xl shadow-2xl p-2 z-50 text-xs animate-fadeIn ${
-        isBright ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+        isBright ? 'bg-white border-stone-200 text-stone-800' : 'bg-[#13161b] border-stone-800 text-stone-100'
       }`}
     >
       {/* Header inside Account menu */}
       {isAuthenticated && user ? (
-        <div className={`p-2 border-b mb-1 ${isBright ? 'border-slate-100' : 'border-slate-800'}`}>
-          <p className={`font-bold text-xs ${isBright ? 'text-slate-900' : 'text-white'}`}>
+        <div className={`p-2 border-b mb-1 ${isBright ? 'border-stone-100' : 'border-stone-800/80'}`}>
+          <p className={`font-semibold text-xs ${isBright ? 'text-stone-900' : 'text-stone-100'}`}>
             {user?.fullName || user?.username}
           </p>
-          <p className={`text-[10px] font-mono ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>
+          <p className={`text-[10px] font-mono ${isBright ? 'text-stone-500' : 'text-stone-400'}`}>
             {user?.email || 'Signed In'}
           </p>
-          <span className="inline-block mt-1 text-[9px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border border-cyan-500/20">
+          <span className="inline-block mt-1 text-[9px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 font-mono">
             {user?.role || 'Student Developer'}
           </span>
         </div>
       ) : (
-        <div className={`p-2 border-b mb-1 space-y-1.5 ${isBright ? 'border-slate-100' : 'border-slate-800'}`}>
+        <div className={`p-2 border-b mb-1 space-y-1.5 ${isBright ? 'border-stone-100' : 'border-stone-800/80'}`}>
           <button
             onClick={() => handleAction(() => openLoginModal('login'))}
-            className="w-full py-1.5 px-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs"
+            className="w-full py-1.5 px-3 rounded-lg bg-amber-500 hover:bg-amber-400 text-stone-950 font-semibold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs"
           >
             <User size={13} />
             <span>Sign In</span>
           </button>
           <button
             onClick={() => handleAction(() => openRegisterModal())}
-            className={`w-full py-1.5 px-3 rounded-lg border font-semibold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer ${
+            className={`w-full py-1.5 px-3 rounded-lg border font-medium text-xs flex items-center justify-center gap-1.5 transition cursor-pointer ${
               isBright
-                ? 'border-slate-300 hover:bg-slate-100 text-slate-700'
-                : 'border-slate-700 hover:bg-slate-800 text-slate-200'
+                ? 'border-stone-300 hover:bg-stone-100 text-stone-700'
+                : 'border-stone-700 hover:bg-stone-800 text-stone-200'
             }`}
           >
             <UserPlus size={13} />
             <span>Create Account</span>
           </button>
-          <p className={`text-[10px] text-center pt-0.5 ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>
+          <p className={`text-[10px] text-center pt-0.5 ${isBright ? 'text-stone-500' : 'text-stone-400'}`}>
             Sign in to sync your saved traces and history.
           </p>
         </div>
@@ -71,10 +71,10 @@ export default function AccountMenu({ onClose }) {
           <button
             onClick={() => handleAction(() => navigate('/profile'))}
             className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2 cursor-pointer transition ${
-              isBright ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-slate-800 text-slate-300'
+              isBright ? 'hover:bg-stone-100 text-stone-700' : 'hover:bg-stone-800/80 text-stone-300'
             }`}
           >
-            <User size={13} className="text-cyan-400" />
+            <User size={13} className="text-amber-500" />
             <span>Profile</span>
           </button>
         )}
@@ -87,13 +87,13 @@ export default function AccountMenu({ onClose }) {
             })
           }
           className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2 cursor-pointer transition ${
-            isBright ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-slate-800 text-slate-300'
+            isBright ? 'hover:bg-stone-100 text-stone-700' : 'hover:bg-stone-800/80 text-stone-300'
           }`}
         >
-          <Bookmark size={13} className="text-cyan-500" />
+          <Bookmark size={13} className="text-amber-500" />
           <div className="flex-1 flex items-center justify-between">
-            <span>Save</span>
-            {!isAuthenticated && <span className="text-[9px] font-mono text-amber-500 font-bold">Sign-in</span>}
+            <span>Saved Traces</span>
+            {!isAuthenticated && <span className="text-[9px] font-mono text-amber-500 font-medium">Sign-in</span>}
           </div>
         </button>
 
@@ -105,23 +105,23 @@ export default function AccountMenu({ onClose }) {
             })
           }
           className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2 cursor-pointer transition ${
-            isBright ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-slate-800 text-slate-300'
+            isBright ? 'hover:bg-stone-100 text-stone-700' : 'hover:bg-stone-800/80 text-stone-300'
           }`}
         >
           <History size={13} className="text-amber-500" />
           <div className="flex-1 flex items-center justify-between">
-            <span>History</span>
-            {!isAuthenticated && <span className="text-[9px] font-mono text-amber-500 font-bold">Sign-in</span>}
+            <span>Execution History</span>
+            {!isAuthenticated && <span className="text-[9px] font-mono text-amber-500 font-medium">Sign-in</span>}
           </div>
         </button>
 
         <button
           onClick={() => handleAction(() => navigate('/settings'))}
           className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2 cursor-pointer transition ${
-            isBright ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-slate-800 text-slate-300'
+            isBright ? 'hover:bg-stone-100 text-stone-700' : 'hover:bg-stone-800/80 text-stone-300'
           }`}
         >
-          <Settings size={13} className="text-purple-400" />
+          <Settings size={13} className="text-stone-400" />
           <span>Settings</span>
         </button>
 

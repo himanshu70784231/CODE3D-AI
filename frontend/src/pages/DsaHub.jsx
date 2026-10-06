@@ -26,7 +26,8 @@ import {
 const STORAGE_KEY = 'code3d_striver_solved_v1';
 
 export default function DsaHub({ onSelectConcept, initialTab = 'algorithms' }) {
-  const { isBright } = useTheme();
+  const { isBright, currentAccent } = useTheme();
+  const accentHex = isBright ? currentAccent.bright : currentAccent.dark;
 
   // Top-level View Switcher: 'algorithms' | 'curriculum' | 'striver'
   const [activeMainTab, setActiveMainTab] = useState(initialTab || 'algorithms');
@@ -195,18 +196,14 @@ export default function DsaHub({ onSelectConcept, initialTab = 'algorithms' }) {
 
   return (
     <div className={`flex-1 overflow-y-auto p-4 md:p-8 select-none transition-colors duration-200 ${
-      isBright ? 'bg-slate-50 text-slate-900' : 'bg-[#070b14] text-slate-100'
+      isBright ? 'bg-[#f7f6f3] text-stone-900' : 'bg-[#0e1013] text-stone-100'
     }`}>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Top Header & View Mode Switcher */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-medium border ${
-                isBright
-                  ? 'bg-cyan-50 border-cyan-300 text-cyan-800'
-                  : 'bg-cyan-950/60 border-cyan-800/50 text-cyan-400'
-              }`}>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-medium border bg-amber-500/10 border-amber-500/30 text-amber-500">
                 <Layers size={13} />
                 <span>3D DSA Learning Hub</span>
               </span>
@@ -231,55 +228,67 @@ export default function DsaHub({ onSelectConcept, initialTab = 'algorithms' }) {
 
           {/* Master View Mode Switcher */}
           <div className={`flex items-center p-1 rounded-xl border self-start md:self-auto shrink-0 ${
-            isBright ? 'bg-slate-200/80 border-slate-300' : 'bg-slate-900/90 border-slate-800'
+            isBright ? 'bg-stone-100 border-[#e2dfd8]' : 'bg-[#13161b] border-[#252932]'
           }`}>
             <button
               onClick={() => setActiveMainTab('algorithms')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+              style={{
+                backgroundColor: activeMainTab === 'algorithms' ? accentHex : undefined,
+                color: activeMainTab === 'algorithms' ? '#0f172a' : undefined,
+              }}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                 activeMainTab === 'algorithms'
-                  ? isBright
-                    ? 'bg-purple-600 text-white shadow-md font-bold'
-                    : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30'
-                  : isBright ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
+                  ? 'shadow-sm font-bold'
+                  : isBright ? 'text-stone-600 hover:text-stone-900' : 'text-stone-400 hover:text-stone-200'
               }`}
             >
               <Zap size={14} />
               <span>3D Algorithms</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-purple-500/20 text-purple-300">
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                activeMainTab === 'algorithms' ? 'bg-stone-950/20 text-stone-950' : 'bg-stone-800 text-stone-300'
+              }`}>
                 {ALGORITHM_CATALOG.length}
               </span>
             </button>
 
             <button
               onClick={() => setActiveMainTab('curriculum')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+              style={{
+                backgroundColor: activeMainTab === 'curriculum' ? accentHex : undefined,
+                color: activeMainTab === 'curriculum' ? '#0f172a' : undefined,
+              }}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                 activeMainTab === 'curriculum'
-                  ? isBright
-                    ? 'bg-white text-cyan-800 shadow-md font-bold'
-                    : 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-600/30'
-                  : isBright ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
+                  ? 'shadow-sm font-bold'
+                  : isBright ? 'text-stone-600 hover:text-stone-900' : 'text-stone-400 hover:text-stone-200'
               }`}
             >
               <Layers size={14} />
               <span>Core Modules</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-cyan-500/20 text-cyan-300">
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                activeMainTab === 'curriculum' ? 'bg-stone-950/20 text-stone-950' : 'bg-stone-800 text-stone-300'
+              }`}>
                 {SAMPLE_PROGRAMS.length}
               </span>
             </button>
 
             <button
               onClick={() => setActiveMainTab('striver')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+              style={{
+                backgroundColor: activeMainTab === 'striver' ? accentHex : undefined,
+                color: activeMainTab === 'striver' ? '#0f172a' : undefined,
+              }}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                 activeMainTab === 'striver'
-                  ? isBright
-                    ? 'bg-amber-500 text-white shadow-md font-bold'
-                    : 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md shadow-amber-500/30'
-                  : isBright ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
+                  ? 'shadow-sm font-bold'
+                  : isBright ? 'text-stone-600 hover:text-stone-900' : 'text-stone-400 hover:text-stone-200'
               }`}
             >
               <BookOpen size={14} />
               <span>Striver SDE Sheet 📜</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-amber-500/20 text-amber-300">
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                activeMainTab === 'striver' ? 'bg-stone-950/20 text-stone-950' : 'bg-stone-800 text-stone-300'
+              }`}>
                 {totalStriverCount}
               </span>
             </button>
@@ -525,20 +534,20 @@ export default function DsaHub({ onSelectConcept, initialTab = 'algorithms' }) {
                       {/* Card Footer: Complexities & Visualize 3D Button */}
                       <div className="pt-3 border-t border-slate-800/60 flex items-center justify-between text-[11px] font-mono">
                         <div className="flex items-center gap-2">
-                          <span className={isBright ? 'text-cyan-700 font-bold' : 'text-cyan-400 font-bold'}>
+                          <span className="text-amber-500 font-bold">
                             {p.timeComplexity}
                           </span>
-                          <span className="text-slate-600">•</span>
-                          <span className={isBright ? 'text-emerald-700 font-bold' : 'text-emerald-400 font-bold'}>
+                          <span className="text-stone-500">•</span>
+                          <span className="text-emerald-500 font-bold">
                             {p.spaceComplexity}
                           </span>
                         </div>
 
                         <button
                           onClick={() => handleLaunchStriverProblem(p)}
-                          className="flex items-center gap-1 px-3 py-1 rounded-md text-xs font-semibold bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 shadow-sm transition active:scale-95 cursor-pointer"
+                          className="flex items-center gap-1 px-3 py-1 rounded-md text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-stone-950 shadow-sm transition active:scale-95 cursor-pointer"
                         >
-                          <Zap size={12} className="fill-slate-950" />
+                          <Zap size={12} className="fill-stone-950" />
                           <span>Visualize 3D</span>
                         </button>
                       </div>
@@ -569,19 +578,17 @@ export default function DsaHub({ onSelectConcept, initialTab = 'algorithms' }) {
                       onClick={() => setActiveCategory(cat)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition shrink-0 flex items-center gap-1.5 cursor-pointer ${
                         isActive
-                          ? isBright
-                            ? 'bg-cyan-600 text-white font-bold shadow-md'
-                            : 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20'
+                          ? 'bg-amber-500 text-stone-950 font-bold shadow-xs'
                           : isBright
-                            ? 'bg-white border border-slate-200 text-slate-600 hover:text-slate-900 shadow-sm'
-                            : 'bg-slate-900/80 border border-slate-800 text-slate-400 hover:text-white'
+                            ? 'bg-white border border-[#e2dfd8] text-stone-600 hover:text-stone-900 shadow-2xs'
+                            : 'bg-[#13161b] border border-[#252932] text-stone-400 hover:text-white'
                       }`}
                     >
                       <span>{cat}</span>
                       <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
                         isActive
-                          ? isBright ? 'bg-cyan-700 text-white' : 'bg-slate-950/40 text-slate-950'
-                          : isBright ? 'bg-slate-100 text-slate-500' : 'bg-slate-800 text-slate-400'
+                          ? 'bg-stone-950/20 text-stone-950'
+                          : isBright ? 'bg-stone-100 text-stone-500' : 'bg-stone-800 text-stone-400'
                       }`}>
                         {count}
                       </span>
@@ -592,14 +599,14 @@ export default function DsaHub({ onSelectConcept, initialTab = 'algorithms' }) {
 
               {/* Search Box */}
               <div className="relative w-full sm:w-64 shrink-0">
-                <Search size={14} className={`absolute left-3 top-2.5 ${isBright ? 'text-slate-400' : 'text-slate-500'}`} />
+                <Search size={14} className={`absolute left-3 top-2.5 ${isBright ? 'text-stone-400' : 'text-stone-500'}`} />
                 <input
                   type="text"
                   placeholder="Search concepts (e.g. avl, bfs)..."
                   value={curriculumSearch}
                   onChange={(e) => setCurriculumSearch(e.target.value)}
-                  className={`w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                    isBright ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+                  className={`w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 ${
+                    isBright ? 'bg-white border-[#e2dfd8] text-stone-900' : 'bg-[#13161b] border-[#252932] text-stone-100'
                   }`}
                 />
               </div>
@@ -610,16 +617,16 @@ export default function DsaHub({ onSelectConcept, initialTab = 'algorithms' }) {
               {filteredCurriculum.map((item) => (
                 <div
                   key={item.id}
-                  className={`border rounded-xl p-5 flex flex-col justify-between transition-all duration-200 hover:border-cyan-500/60 group ${
+                  className={`border rounded-xl p-5 flex flex-col justify-between transition-all duration-200 hover:border-amber-500/50 group ${
                     isBright
-                      ? 'bg-white border-slate-200 shadow-sm hover:shadow-md hover:bg-cyan-50/20'
-                      : 'bg-slate-900/60 border-slate-800/90 hover:bg-slate-900/90'
+                      ? 'bg-white border-[#e2dfd8] shadow-2xs hover:bg-stone-50/50'
+                      : 'bg-[#13161b] border-[#252932] hover:bg-[#181c23]'
                   }`}
                 >
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <span className={`text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded ${
-                        isBright ? 'bg-slate-100 text-slate-700 border border-slate-200' : 'bg-slate-800 text-slate-400'
+                        isBright ? 'bg-stone-100 text-stone-700 border border-stone-200' : 'bg-stone-800 text-stone-400'
                       }`}>
                         {item.category}
                       </span>
@@ -627,45 +634,39 @@ export default function DsaHub({ onSelectConcept, initialTab = 'algorithms' }) {
                         item.difficulty === 'Beginner'
                           ? isBright ? 'bg-emerald-50 border-emerald-300 text-emerald-700 font-medium' : 'bg-emerald-950/60 border-emerald-800/50 text-emerald-400'
                           : item.difficulty === 'Intermediate'
-                          ? isBright ? 'bg-blue-50 border-blue-300 text-blue-700 font-medium' : 'bg-blue-950/60 border-blue-800/50 text-blue-400'
-                          : isBright ? 'bg-purple-50 border-purple-300 text-purple-700 font-medium' : 'bg-purple-950/60 border-purple-800/50 text-purple-400'
+                          ? isBright ? 'bg-amber-50 border-amber-300 text-amber-700 font-medium' : 'bg-amber-950/60 border-amber-800/50 text-amber-400'
+                          : isBright ? 'bg-rose-50 border-rose-300 text-rose-700 font-medium' : 'bg-rose-950/60 border-rose-800/50 text-rose-400'
                       }`}>
                         {item.difficulty}
                       </span>
                     </div>
 
-                    <h3 className={`text-base font-bold mb-2 group-hover:text-cyan-400 transition-colors ${
-                      isBright ? 'text-slate-900' : 'text-white'
-                    }`}>
+                    <h3 className="text-base font-bold mb-2 group-hover:text-amber-500 transition-colors">
                       {item.title}
                     </h3>
 
                     <p className={`text-xs line-clamp-3 mb-4 leading-relaxed ${
-                      isBright ? 'text-slate-600' : 'text-slate-400'
+                      isBright ? 'text-stone-600' : 'text-stone-400'
                     }`}>
                       {item.description}
                     </p>
                   </div>
 
-                  <div className="space-y-3 pt-3 border-t border-slate-800/60">
+                  <div className="space-y-3 pt-3 border-t border-inherit">
                     <div className="flex items-center justify-between text-[11px] font-mono">
                       <div className="flex items-center gap-1.5">
-                        <Clock size={12} className={isBright ? 'text-cyan-600' : 'text-cyan-400'} />
+                        <Clock size={12} className="text-amber-500" />
                         <span>{item.timeComplexity}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <HardDrive size={12} className={isBright ? 'text-emerald-600' : 'text-emerald-400'} />
+                        <HardDrive size={12} className="text-emerald-500" />
                         <span>{item.spaceComplexity}</span>
                       </div>
                     </div>
 
                     <button
                       onClick={() => onSelectConcept(item)}
-                      className={`w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition duration-150 cursor-pointer ${
-                        isBright
-                          ? 'bg-cyan-600 hover:bg-cyan-700 text-white shadow-sm'
-                          : 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                      }`}
+                      className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition duration-150 cursor-pointer bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 border border-amber-500/30"
                     >
                       <Play size={12} className="fill-current" />
                       <span>Step-by-Step 3D Simulation</span>

@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
-import { Sparkles, Send, HelpCircle, Check, Lightbulb, Clock, Database } from 'lucide-react';
-import { formatOperation, safeString, safeDisplay } from '../utils/safeRender';
+import { Sparkles, Send, Lightbulb, Clock, Database } from 'lucide-react';
+import { formatOperation, safeString } from '../utils/safeRender';
+import { useTheme } from '../context/ThemeContext';
 
-/**
- * CODE3D-AI - AiPanel Component
- * Embedded IDE AI assistant showing step explanation, suggestions, complexity, and quick Q&A.
- */
 export function AiPanel({
   currentStep = null,
   timeComplexity = 'O(n)',
@@ -13,6 +10,7 @@ export function AiPanel({
   code = '',
   onOpenFullTutor = null,
 }) {
+  const { isBright } = useTheme();
   const [question, setQuestion] = useState('');
   const [messages, setMessages] = useState([
     {
@@ -48,10 +46,14 @@ export function AiPanel({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#101c2d] text-xs select-none">
+    <div className={`flex flex-col h-full text-xs select-none transition-colors duration-200 ${
+      isBright ? 'bg-[#fcfbf9] text-stone-800' : 'bg-[#13161b] text-stone-100'
+    }`}>
       {/* Header */}
-      <div className="px-3 py-2 bg-[#142338] border-b border-[#26364a] flex items-center justify-between text-xs font-semibold text-[#f8fafc]">
-        <div className="flex items-center gap-1.5 text-[#8b5cf6]">
+      <div className={`px-3 py-2 border-b flex items-center justify-between text-xs font-semibold transition-colors ${
+        isBright ? 'bg-[#f7f6f3] border-[#e2dfd8] text-stone-800' : 'bg-[#181c23] border-[#252932] text-stone-100'
+      }`}>
+        <div className="flex items-center gap-1.5 text-amber-500">
           <Sparkles size={13} />
           <span>AI Analysis &amp; Tutor</span>
         </div>
@@ -59,7 +61,7 @@ export function AiPanel({
         {onOpenFullTutor && (
           <button
             onClick={onOpenFullTutor}
-            className="text-[10px] text-[#c084fc] hover:underline cursor-pointer"
+            className="text-[10px] text-amber-500 hover:underline cursor-pointer"
           >
             Open Tutor ↗
           </button>
@@ -68,56 +70,64 @@ export function AiPanel({
 
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {/* Current Operation & Explanation Card */}
-        <div className="bg-[#0d1726] border border-[#26364a] rounded-md p-2.5 space-y-1.5 font-mono">
+        <div className={`border rounded-lg p-2.5 space-y-1.5 font-mono ${
+          isBright ? 'bg-white border-[#e2dfd8]' : 'bg-[#0e1013] border-[#252932]'
+        }`}>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase font-bold text-[#8b5cf6]">
+            <span className="text-[10px] uppercase font-bold text-amber-500">
               Current Operation
             </span>
-            <span className="text-[10px] text-[#94a3b8]">
+            <span className="text-[10px] text-stone-500">
               Line {currentStep?.lineNumber || '—'}
             </span>
           </div>
 
-          <div className="font-semibold text-xs text-[#38bdf8]">
+          <div className="font-semibold text-xs text-amber-400">
             {formatOperation(currentOperation)}
           </div>
 
-          <div className="text-[11px] text-[#f8fafc] font-sans pt-1 border-t border-[#1e2c3d]">
+          <div className="text-[11px] font-sans pt-1 border-t border-inherit">
             {explanation}
           </div>
         </div>
 
         {/* Suggestion / AI Hint */}
-        <div className="bg-[#0d1726]/70 border border-[#8b5cf6]/30 rounded-md p-2.5 flex items-start gap-2">
-          <Lightbulb size={14} className="text-[#a855f7] shrink-0 mt-0.5" />
-          <div className="text-[11px] text-[#e2e8f0]">
-            <span className="font-semibold text-[#c084fc]">Insight: </span>
+        <div className={`border rounded-lg p-2.5 flex items-start gap-2 ${
+          isBright ? 'bg-amber-50/50 border-amber-200 text-stone-800' : 'bg-amber-500/10 border-amber-500/25 text-amber-200'
+        }`}>
+          <Lightbulb size={14} className="text-amber-500 shrink-0 mt-0.5" />
+          <div className="text-[11px]">
+            <span className="font-semibold text-amber-500">Insight: </span>
             {aiHint}
           </div>
         </div>
 
         {/* Complexity Summary */}
         <div className="grid grid-cols-2 gap-2 font-mono text-[11px]">
-          <div className="bg-[#0d1726] border border-[#26364a] rounded p-2 flex items-center gap-2">
-            <Clock size={13} className="text-[#3b82f6]" />
+          <div className={`border rounded p-2 flex items-center gap-2 ${
+            isBright ? 'bg-white border-[#e2dfd8]' : 'bg-[#0e1013] border-[#252932]'
+          }`}>
+            <Clock size={13} className="text-amber-500" />
             <div>
-              <div className="text-[9px] text-[#94a3b8] uppercase">Time</div>
-              <div className="font-bold text-[#f8fafc]">{timeComplexity}</div>
+              <div className="text-[9px] text-stone-500 uppercase">Time</div>
+              <div className="font-bold">{timeComplexity}</div>
             </div>
           </div>
 
-          <div className="bg-[#0d1726] border border-[#26364a] rounded p-2 flex items-center gap-2">
-            <Database size={13} className="text-[#14b8a6]" />
+          <div className={`border rounded p-2 flex items-center gap-2 ${
+            isBright ? 'bg-white border-[#e2dfd8]' : 'bg-[#0e1013] border-[#252932]'
+          }`}>
+            <Database size={13} className="text-emerald-500" />
             <div>
-              <div className="text-[9px] text-[#94a3b8] uppercase">Space</div>
-              <div className="font-bold text-[#f8fafc]">{spaceComplexity}</div>
+              <div className="text-[9px] text-stone-500 uppercase">Space</div>
+              <div className="font-bold">{spaceComplexity}</div>
             </div>
           </div>
         </div>
 
         {/* Mini Q&A Feed */}
-        <div className="space-y-2 pt-1 border-t border-[#26364a]">
-          <span className="text-[10px] uppercase font-bold text-[#94a3b8]">
+        <div className="space-y-2 pt-1 border-t border-inherit">
+          <span className="text-[10px] uppercase font-bold text-stone-500">
             Quick Q&amp;A
           </span>
 
@@ -127,15 +137,19 @@ export function AiPanel({
                 key={idx}
                 className={`p-2 rounded text-[11px] ${
                   m.sender === 'user'
-                    ? 'bg-[#1e2f47] text-[#f8fafc] ml-4'
-                    : 'bg-[#0d1726] text-[#cbd5e1] border border-[#26364a] mr-2'
+                    ? isBright
+                      ? 'bg-amber-100/70 text-amber-950 ml-4'
+                      : 'bg-amber-500/20 text-amber-200 ml-4'
+                    : isBright
+                      ? 'bg-white text-stone-800 border border-[#e2dfd8] mr-2'
+                      : 'bg-[#0e1013] text-stone-300 border border-[#252932] mr-2'
                 }`}
               >
                 {m.text}
               </div>
             ))}
             {isAsking && (
-              <div className="text-[10px] text-[#a855f7] animate-pulse">
+              <div className="text-[10px] text-amber-500 animate-pulse">
                 Analyzing execution state...
               </div>
             )}
@@ -144,18 +158,22 @@ export function AiPanel({
       </div>
 
       {/* Input Box */}
-      <form onSubmit={handleSendQuestion} className="p-2 border-t border-[#26364a] bg-[#0d1726] flex items-center gap-1.5 shrink-0">
+      <form onSubmit={handleSendQuestion} className={`p-2 border-t flex items-center gap-1.5 shrink-0 ${
+        isBright ? 'bg-[#f7f6f3] border-[#e2dfd8]' : 'bg-[#181c23] border-[#252932]'
+      }`}>
         <input
           type="text"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="Ask why this line executed..."
-          className="flex-1 bg-[#101c2d] border border-[#26364a] rounded px-2.5 py-1 text-xs text-[#f8fafc] placeholder-[#64748b] focus:outline-none focus:border-[#8b5cf6]"
+          className={`flex-1 rounded px-2.5 py-1 text-xs border focus:outline-none focus:border-amber-500 ${
+            isBright ? 'bg-white border-[#e2dfd8] text-stone-900 placeholder-stone-400' : 'bg-[#0e1013] border-[#252932] text-stone-100 placeholder-stone-500'
+          }`}
         />
         <button
           type="submit"
           disabled={!question.trim() || isAsking}
-          className="p-1.5 rounded bg-[#8b5cf6] hover:bg-[#7c3aed] text-white disabled:opacity-40 transition-colors cursor-pointer"
+          className="p-1.5 rounded bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold disabled:opacity-40 transition-colors cursor-pointer"
           title="Send Question"
         >
           <Send size={12} />

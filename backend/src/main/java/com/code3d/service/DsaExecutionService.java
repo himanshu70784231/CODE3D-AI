@@ -22,6 +22,7 @@ public class DsaExecutionService {
         this.javaAstExecutionEngine = javaAstExecutionEngine;
     }
 
+
     public ExecuteResponse execute(ExecuteRequest request) {
         String conceptId = request.getConceptId();
         String code = request.getCode();
@@ -109,7 +110,7 @@ public class DsaExecutionService {
         return generateArrayLoopTrace(customValues);
     }
 
-    // ==========================================
+
     // 1. 1D Array Loop Traversal (Dynamic Values)
     // ==========================================
     public ExecuteResponse generateArrayLoopTrace(List<Integer> values) {
@@ -531,9 +532,8 @@ public class DsaExecutionService {
         return ds;
     }
 
-    // ==========================================
+
     // 8. Binary Search Visualization
-    // ==========================================
     private ExecuteResponse generateBinarySearchTrace() {
         List<ExecutionStep> steps = new ArrayList<>();
         List<Integer> arr = List.of(10, 20, 30, 40, 50, 60, 70);

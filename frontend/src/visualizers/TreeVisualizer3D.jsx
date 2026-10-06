@@ -26,7 +26,7 @@ function TreeBranch({ start, end, isActive }) {
       <mesh>
         <cylinderGeometry args={[0.045, 0.045, length, 16]} />
         <meshStandardMaterial
-          color={isActive ? '#38bdf8' : '#334155'}
+          color={isActive ? '#f59e0b' : '#334155'}
           emissive={isActive ? '#0284c7' : '#0f172a'}
           emissiveIntensity={isActive ? 1.0 : 0.25}
           metalness={0.6}
@@ -38,7 +38,7 @@ function TreeBranch({ start, end, isActive }) {
         <mesh>
           <cylinderGeometry args={[0.09, 0.09, length, 16]} />
           <meshBasicMaterial
-            color="#38bdf8"
+            color="#f59e0b"
             transparent
             opacity={0.35}
           />
@@ -277,9 +277,11 @@ export default function TreeVisualizer3D({ dataStructureState }) {
       if (node.y > maxY) maxY = node.y;
     });
 
-    // Dynamic scale for large trees to avoid camera clipping
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const treeHeight = Math.max(maxY - minY, 1);
     const treeWidth = Math.max(maxX - minX, 1);
-    const treeScale = treeWidth > 11 ? Math.min(1.0, 11.0 / treeWidth) : 1.0;
+    const treeScale = Math.min(1.0, 9.5 / Math.max(treeWidth, treeHeight * 1.15));
 
     const positionedNodes = treeNodes.map((node) => {
       const n = nodeMap.get(node.id);
@@ -323,17 +325,17 @@ export default function TreeVisualizer3D({ dataStructureState }) {
       }
     }
 
-    return { positionedNodes, branches, levels, minX, maxX, treeScale };
+    return { positionedNodes, branches, levels, minX, maxX, treeScale, centerX, centerY };
   }, [treeNodes]);
 
-  const { positionedNodes, branches, levels, minX = -4, maxX = 4, treeScale = 1.0 } = layoutData;
+  const { positionedNodes, branches, levels, minX = -4, maxX = 4, treeScale = 1.0, centerX = 0, centerY = 0 } = layoutData;
   const hoveredNode = positionedNodes.find((n) => n.id === hoveredNodeId);
 
   const markerOffset = Math.min(minX - 1.2, -3.8);
 
   return (
-    <group position={[0, 0, 0]} scale={[treeScale, treeScale, treeScale]}>
-      {/* Symmetrically balanced Level Markers so <Center> stays perfectly centered on Root */}
+    <group position={[-centerX * treeScale, -centerY * treeScale + 0.5, 0]} scale={[treeScale, treeScale, treeScale]}>
+      {/* Level Markers */}
       <group position={[markerOffset, 0, 0]}>
         {levels.map((lvl) => (
           <Billboard key={`lvl-${lvl.depth}`} position={[0, lvl.y, 0]}>
@@ -347,12 +349,6 @@ export default function TreeVisualizer3D({ dataStructureState }) {
               {lvl.label} ──
             </Text>
           </Billboard>
-        ))}
-      </group>
-      {/* Invisible right balance anchor to keep Center root at X=0 */}
-      <group position={[-markerOffset, 0, 0]}>
-        {levels.map((lvl) => (
-          <group key={`lvl-balance-${lvl.depth}`} position={[0, lvl.y, 0]} />
         ))}
       </group>
 
@@ -369,7 +365,7 @@ export default function TreeVisualizer3D({ dataStructureState }) {
         );
       })}
 
-      {/* 3D Glowing Spheres for Nodes */}
+      {/* 3D Spheres for Nodes */}
       {positionedNodes.map((node) => {
         const isActive = activeIndex === node.id;
         const isHovered = hoveredNodeId === node.id;
@@ -388,13 +384,13 @@ export default function TreeVisualizer3D({ dataStructureState }) {
               setHoveredNodeId(null);
             }}
           >
-            {/* Sphere Mesh with cyber glowing material */}
+            {/* Sphere Mesh */}
             <mesh castShadow receiveShadow>
               <sphereGeometry args={[radius, 32, 32]} />
               <meshStandardMaterial
-                color={isActive ? '#06b6d4' : isHovered ? '#f59e0b' : isBright ? '#e2e8f0' : '#1e293b'}
-                emissive={isActive ? '#0891b2' : isHovered ? '#d97706' : isBright ? '#cbd5e1' : '#0f172a'}
-                emissiveIntensity={isActive ? 1.0 : isHovered ? 0.6 : 0.2}
+                color={isActive ? '#f59e0b' : isHovered ? '#fbbf24' : isBright ? '#e2e8f0' : '#1e293b'}
+                emissive={isActive ? '#d97706' : isHovered ? '#b45309' : isBright ? '#cbd5e1' : '#0f172a'}
+                emissiveIntensity={isActive ? 1.4 : isHovered ? 0.8 : 0.2}
                 metalness={0.5}
                 roughness={0.2}
               />
@@ -404,15 +400,15 @@ export default function TreeVisualizer3D({ dataStructureState }) {
             <lineSegments>
               <edgesGeometry args={[new THREE.SphereGeometry(radius + 0.015, 16, 16)]} />
               <lineBasicMaterial
-                color={isActive ? '#67e8f9' : isHovered ? '#fbbf24' : isBright ? '#94a3b8' : '#334155'}
+                color={isActive ? '#fbbf24' : isHovered ? '#f59e0b' : isBright ? '#94a3b8' : '#334155'}
               />
             </lineSegments>
 
-            {/* Node Value Text Billboard (Always faces camera) */}
+            {/* Node Value Text Billboard */}
             <Billboard position={[0, 0, radius + 0.08]}>
               <Text
                 fontSize={0.34}
-                color={isActive ? '#082f49' : isBright ? '#0f172a' : '#ffffff'}
+                color={isActive ? '#1c1917' : isBright ? '#0f172a' : '#ffffff'}
                 anchorX="center"
                 anchorY="middle"
                 fontWeight="bold"
@@ -441,15 +437,15 @@ export default function TreeVisualizer3D({ dataStructureState }) {
                   <mesh rotation={[Math.PI, 0, 0]}>
                     <coneGeometry args={[0.18, 0.42, 16]} />
                     <meshStandardMaterial
-                      color="#22d3ee"
-                      emissive="#06b6d4"
-                      emissiveIntensity={1.0}
+                      color="#f59e0b"
+                      emissive="#d97706"
+                      emissiveIntensity={1.2}
                     />
                   </mesh>
                   <Billboard position={[0, 0.35, 0]}>
                     <Text
                       fontSize={0.22}
-                      color="#38bdf8"
+                      color="#f59e0b"
                       fontWeight="bold"
                       anchorX="center"
                       anchorY="middle"
@@ -469,7 +465,7 @@ export default function TreeVisualizer3D({ dataStructureState }) {
                     <planeGeometry args={[2.8, 0.8]} />
                     <meshBasicMaterial color="#090d16" transparent opacity={0.9} />
                   </mesh>
-                  <Text position={[0, 0.2, 0]} fontSize={0.2} color="#38bdf8" fontWeight="bold">
+                  <Text position={[0, 0.2, 0]} fontSize={0.2} color="#f59e0b" fontWeight="bold">
                     Node: {node.val} (Level {node.depth})
                   </Text>
                   <Text position={[0, -0.15, 0]} fontSize={0.16} color="#94a3b8">

@@ -197,7 +197,7 @@ export default function SortingVisualizer3D({ dataStructureState }) {
               <boxGeometry args={[1.3, height, 1.2]} />
               <meshStandardMaterial
                 color={isHovered ? '#0284c7' : color}
-                emissive={isHovered ? '#38bdf8' : emissive}
+                emissive={isHovered ? '#f59e0b' : emissive}
                 emissiveIntensity={isHovered ? 1.8 : (isCompared || isSwapped || isActive || isPivot ? 0.9 : 0.25)}
                 metalness={0.4}
                 roughness={0.2}
@@ -207,7 +207,7 @@ export default function SortingVisualizer3D({ dataStructureState }) {
             {/* Glowing Wireframe Border */}
             <lineSegments>
               <edgesGeometry args={[new THREE.BoxGeometry(1.31, height + 0.01, 1.21)]} />
-              <lineBasicMaterial color={isHovered ? '#38bdf8' : wireColor} linewidth={2} />
+              <lineBasicMaterial color={isHovered ? '#f59e0b' : wireColor} linewidth={2} />
             </lineSegments>
 
             {/* Interactive Mouse Hover 3D Inspection Tooltip */}
@@ -220,9 +220,9 @@ export default function SortingVisualizer3D({ dataStructureState }) {
                   </mesh>
                   <lineSegments position={[0, 0, -0.01]}>
                     <edgesGeometry args={[new THREE.BoxGeometry(2.72, 1.02, 0.01)]} />
-                    <lineBasicMaterial color="#38bdf8" />
+                    <lineBasicMaterial color="#f59e0b" />
                   </lineSegments>
-                  <Text position={[0, 0.3, 0.05]} fontSize={0.21} color="#38bdf8" fontWeight="bold">
+                  <Text position={[0, 0.3, 0.05]} fontSize={0.21} color="#f59e0b" fontWeight="bold">
                     {`Pillar [${idx}] = ${val}`}
                   </Text>
                   <Text position={[0, 0.04, 0.05]} fontSize={0.14} color="#94a3b8">
@@ -264,7 +264,7 @@ export default function SortingVisualizer3D({ dataStructureState }) {
                         ? '#c4b5fd'
                         : ptrNames.includes('TARGET')
                         ? '#fde047'
-                        : '#38bdf8'
+                        : '#f59e0b'
                     }
                     fontWeight="bold"
                     anchorX="center"

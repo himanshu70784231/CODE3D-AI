@@ -158,7 +158,7 @@ export default function GraphVisualizer3D({ dataStructureState }) {
                     <coneGeometry args={[0.18, 0.4, 16]} />
                     <meshStandardMaterial color="#22d3ee" emissive="#06b6d4" emissiveIntensity={0.9} />
                   </mesh>
-                  <Text position={[0, 0.35, 0]} fontSize={0.22} color="#38bdf8" fontWeight="bold">
+                  <Text position={[0, 0.35, 0]} fontSize={0.22} color="#f59e0b" fontWeight="bold">
                     VISITING
                   </Text>
                 </group>

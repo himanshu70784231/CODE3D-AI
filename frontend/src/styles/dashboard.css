@@ -1,21 +1,21 @@
-/* CODE3D-AI Dashboard Styles */
+/* CODE3D-AI Dashboard Styles — Editorial Learning Platform */
 
 .dashboard-container {
-  background-color: var(--bg-main, #08111f);
-  color: var(--text-main, #f8fafc);
+  background-color: var(--bg-main);
+  color: var(--text-main);
 }
 
 .ide-card {
-  background-color: var(--bg-panel, #101c2d);
-  border: 1px solid var(--border-color, #26364a);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
 }
 
 .ide-card:hover {
-  border-color: #3b82f6;
-  box-shadow: 0 4px 16px rgba(13, 23, 38, 0.6);
-  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-card);
+  transform: translateY(-1px);
 }
 
 .metric-pill {

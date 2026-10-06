@@ -17,16 +17,16 @@ export default function ProtectedRoute({ children }) {
     return (
       <div
         className={`min-h-screen w-full flex flex-col items-center justify-center p-4 transition-colors ${
-          isBright ? 'bg-slate-100 text-slate-900' : 'bg-[#070b14] text-slate-100'
+          isBright ? 'bg-[#f7f6f3] text-stone-900' : 'bg-[#0e1013] text-stone-100'
         }`}
       >
         <div className="relative flex items-center justify-center mb-4">
-          <div className="w-12 h-12 rounded-2xl border-2 border-cyan-500/20 border-t-cyan-400 animate-spin" />
-          <div className="absolute w-7 h-7 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-slate-950 font-black text-[11px] shadow-lg shadow-cyan-500/30">
+          <div className="w-12 h-12 rounded-xl border-2 border-amber-500/20 border-t-amber-500 animate-spin" />
+          <div className="absolute w-7 h-7 rounded-lg bg-amber-500 flex items-center justify-center text-stone-950 font-mono font-bold text-xs shadow-sm">
             3D
           </div>
         </div>
-        <p className="text-xs font-mono text-cyan-400 font-semibold tracking-wider animate-pulse">
+        <p className="text-xs font-mono text-amber-500 font-medium tracking-wider animate-pulse">
           VERIFYING SESSION...
         </p>
       </div>

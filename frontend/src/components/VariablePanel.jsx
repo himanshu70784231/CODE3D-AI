@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Cpu, ChevronRight, ChevronDown } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext.jsx';
 
 function inferType(val) {
   if (val === null) return 'null';
@@ -25,22 +26,18 @@ function formatValue(val) {
   return String(val);
 }
 
-/**
- * CODE3D-AI - VariablePanel Component
- * Displays Name | Value | Type | Previous in a clean developer inspector table.
- * Highlights variables on change with a brief transition and shows previous values.
- */
 export function VariablePanel({
   variables = {},
   scope = 'main',
   changedVariable = null,
   previousValue = null,
+  onSelectVariable = null,
 }) {
+  const { isBright } = useTheme();
   const [expandedArrays, setExpandedArrays] = useState({});
   const prevVarsRef = useRef({});
   const [historyValues, setHistoryValues] = useState({});
 
-  // Track previous value history per variable
   useEffect(() => {
     if (variables && typeof variables === 'object') {
       setHistoryValues((prevHistory) => {
@@ -63,34 +60,42 @@ export function VariablePanel({
   const entries = Object.entries(variables || {});
 
   return (
-    <div className="flex flex-col h-full bg-[#101c2d] select-none text-xs">
+    <div className={`flex flex-col h-full select-none text-xs transition-colors duration-200 ${
+      isBright ? 'bg-[#fcfbf9] text-stone-800' : 'bg-[#13161b] text-stone-100'
+    }`}>
       {/* Table Header */}
-      <div className="px-3 py-2 bg-[#142338] border-b border-[#26364a] flex items-center justify-between text-xs font-semibold text-[#f8fafc]">
-        <div className="flex items-center gap-1.5 text-[#3b82f6]">
+      <div className={`px-3 py-2 border-b flex items-center justify-between text-xs font-semibold transition-colors ${
+        isBright ? 'bg-[#f7f6f3] border-[#e2dfd8] text-stone-800' : 'bg-[#181c23] border-[#252932] text-stone-100'
+      }`}>
+        <div className="flex items-center gap-1.5 text-amber-500">
           <Cpu size={13} />
-          <span>Variables</span>
+          <span className="font-bold">Variables &amp; Registers</span>
         </div>
-        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#0d1726] text-[#94a3b8] border border-[#26364a]">
+        <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+          isBright ? 'bg-white text-stone-600 border-[#e2dfd8]' : 'bg-[#0e1013] text-stone-400 border-[#252932]'
+        }`}>
           scope: {scope}
         </span>
       </div>
 
       {entries.length === 0 ? (
-        <div className="p-4 text-center text-[#64748b] font-mono italic">
+        <div className="p-4 text-center font-mono italic text-stone-500">
           No variables initialized in this step.
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto flex-1">
           <table className="w-full text-left font-mono text-[11px]">
             <thead>
-              <tr className="border-b border-[#26364a] text-[#94a3b8] bg-[#0d1726]/60 text-[10px] uppercase tracking-wider">
+              <tr className={`border-b text-[10px] uppercase tracking-wider ${
+                isBright ? 'bg-stone-50 text-stone-500 border-[#e2dfd8]' : 'bg-[#0e1013]/60 text-stone-400 border-[#252932]'
+              }`}>
                 <th className="py-1.5 px-3 font-semibold">Name</th>
                 <th className="py-1.5 px-3 font-semibold">Value</th>
                 <th className="py-1.5 px-3 font-semibold">Type</th>
                 <th className="py-1.5 px-3 font-semibold">Previous</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1e2c3d]">
+            <tbody className={`divide-y ${isBright ? 'divide-stone-100' : 'divide-[#252932]/50'}`}>
               {entries.map(([name, val]) => {
                 const isChanged = changedVariable === name;
                 const isArray = Array.isArray(val);
@@ -106,26 +111,35 @@ export function VariablePanel({
                 return (
                   <React.Fragment key={name}>
                     <tr
-                      className={`transition-colors duration-200 ${
+                      onClick={() => onSelectVariable && onSelectVariable(name, val)}
+                      className={`transition-colors duration-200 cursor-pointer ${
                         isChanged
-                          ? 'bg-[#f59e0b]/15 text-[#fbbf24]'
-                          : 'hover:bg-[#142338]/50 text-[#f8fafc]'
+                          ? isBright
+                            ? 'bg-amber-100/70 text-amber-950 font-semibold'
+                            : 'bg-amber-500/15 text-amber-300 font-semibold'
+                          : isBright
+                            ? 'hover:bg-stone-50 text-stone-800'
+                            : 'hover:bg-[#181c23]/60 text-stone-100'
                       }`}
+                      title="Click to highlight in 3D scene"
                     >
                       {/* Name */}
                       <td className="py-1.5 px-3 font-semibold whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           {isArray ? (
                             <button
-                              onClick={() => toggleArray(name)}
-                              className="text-[#94a3b8] hover:text-[#f8fafc] cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleArray(name);
+                              }}
+                              className="cursor-pointer text-stone-400 hover:text-stone-700"
                             >
                               {isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
                             </button>
                           ) : (
                             <span className="w-2.5" />
                           )}
-                          <span className={isChanged ? 'text-[#f59e0b]' : 'text-[#38bdf8]'}>
+                          <span className={isChanged ? 'text-amber-500' : ''}>
                             {name}
                           </span>
                         </div>
@@ -133,31 +147,33 @@ export function VariablePanel({
 
                       {/* Value */}
                       <td className="py-1.5 px-3 font-bold whitespace-nowrap">
-                        <span className={isChanged ? 'text-[#facc15]' : 'text-[#f8fafc]'}>
+                        <span className={isChanged ? 'text-amber-400' : ''}>
                           {valStr}
                         </span>
                       </td>
 
                       {/* Type */}
-                      <td className="py-1.5 px-3 text-[#94a3b8] whitespace-nowrap">
+                      <td className="py-1.5 px-3 whitespace-nowrap text-stone-500">
                         {typeStr}
                       </td>
 
                       {/* Previous Value */}
-                      <td className="py-1.5 px-3 text-[#64748b] whitespace-nowrap">
+                      <td className="py-1.5 px-3 whitespace-nowrap text-stone-400">
                         {prevVal}
                       </td>
                     </tr>
 
                     {/* Expanded Array Elements */}
                     {isArray && isExpanded && (
-                      <tr className="bg-[#0d1726]/40">
+                      <tr className={isBright ? 'bg-stone-50/70' : 'bg-[#0e1013]/40'}>
                         <td colSpan={4} className="py-1 px-6">
-                          <div className="space-y-0.5 text-[10px] text-[#94a3b8] border-l-2 border-[#3b82f6]/40 pl-2">
+                          <div className="space-y-0.5 text-[10px] border-l-2 border-amber-500/50 pl-2 text-stone-500">
                             {val.map((item, idx) => (
                               <div key={idx} className="flex items-center gap-2">
-                                <span className="text-[#64748b]">[{idx}]:</span>
-                                <span className="text-[#f8fafc] font-medium">{String(item)}</span>
+                                <span className="text-stone-400">[{idx}]:</span>
+                                <span className={`font-medium ${isBright ? 'text-stone-900' : 'text-stone-100'}`}>
+                                  {String(item)}
+                                </span>
                               </div>
                             ))}
                           </div>

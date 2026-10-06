@@ -27,10 +27,33 @@ public class AiExplanationService {
         }
 
         if (question != null && !question.isBlank()) {
+            String qLower = question.toLowerCase();
+            if (qLower.contains("complex") || qLower.contains("time") || qLower.contains("space") || qLower.contains("big-o")) {
+                boolean hasLoop = request.getCode() != null && (request.getCode().contains("for") || request.getCode().contains("while"));
+                String timeComp = hasLoop ? "O(n)" : "O(1)";
+                return new ExplainResponse(
+                        "Complexity Analysis for " + lang + ": Time Complexity is " + timeComp + " and Auxiliary Space is O(1). The algorithm operates with linear scan mechanics over sequential memory addresses without dynamic re-allocation.",
+                        "Notice that scalar loop counters require only 32 bits of stack space, giving constant O(1) space footprint.",
+                        "Time: " + timeComp + " | Space: O(1) | Invariant: Monotonic index increments safeguard bounded termination."
+                );
+            } else if (qLower.contains("edge") || qLower.contains("boundary") || qLower.contains("empty") || qLower.contains("null")) {
+                return new ExplainResponse(
+                        "Critical Edge Cases (" + lang + "): 1) Empty/Null array input, 2) Single element array (length == 1), 3) All-negative values, 4) Integer arithmetic overflow on 32-bit bounds.",
+                        "Always implement defensive bounds verification: `if (nums == null || nums.length == 0) return 0;`.",
+                        "Edge case guards prevent ArrayIndexOutOfBoundsException and NullPointerException."
+                );
+            } else if (qLower.contains("3d") || qLower.contains("visual") || qLower.contains("scene")) {
+                return new ExplainResponse(
+                        "3D Spatial Mapping: In CODE3D-AI, memory elements appear as elevated 3D geometric cylinders. Pointers (i, j, mid) orbit as illuminated metallic rings, and comparisons trigger pulsed laser beams across memory cells.",
+                        "Click 'Launch in 3D' to observe live memory transitions in the WebGL canvas.",
+                        "Physical 3D representation cements mental models of data structure layouts."
+                );
+            }
+
             return new ExplainResponse(
-                    "AI Tutor Explanation for: \"" + question + "\": In " + lang + ", variables and operations execute sequentially. Step " + (request.getStepNumber() != null ? request.getStepNumber() : line) + " handles state transitions.",
+                    "AI Tutor Pedagogical Response for \"" + question + "\": In " + lang + ", variables and operations execute in deterministic sequence. At step " + (request.getStepNumber() != null ? request.getStepNumber() : line) + ", state registers mutate in stack memory and evaluate conditional invariants before branching.",
                     "Try visualizing how the variable states change in the 3D scene after each operation.",
-                    "Trace individual variables to master algorithm flow."
+                    "Trace individual variables to master algorithm invariants and branch logic."
             );
         }
 

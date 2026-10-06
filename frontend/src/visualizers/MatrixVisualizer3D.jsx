@@ -134,9 +134,9 @@ export default function MatrixVisualizer3D({ dataStructureState }) {
         <group position={[activePosX, 1.3, activePosZ]}>
           <mesh>
             <cylinderGeometry args={[0.045, 0.045, 2.6, 16]} />
-            <meshBasicMaterial color="#38bdf8" transparent opacity={0.75} />
+            <meshBasicMaterial color="#f59e0b" transparent opacity={0.75} />
           </mesh>
-          <pointLight color="#38bdf8" intensity={1.8} distance={4.5} />
+          <pointLight color="#f59e0b" intensity={1.8} distance={4.5} />
 
           <Float speed={4} floatIntensity={0.25}>
             <group position={[0, 1.5, 0]}>
@@ -216,7 +216,7 @@ export default function MatrixVisualizer3D({ dataStructureState }) {
                   <boxGeometry args={[1.4, blockHeight, 1.4]} />
                   <meshStandardMaterial
                     color={isHovered ? '#0284c7' : tileColor}
-                    emissive={isHovered ? '#38bdf8' : emissiveColor}
+                    emissive={isHovered ? '#f59e0b' : emissiveColor}
                     emissiveIntensity={isHovered ? 1.8 : emissiveIntensity}
                     metalness={0.5}
                     roughness={0.25}
@@ -229,7 +229,7 @@ export default function MatrixVisualizer3D({ dataStructureState }) {
                   <lineBasicMaterial
                     color={
                       isHovered
-                        ? '#38bdf8'
+                        ? '#f59e0b'
                         : isConflict
                         ? '#ef4444'
                         : isActive
@@ -253,9 +253,9 @@ export default function MatrixVisualizer3D({ dataStructureState }) {
                       </mesh>
                       <lineSegments position={[0, 0, -0.01]}>
                         <edgesGeometry args={[new THREE.BoxGeometry(2.72, 1.07, 0.01)]} />
-                        <lineBasicMaterial color="#38bdf8" />
+                        <lineBasicMaterial color="#f59e0b" />
                       </lineSegments>
-                      <Text position={[0, 0.32, 0.05]} fontSize={0.21} color="#38bdf8" fontWeight="bold">
+                      <Text position={[0, 0.32, 0.05]} fontSize={0.21} color="#f59e0b" fontWeight="bold">
                         {`Grid [${r}, ${c}] = ${val}`}
                       </Text>
                       <Text position={[0, 0.04, 0.05]} fontSize={0.14} color="#94a3b8">
@@ -308,7 +308,7 @@ export default function MatrixVisualizer3D({ dataStructureState }) {
                   position={[0, 0.02, 0.85]}
                   rotation={[-Math.PI / 3, 0, 0]}
                   fontSize={0.2}
-                  color={isActive ? '#38bdf8' : '#64748b'}
+                  color={isActive ? '#f59e0b' : '#64748b'}
                 >
                   {`[${r}][${c}]`}
                 </Text>

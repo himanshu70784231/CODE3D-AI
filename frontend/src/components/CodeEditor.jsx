@@ -82,41 +82,49 @@ export default function CodeEditor({
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // Dark Theme definition - Deep obsidian palette harmonized with 3D canvas
+    // Dark Theme definition - Warm obsidian & amber technical palette
     monaco.editor.defineTheme('code3dDark', {
       base: 'vs-dark',
       inherit: true,
       rules: [
-        { token: 'keyword', foreground: '00f2fe', fontStyle: 'bold' },
-        { token: 'type', foreground: '38bdf8' },
-        { token: 'string', foreground: '34d399' },
-        { token: 'number', foreground: 'fbbf24' },
-        { token: 'comment', foreground: '64748b', fontStyle: 'italic' },
+        { token: 'keyword', foreground: 'f59e0b', fontStyle: 'bold' },
+        { token: 'type', foreground: 'e4e4e7' },
+        { token: 'string', foreground: '10b981' },
+        { token: 'number', foreground: 'fb923c' },
+        { token: 'comment', foreground: '6b7280', fontStyle: 'italic' },
+        { token: 'delimiter', foreground: '9ca3af' },
+        { token: 'identifier', foreground: 'f3f4f6' },
       ],
       colors: {
-        'editor.background': '#070b14',
-        'editor.lineHighlightBackground': '#1e293b44',
-        'editorLineNumber.foreground': '#475569',
-        'editorLineNumber.activeForeground': '#00f2fe',
+        'editor.background': '#13161b',
+        'editor.lineHighlightBackground': '#1a1e2455',
+        'editorLineNumber.foreground': '#4b5563',
+        'editorLineNumber.activeForeground': '#f59e0b',
+        'editorCursor.foreground': '#f59e0b',
+        'editorGutter.background': '#13161b',
       },
     });
 
-    // Bright Theme definition
+    // Bright Theme definition - Warm alabaster & deep amber palette
     monaco.editor.defineTheme('code3dLight', {
       base: 'vs',
       inherit: true,
       rules: [
-        { token: 'keyword', foreground: '0284c7', fontStyle: 'bold' },
-        { token: 'type', foreground: '0369a1' },
+        { token: 'keyword', foreground: 'b45309', fontStyle: 'bold' },
+        { token: 'type', foreground: '27272a' },
         { token: 'string', foreground: '059669' },
-        { token: 'number', foreground: 'd97706' },
-        { token: 'comment', foreground: '94a3b8', fontStyle: 'italic' },
+        { token: 'number', foreground: 'c2410c' },
+        { token: 'comment', foreground: '78716c', fontStyle: 'italic' },
+        { token: 'delimiter', foreground: '52525b' },
+        { token: 'identifier', foreground: '18181b' },
       ],
       colors: {
         'editor.background': '#ffffff',
-        'editor.lineHighlightBackground': '#f1f5f9',
-        'editorLineNumber.foreground': '#94a3b8',
-        'editorLineNumber.activeForeground': '#0284c7',
+        'editor.lineHighlightBackground': '#f7f6f3',
+        'editorLineNumber.foreground': '#a8a29e',
+        'editorLineNumber.activeForeground': '#d97706',
+        'editorCursor.foreground': '#d97706',
+        'editorGutter.background': '#ffffff',
       },
     });
 
@@ -328,24 +336,24 @@ export default function CodeEditor({
               onClick={onOpenCustomCode}
               className={`h-7 flex items-center gap-1 text-xs px-2 rounded-md border transition font-semibold shadow-xs cursor-pointer shrink-0 ${
                 isBright
-                  ? 'bg-cyan-100 text-cyan-800 border-cyan-300 hover:bg-cyan-200'
-                  : 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border-cyan-500/30 shadow-cyan-950'
+                  ? 'bg-stone-100 text-stone-800 border-stone-300 hover:bg-stone-200'
+                  : 'bg-stone-800 hover:bg-stone-700 text-stone-200 border-stone-700'
               }`}
               title="Input Any Code in JS, C, C++, Python, or Java to visualize in 3D"
             >
-              <Code2 size={12} className={`shrink-0 ${isBright ? 'text-cyan-700' : 'text-cyan-400'}`} />
+              <Code2 size={12} className="shrink-0 text-amber-500" />
               <span className="hidden xl:inline">Input ⚡</span>
             </button>
           )}
 
           {currentLineNumber && (
-            <div className={`h-7 flex items-center gap-1 text-xs font-mono px-1.5 rounded-md border shrink-0 ${
+            <div className={`h-7 flex items-center gap-1 text-xs font-mono px-2 rounded-md border shrink-0 ${
               isBright
-                ? 'text-cyan-700 bg-cyan-50 border-cyan-300'
-                : 'text-cyan-400 bg-cyan-950/60 border-cyan-800/50'
+                ? 'text-amber-800 bg-amber-50 border-amber-300'
+                : 'text-amber-400 bg-amber-950/40 border-amber-700/50'
             }`}>
-              <span className={`w-1.5 h-1.5 rounded-full animate-ping shrink-0 ${isBright ? 'bg-cyan-600' : 'bg-cyan-400'}`}></span>
-              <span className="whitespace-nowrap">L{currentLineNumber}</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
+              <span className="whitespace-nowrap font-bold">Line {currentLineNumber}</span>
             </div>
           )}
         </div>
@@ -391,14 +399,12 @@ export default function CodeEditor({
               else if (onPlay) onPlay();
             }}
             disabled={isExecuting}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-semibold transition shadow-sm cursor-pointer shrink-0 ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition shadow-xs cursor-pointer shrink-0 ${
               isExecuting
-                ? 'opacity-70 cursor-not-allowed bg-cyan-700 text-cyan-200'
+                ? 'opacity-70 cursor-not-allowed bg-stone-700 text-stone-300'
                 : isCodeDirty
-                  ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-bold ring-2 ring-cyan-400 shadow-lg shadow-cyan-500/40 animate-pulse'
-                  : isBright
-                    ? 'bg-cyan-600 text-white hover:bg-cyan-500 shadow-cyan-600/20'
-                    : 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-cyan-500/20'
+                  ? 'bg-amber-500 hover:bg-amber-400 text-stone-950 ring-2 ring-amber-400/50 shadow-md shadow-amber-500/20'
+                  : 'bg-amber-500 hover:bg-amber-400 text-stone-950 shadow-xs'
             }`}
             title={isExecuting ? "Executing code..." : "Run Code (Ctrl+Enter)"}
           >
@@ -497,12 +503,12 @@ export default function CodeEditor({
           <button
             onClick={onNext}
             disabled={isAtEnd}
-            className={`flex items-center gap-0.5 px-2 py-1.5 rounded text-xs font-medium transition border shrink-0 ${
+            className={`flex items-center gap-0.5 px-2 py-1.5 rounded-md text-xs font-medium transition border shrink-0 ${
               isAtEnd
-                ? 'opacity-40 cursor-not-allowed border-slate-300 dark:border-slate-800 text-slate-400 dark:text-slate-500'
+                ? 'opacity-40 cursor-not-allowed border-stone-300 dark:border-stone-800 text-stone-400 dark:text-stone-500'
                 : isBright
-                  ? 'border-cyan-400 bg-cyan-50 text-cyan-800 hover:bg-cyan-100 cursor-pointer'
-                  : 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300 hover:bg-cyan-900/60 cursor-pointer'
+                  ? 'border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 cursor-pointer font-semibold'
+                  : 'border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 cursor-pointer font-semibold'
             }`}
             title="Next Execution Step"
           >

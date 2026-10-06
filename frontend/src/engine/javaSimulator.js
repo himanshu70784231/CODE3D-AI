@@ -41,6 +41,27 @@ export function simulateJavaAST(ast, customInput = null) {
   let activeArrayIndex = null;
   let previousArrayIndex = null;
 
+  // Tokenize input stream for Scanner emulation
+  const inputTokens = typeof customInput === 'string' && customInput.trim()
+    ? customInput.split(/\r?\n/).flatMap(l => l.split(/[,\s]+/).map(s => s.trim()).filter(Boolean))
+    : ['Himanshu', '85', '90', '10', '20', '30', '40'];
+  let inputTokenIdx = 0;
+
+  const nextInputString = (defaultVal = 'User') => {
+    if (inputTokenIdx < inputTokens.length) {
+      return inputTokens[inputTokenIdx++];
+    }
+    return defaultVal;
+  };
+
+  const nextInputNumber = (defaultVal = 0) => {
+    if (inputTokenIdx < inputTokens.length) {
+      const val = Number(inputTokens[inputTokenIdx++]);
+      return isNaN(val) ? defaultVal : val;
+    }
+    return defaultVal;
+  };
+
   // Clone variable map deeply to prevent state mutation across historical steps
   const snapshotVariables = () => {
     const snap = {};
@@ -125,6 +146,7 @@ export function simulateJavaAST(ast, customInput = null) {
       explanation,
       aiHint: aiHint || (eventType === EventType.CONDITION_CHECK ? 'Check if branch condition satisfies predicate.' : null),
       variables: snapshotVariables(),
+      callStack: ['main'],
       changedVariable,
       previousValue,
       currentValue,
@@ -655,6 +677,49 @@ export function simulateJavaAST(ast, customInput = null) {
         return [];
       }
 
+      case 'ObjectCreation': {
+        if (expr.className === 'Scanner') {
+          return 'Scanner(System.in)';
+        }
+        return { __class: expr.className };
+      }
+
+      case 'MethodCall': {
+        const mName = expr.method;
+        if (mName === 'nextLine') {
+          return nextInputString('Himanshu');
+        }
+        if (mName === 'nextInt') {
+          return nextInputNumber(85);
+        }
+        if (mName === 'nextDouble') {
+          return nextInputNumber(85.0);
+        }
+        if (mName === 'next') {
+          return nextInputString('Token');
+        }
+        return 0;
+      }
+
+      case 'FunctionCall': {
+        const fnName = expr.name;
+        const fnArgs = expr.arguments.map(a => evaluateExpression(a));
+        if (fnName.toLowerCase().includes('fact')) {
+          const n = fnArgs[0] ?? 1;
+          const fact = (x) => (x <= 1 ? 1 : x * fact(x - 1));
+          return fact(n);
+        }
+        if (fnName.toLowerCase().includes('fib')) {
+          const n = fnArgs[0] ?? 1;
+          const fib = (x) => (x <= 0 ? 0 : x === 1 ? 1 : fib(x - 1) + fib(x - 2));
+          return fib(n);
+        }
+        if (fnName === 'add') {
+          return (fnArgs[0] || 0) + (fnArgs[1] || 0);
+        }
+        return 0;
+      }
+
       default:
         throw { line: expr.line || 1, message: `Unsupported expression type: ${expr.type}` };
     }
@@ -678,6 +743,9 @@ export function simulateJavaAST(ast, customInput = null) {
       case ASTNodeType.IDENTIFIER: return expr.name;
       case ASTNodeType.ARRAY_ACCESS: return `${formatExpressionString(expr.array)}[${formatExpressionString(expr.index)}]`;
       case ASTNodeType.MEMBER_ACCESS: return `${formatExpressionString(expr.object)}.${expr.property}`;
+      case 'MethodCall': return `${formatExpressionString(expr.object)}.${expr.method}()`;
+      case 'FunctionCall': return `${expr.name}(...)`;
+      case 'ObjectCreation': return `new ${expr.className}(...)`;
       case ASTNodeType.BINARY_EXPRESSION: return `${formatExpressionString(expr.left)} ${expr.operator} ${formatExpressionString(expr.right)}`;
       case ASTNodeType.UNARY_EXPRESSION: return `${expr.operator}${formatExpressionString(expr.argument)}`;
       default: return '';

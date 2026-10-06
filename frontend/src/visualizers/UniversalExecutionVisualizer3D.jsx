@@ -6,7 +6,7 @@ import * as THREE from 'three';
 /**
  * Pulsing Halo Ring for the currently active variable in execution
  */
-function ActiveVariableHalo({ color = '#00f2fe' }) {
+function ActiveVariableHalo({ color = '#f59e0b' }) {
   const haloRef = useRef();
 
   useFrame((_, delta) => {
@@ -53,7 +53,7 @@ function AluReactor3D({ calculationInfo }) {
       <mesh ref={coreRef}>
         <octahedronGeometry args={[0.55, 0]} />
         <meshStandardMaterial
-          color="#38bdf8"
+          color="#f59e0b"
           emissive="#0284c7"
           emissiveIntensity={1.8}
           wireframe
@@ -70,13 +70,13 @@ function AluReactor3D({ calculationInfo }) {
           </mesh>
           <mesh position={[0, 0, -0.04]}>
             <planeGeometry args={[4.44, 0.89]} />
-            <meshBasicMaterial color="#38bdf8" transparent opacity={0.3} wireframe />
+            <meshBasicMaterial color="#f59e0b" transparent opacity={0.3} wireframe />
           </mesh>
 
           <Text
             position={[0, 0.16, 0]}
             fontSize={0.22}
-            color="#38bdf8"
+            color="#f59e0b"
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
@@ -184,13 +184,13 @@ function HologramTerminalBoard({ outputStream = [] }) {
       </mesh>
       <mesh position={[0, 0, -0.04]}>
         <planeGeometry args={[6.64, 1.44]} />
-        <meshBasicMaterial color="#06b6d4" transparent opacity={0.2} wireframe />
+        <meshBasicMaterial color="#f59e0b" transparent opacity={0.2} wireframe />
       </mesh>
 
       <Text
         position={[-3.1, 0.5, 0]}
         fontSize={0.16}
-        color="#38bdf8"
+        color="#f59e0b"
         anchorX="left"
         anchorY="middle"
         fontWeight="bold"
@@ -293,11 +293,11 @@ export default function UniversalExecutionVisualizer3D({ dataStructureState }) {
         }
 
         // Color coding
-        let baseColor = '#0284c7';
-        let emissiveColor = '#0369a1';
+        let baseColor = '#d97706';
+        let emissiveColor = '#b45309';
         if (isActive) {
-          baseColor = '#06b6d4';
-          emissiveColor = '#0891b2';
+          baseColor = '#f59e0b';
+          emissiveColor = '#d97706';
         } else if (name.toLowerCase().includes('total') || name.toLowerCase().includes('percentage')) {
           baseColor = '#f59e0b';
           emissiveColor = '#d97706';
@@ -311,14 +311,14 @@ export default function UniversalExecutionVisualizer3D({ dataStructureState }) {
         return (
           <group key={name} position={[posX, 0, posZ]}>
             {/* Active Glow Ring */}
-            {isActive && <ActiveVariableHalo color="#00f2fe" />}
+            {isActive && <ActiveVariableHalo color="#f59e0b" />}
 
             {/* Base Pedestal Cyber Block */}
             <mesh position={[0, 0.05, 0]}>
               <cylinderGeometry args={[0.75, 0.85, 0.18, 24]} />
               <meshStandardMaterial
-                color={isActive ? '#0e7490' : '#1e293b'}
-                emissive={isActive ? '#06b6d4' : '#0f172a'}
+                color={isActive ? '#78350f' : '#1e293b'}
+                emissive={isActive ? '#f59e0b' : '#0f172a'}
                 emissiveIntensity={isActive ? 0.8 : 0.2}
                 metalness={0.8}
                 roughness={0.2}
@@ -356,7 +356,7 @@ export default function UniversalExecutionVisualizer3D({ dataStructureState }) {
             {isNumeric && (
               <mesh position={[0, barHeight + 0.14, 0]}>
                 <cylinderGeometry args={[0.385, 0.385, 0.04, 20]} />
-                <meshBasicMaterial color={isActive ? '#a5f3fc' : '#38bdf8'} />
+                <meshBasicMaterial color={isActive ? '#a5f3fc' : '#f59e0b'} />
               </mesh>
             )}
 
@@ -382,7 +382,7 @@ export default function UniversalExecutionVisualizer3D({ dataStructureState }) {
                 <Text
                   position={[0, 0.18, 0]}
                   fontSize={0.16}
-                  color={isActive ? '#38bdf8' : '#e2e8f0'}
+                  color={isActive ? '#f59e0b' : '#e2e8f0'}
                   anchorX="center"
                   anchorY="middle"
                   fontWeight="bold"

@@ -3,6 +3,7 @@
  */
 
 import { solvePersonalProblem, correctPersonalCode } from './personalProblemSolver';
+import { analyzeAlgorithmCode, generateIntelligentAiTutorAnswer } from './algorithmicTutorEngine';
 
 const LIVE_RENDER_URL = 'https://code3d-ai.onrender.com/api';
 const LOCAL_URL_8080 = 'http://localhost:8080/api';
@@ -219,12 +220,12 @@ export async function analyzeCode(code, language = 'java') {
 // Backward compatible alias
 export const analyzeJavaCode = analyzeCode;
 
-export async function requestAiExplanation(code, lineNumber, stepNumber, queryType, level, language = 'java') {
+export async function requestAiExplanation(code, lineNumber, stepNumber, queryType, level, language = 'java', question = null) {
   try {
     const res = await smartFetch('/explain', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, lineNumber, stepNumber, queryType, level, language }),
+      body: JSON.stringify({ code, lineNumber, stepNumber, queryType, level, language, question }),
     });
     if (!res.ok) throw new Error('AI explanation request failed');
     return await res.json();
@@ -536,48 +537,61 @@ export const solveAndVisualizePersonalProblem = correctAndVisualizeCode;
 
 export async function getAiExplanation({ code, language = 'java', question = '' }) {
   try {
-    const analysis = await analyzeCode(code, language);
-    if (analysis) {
-      return {
-        success: true,
-        title: analysis.title || 'Code Analysis',
-        timeComplexity: analysis.timeComplexity || 'O(n)',
-        spaceComplexity: analysis.spaceComplexity || 'O(1)',
-        explanation: analysis.explanation || analysis.summary || 'Code analyzed successfully.',
-        insights: analysis.insights || [
-          'Linear single-pass traversal ensures predictable performance.',
-          'Scalar memory variables provide O(1) auxiliary space footprint.'
-        ],
-        edgeCases: analysis.edgeCases || [
-          'Check for empty array or zero bounds.',
-          'Verify integer bounds during additions.'
-        ]
-      };
+    const res = await smartFetch('/ai/explain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, language, question }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success && data.explanation) {
+        const localMeta = analyzeAlgorithmCode(code, language);
+        return {
+          success: true,
+          title: data.title || localMeta.title,
+          timeComplexity: data.timeComplexity || localMeta.timeComplexity,
+          spaceComplexity: data.spaceComplexity || localMeta.spaceComplexity,
+          explanation: data.explanation || localMeta.summary,
+          insights: data.insights || localMeta.insights,
+          edgeCases: data.edgeCases || localMeta.edgeCases,
+        };
+      }
     }
   } catch (err) {
-    console.warn('AI analysis fallback:', err);
+    console.warn('Backend AI explanation unavailable, using local AST analyzer:', err);
   }
+
+  // Resilient Local AST / Algorithmic Intelligence
+  const localAnalysis = analyzeAlgorithmCode(code, language);
   return {
     success: true,
-    title: 'Code Complexity Analysis',
-    timeComplexity: 'O(n)',
-    spaceComplexity: 'O(1)',
-    explanation: 'Code decomposed with client-side AST inspection.',
-    insights: ['Verified linear time iteration', 'Scalar variable allocation'],
-    edgeCases: ['Check array bounds', 'Handle edge inputs']
+    title: localAnalysis.title,
+    timeComplexity: localAnalysis.timeComplexity,
+    spaceComplexity: localAnalysis.spaceComplexity,
+    explanation: localAnalysis.summary,
+    insights: localAnalysis.insights,
+    edgeCases: localAnalysis.edgeCases,
   };
 }
 
 export async function askAiFollowUp(prompt, code, language = 'java') {
   try {
-    const res = await requestAiExplanation(code, 1, 1, 'WHY', 'CONCEPTUAL', language);
-    if (res && res.explanation) {
-      return { answer: res.explanation };
+    const res = await smartFetch('/ai/explain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: prompt, prompt, code, language, queryType: 'ASK_QUESTION' }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && (data.answer || data.explanation)) {
+        return { answer: data.answer || data.explanation };
+      }
     }
   } catch (err) {
-    console.warn('AI Q&A fallback:', err);
+    console.warn('Backend AI Q&A unavailable, generating intelligent tutor answer:', err);
   }
-  return {
-    answer: `Regarding "${prompt}": In CODE3D-AI, variables and control flow are mapped directly into 3D spatial representations. The execution timeline tracks every assignment and pointer movement step-by-step.`
-  };
+
+  // Generate deep, tailored pedagogical answer (supports Hinglish & English)
+  const answer = generateIntelligentAiTutorAnswer(prompt, code, language);
+  return { answer };
 }

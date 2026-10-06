@@ -14,14 +14,10 @@ import {
   ShieldCheck,
   Eye,
   EyeOff,
-  Zap,
 } from 'lucide-react';
 
-/**
- * CODE3D-AI — Developer Registration Page
- */
 export default function RegisterPage() {
-  const { register, loginAsGuest, isAuthenticated } = useAuth();
+  const { register, isAuthenticated } = useAuth();
   const { isBright } = useTheme();
   const navigate = useNavigate();
 
@@ -98,94 +94,89 @@ export default function RegisterPage() {
       });
 
       if (res && res.success) {
-        setSuccess('Account created successfully! Launching your workspace...');
-        setTimeout(() => navigate('/dashboard', { replace: true }), 350);
+        setSuccess('Account created successfully! Launching studio...');
+        setTimeout(() => {
+          navigate('/dashboard', { replace: true });
+        }, 400);
       } else {
-        setError(res?.message || 'Registration failed. Please check your information.');
+        setError(res?.message || 'Could not complete registration. Please try another username.');
       }
     } catch (err) {
-      setError(err?.message || 'Registration failed. Please try again.');
+      setError(err?.message || 'Failed to connect to authentication service.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleQuickDemo = () => {
-    loginAsGuest('Lead Architect');
-    navigate('/dashboard', { replace: true });
-  };
-
   return (
-    <div className={`min-h-screen w-full flex flex-col justify-between p-4 sm:p-6 md:p-8 relative overflow-x-hidden select-none transition-colors duration-200 ${
-      isBright ? 'bg-slate-50 text-slate-900' : 'bg-[#070b14] text-slate-100'
+    <div className={`min-h-screen w-full flex flex-col justify-between p-4 sm:p-6 select-none transition-colors duration-200 relative overflow-hidden ${
+      isBright ? 'bg-[#f7f6f3] text-stone-900' : 'bg-[#0e1013] text-stone-100'
     }`}>
-      {/* Background Subtle Grid & Ambient Glows */}
+      {/* Subtle Background Pattern */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div
-          className="absolute inset-0 opacity-[0.18]"
+          className="absolute inset-0 opacity-[0.03]"
           style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, ${isBright ? '#94a3b8' : '#a855f7'} 1px, transparent 0)`,
-            backgroundSize: '32px 32px',
+            backgroundImage: `radial-gradient(circle at 1px 1px, ${isBright ? '#000000' : '#ffffff'} 1px, transparent 0)`,
+            backgroundSize: '24px 24px',
           }}
         />
-        <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full blur-[140px] bg-purple-500/15" />
-        <div className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full blur-[140px] bg-cyan-500/15" />
       </div>
 
       {/* Header */}
-      <header className="relative z-10 w-full max-w-6xl mx-auto flex items-center justify-between py-2">
+      <header className="relative z-10 w-full max-w-5xl mx-auto flex items-center justify-between py-2">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/25">
-            <Box className="w-5 h-5 text-white stroke-[2.5]" />
+          <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center shadow-md shadow-amber-500/20">
+            <Box className="w-4 h-4 text-stone-950 stroke-[2.5]" />
           </div>
-          <span className="font-extrabold text-lg tracking-wider font-sans">
-            CODE<span className="text-purple-400">3D</span> <span className="text-[10px] font-mono bg-purple-500/15 text-purple-400 border border-purple-500/30 rounded px-1.5 py-0.5 ml-0.5">REGISTER</span>
+          <span className="font-bold text-base tracking-tight font-sans">
+            CODE3D <span className="text-amber-500 font-mono text-xs">AI</span>
           </span>
         </div>
 
         <Link
           to="/login"
-          className="text-xs text-purple-400 hover:text-purple-300 font-semibold transition"
+          className="text-xs text-amber-500 hover:text-amber-400 font-semibold transition"
         >
           ← Back to Sign In
         </Link>
       </header>
 
       {/* Main Centered Section */}
-      <main className="relative z-10 w-full max-w-lg mx-auto my-auto py-6 sm:py-8">
-        <div className="text-center mb-6 space-y-2">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/25 text-purple-400 text-[11px] font-mono font-medium tracking-wide mb-1">
-            <Sparkles size={12} className="text-purple-400 animate-pulse" />
+      <main className="relative z-10 w-full max-w-md mx-auto my-auto py-6">
+        <div className="text-center mb-6 space-y-1.5">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500 text-[10px] font-mono font-bold tracking-wide">
+            <Sparkles size={11} className="text-amber-500" />
             <span>Developer Account Onboarding</span>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight bg-gradient-to-r from-white via-purple-100 to-indigo-300 bg-clip-text text-transparent">
-            Join the 3D Code Revolution.
+          <h1 className="text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
+            Create Developer Account
           </h1>
 
-          <p className={`text-xs sm:text-sm max-w-sm mx-auto leading-relaxed ${
-            isBright ? 'text-slate-600' : 'text-slate-400'
+          <p className={`text-xs max-w-xs mx-auto leading-relaxed ${
+            isBright ? 'text-stone-600' : 'text-stone-400'
           }`}>
-            Create your account to save algorithm simulations, track execution logs, and master DSA in 3D.
+            Save algorithm simulations, customize datasets, and master DSA in interactive 3D.
           </p>
         </div>
 
         {/* Card */}
-        <div className={`p-6 sm:p-8 rounded-2xl border backdrop-blur-xl shadow-2xl relative transition-all duration-200 ${
+        <div className={`p-6 rounded-xl border shadow-sm transition-all duration-200 ${
           isBright
-            ? 'bg-white/95 border-slate-200 shadow-slate-300/60'
-            : 'bg-[#0d1726]/90 border-slate-800 shadow-purple-950/40 ring-1 ring-purple-500/20'
+            ? 'bg-white border-[#e2dfd8]'
+            : 'bg-[#13161b] border-[#252932]'
         }`}>
           {error && (
-            <div role="alert" className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
-              <AlertCircle size={16} className="shrink-0 text-rose-400" />
+            <div role="alert" className="mb-4 p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+              <AlertCircle size={14} className="shrink-0 text-rose-400" />
               <span className="leading-snug">{error}</span>
             </div>
           )}
 
           {success && (
-            <div role="status" className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
-              <CheckCircle2 size={16} className="shrink-0 text-emerald-400" />
+            <div role="status" className="mb-4 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
+              <CheckCircle2 size={14} className="shrink-0 text-emerald-400" />
               <span className="leading-snug">{success}</span>
             </div>
           )}
@@ -193,20 +184,20 @@ export default function RegisterPage() {
           <form onSubmit={handleSubmit} className="space-y-3.5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
-                  Username <span className="text-purple-400">*</span>
+                <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-stone-700' : 'text-stone-300'}`}>
+                  Username <span className="text-amber-500">*</span>
                 </label>
                 <div className="relative">
-                  <User size={15} className={`absolute left-3 top-3 ${isBright ? 'text-slate-400' : 'text-slate-500'}`} />
+                  <User size={14} className={`absolute left-3 top-2.5 ${isBright ? 'text-stone-400' : 'text-stone-500'}`} />
                   <input
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="alex_dev"
-                    className={`w-full pl-9 pr-3 py-2 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-purple-500 transition ${
+                    className={`w-full pl-9 pr-3 py-2 rounded-lg text-xs border focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition ${
                       isBright
-                        ? 'bg-slate-50 border-slate-300 text-slate-900'
-                        : 'bg-[#070b14] border-slate-700/80 text-white placeholder-slate-500'
+                        ? 'bg-[#f7f6f3] border-[#e2dfd8] text-stone-900 placeholder-stone-400'
+                        : 'bg-[#0e1013] border-[#252932] text-stone-100 placeholder-stone-500'
                     }`}
                     required
                   />
@@ -214,7 +205,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
+                <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-stone-700' : 'text-stone-300'}`}>
                   Full Name (Optional)
                 </label>
                 <input
@@ -222,30 +213,30 @@ export default function RegisterPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Alex Mercer"
-                  className={`w-full px-3 py-2 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-purple-500 transition ${
+                  className={`w-full px-3 py-2 rounded-lg text-xs border focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition ${
                     isBright
-                      ? 'bg-slate-50 border-slate-300 text-slate-900'
-                      : 'bg-[#070b14] border-slate-700/80 text-white placeholder-slate-500'
+                      ? 'bg-[#f7f6f3] border-[#e2dfd8] text-stone-900 placeholder-stone-400'
+                      : 'bg-[#0e1013] border-[#252932] text-stone-100 placeholder-stone-500'
                   }`}
                 />
               </div>
             </div>
 
             <div>
-              <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
-                Email Address <span className="text-purple-400">*</span>
+              <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-stone-700' : 'text-stone-300'}`}>
+                Email Address <span className="text-amber-500">*</span>
               </label>
               <div className="relative">
-                <Mail size={15} className={`absolute left-3 top-3 ${isBright ? 'text-slate-400' : 'text-slate-500'}`} />
+                <Mail size={14} className={`absolute left-3 top-2.5 ${isBright ? 'text-stone-400' : 'text-stone-500'}`} />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="alex@developer.io"
-                  className={`w-full pl-9 pr-3 py-2 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-purple-500 transition ${
+                  className={`w-full pl-9 pr-3 py-2 rounded-lg text-xs border focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition ${
                     isBright
-                      ? 'bg-slate-50 border-slate-300 text-slate-900'
-                      : 'bg-[#070b14] border-slate-700/80 text-white placeholder-slate-500'
+                      ? 'bg-[#f7f6f3] border-[#e2dfd8] text-stone-900 placeholder-stone-400'
+                      : 'bg-[#0e1013] border-[#252932] text-stone-100 placeholder-stone-500'
                   }`}
                   required
                 />
@@ -253,16 +244,16 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
-                Primary Engineering Role
+              <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-stone-700' : 'text-stone-300'}`}>
+                Engineering Role
               </label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                className={`w-full px-3 py-2 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-purple-500 transition ${
+                className={`w-full px-3 py-2 rounded-lg text-xs border focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition cursor-pointer ${
                   isBright
-                    ? 'bg-slate-50 border-slate-300 text-slate-900'
-                    : 'bg-[#070b14] border-slate-700/80 text-white'
+                    ? 'bg-[#f7f6f3] border-[#e2dfd8] text-stone-900'
+                    : 'bg-[#0e1013] border-[#252932] text-stone-100'
                 }`}
               >
                 <option value="Full-Stack Engineer">Full-Stack Engineer</option>
@@ -275,27 +266,27 @@ export default function RegisterPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
-                  Password <span className="text-purple-400">*</span>
+                <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-stone-700' : 'text-stone-300'}`}>
+                  Password <span className="text-amber-500">*</span>
                 </label>
                 <div className="relative">
-                  <Lock size={15} className={`absolute left-3 top-3 ${isBright ? 'text-slate-400' : 'text-slate-500'}`} />
+                  <Lock size={14} className={`absolute left-3 top-2.5 ${isBright ? 'text-stone-400' : 'text-stone-500'}`} />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Min 6 chars"
-                    className={`w-full pl-9 pr-8 py-2 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-purple-500 transition ${
+                    className={`w-full pl-9 pr-8 py-2 rounded-lg text-xs border focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition ${
                       isBright
-                        ? 'bg-slate-50 border-slate-300 text-slate-900'
-                        : 'bg-[#070b14] border-slate-700/80 text-white placeholder-slate-500'
+                        ? 'bg-[#f7f6f3] border-[#e2dfd8] text-stone-900 placeholder-stone-400'
+                        : 'bg-[#0e1013] border-[#252932] text-stone-100 placeholder-stone-500'
                     }`}
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2.5 top-2.5 p-0.5 text-slate-400 hover:text-purple-400 transition"
+                    className="absolute right-2.5 top-2 p-1 text-stone-400 hover:text-amber-500 transition"
                   >
                     {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
@@ -303,20 +294,20 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
-                  Confirm Password <span className="text-purple-400">*</span>
+                <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-stone-700' : 'text-stone-300'}`}>
+                  Confirm Password <span className="text-amber-500">*</span>
                 </label>
                 <div className="relative">
-                  <Lock size={15} className={`absolute left-3 top-3 ${isBright ? 'text-slate-400' : 'text-slate-500'}`} />
+                  <Lock size={14} className={`absolute left-3 top-2.5 ${isBright ? 'text-stone-400' : 'text-stone-500'}`} />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Repeat password"
-                    className={`w-full pl-9 pr-3 py-2 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-purple-500 transition ${
+                    className={`w-full pl-9 pr-3 py-2 rounded-lg text-xs border focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition ${
                       isBright
-                        ? 'bg-slate-50 border-slate-300 text-slate-900'
-                        : 'bg-[#070b14] border-slate-700/80 text-white placeholder-slate-500'
+                        ? 'bg-[#f7f6f3] border-[#e2dfd8] text-stone-900 placeholder-stone-400'
+                        : 'bg-[#0e1013] border-[#252932] text-stone-100 placeholder-stone-500'
                     }`}
                     required
                   />
@@ -327,36 +318,36 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`w-full mt-3 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition duration-150 shadow-lg cursor-pointer ${
+              className={`w-full mt-3 py-2.5 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition duration-150 shadow-md cursor-pointer ${
                 isSubmitting
-                  ? 'opacity-60 cursor-not-allowed bg-slate-700 text-slate-300'
-                  : 'bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white shadow-purple-500/25 active:scale-[0.99]'
+                  ? 'opacity-60 cursor-not-allowed bg-stone-700 text-stone-300'
+                  : 'bg-amber-500 hover:bg-amber-400 text-stone-950 shadow-amber-500/20 active:translate-y-px'
               }`}
             >
               <span>{isSubmitting ? 'Creating Account...' : 'Complete Registration'}</span>
-              <ArrowRight size={15} />
+              <ArrowRight size={14} />
             </button>
           </form>
 
-          {/* Quick Demo Mode */}
-          <div className="mt-4 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs">
-            <span className={isBright ? 'text-slate-600' : 'text-slate-400'}>Already registered?</span>
-            <Link to="/login" className="font-semibold text-purple-400 hover:underline">
+          {/* Switch to Login */}
+          <div className="mt-4 pt-3 border-t border-inherit flex items-center justify-between text-xs">
+            <span className={isBright ? 'text-stone-600' : 'text-stone-400'}>Already registered?</span>
+            <Link to="/login" className="font-semibold text-amber-500 hover:underline">
               Sign In to Code3D
             </Link>
           </div>
         </div>
 
         {/* Security badge footer */}
-        <div className="mt-4 text-center flex items-center justify-center gap-2 text-[10px] font-mono text-slate-500">
-          <ShieldCheck size={12} className="text-purple-400" />
+        <div className="mt-3 text-center flex items-center justify-center gap-1.5 text-[10px] font-mono text-stone-500">
+          <ShieldCheck size={12} className="text-amber-500" />
           <span>bcrypt hashed passwords with secure token persistence</span>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 w-full max-w-6xl mx-auto py-2 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-400 border-t border-slate-800/40">
-        <span>CODE3D AI Studio • Spatial AST 3D WebGL</span>
+      <footer className="relative z-10 w-full max-w-5xl mx-auto py-2 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-stone-500 border-t border-inherit">
+        <span>Code3D AI • Spatial Execution Engine</span>
         <span className="font-mono text-[10px]">React 18 • Three.js • Vite</span>
       </footer>
     </div>

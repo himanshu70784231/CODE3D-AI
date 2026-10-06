@@ -17,11 +17,11 @@ export default function RecursionVisualizer3D({ dataStructureState }) {
       {/* Vertical Guide Beams on Left and Right */}
       <mesh position={[-2.7, Math.max(callStack.length * spacingY, 4) / 2, 0]}>
         <cylinderGeometry args={[0.04, 0.04, Math.max(callStack.length * spacingY, 4), 16]} />
-        <meshStandardMaterial color="#38bdf8" emissive="#0284c7" emissiveIntensity={0.6} />
+        <meshStandardMaterial color="#f59e0b" emissive="#0284c7" emissiveIntensity={0.6} />
       </mesh>
       <mesh position={[2.7, Math.max(callStack.length * spacingY, 4) / 2, 0]}>
         <cylinderGeometry args={[0.04, 0.04, Math.max(callStack.length * spacingY, 4), 16]} />
-        <meshStandardMaterial color="#38bdf8" emissive="#0284c7" emissiveIntensity={0.6} />
+        <meshStandardMaterial color="#f59e0b" emissive="#0284c7" emissiveIntensity={0.6} />
       </mesh>
 
       {/* Empty Stack Indicator */}
@@ -97,7 +97,7 @@ export default function RecursionVisualizer3D({ dataStructureState }) {
             <group position={[1.8, 0, 1.15]}>
               <Text
                 fontSize={0.22}
-                color={isReturn ? '#34d399' : '#38bdf8'}
+                color={isReturn ? '#34d399' : '#f59e0b'}
                 fontWeight="bold"
               >
                 {isReturn ? '✓ RETURN' : isLatest ? '▶ ACTIVE' : 'WAITING'}

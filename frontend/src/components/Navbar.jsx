@@ -1,29 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Box, ChevronDown, Sun, Moon, User, UserPlus } from 'lucide-react';
+import { Box, ChevronDown, Sun, Moon, User, UserPlus, Palette } from 'lucide-react';
 import { checkBackendHealth } from '../services/apiService';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import AccountMenu from './AccountMenu';
+import TemplateCustomizerModal from './TemplateCustomizerModal';
 
 export default function Navbar({ activeTab, setActiveTab }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [backendOnline, setBackendOnline] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [isStyleModalOpen, setIsStyleModalOpen] = useState(false);
   const accountMenuRef = useRef(null);
-  const { user, isAuthenticated, logout, openLoginModal, openRegisterModal } = useAuth();
-  const { theme, toggleTheme, isBright } = useTheme();
+  const { user, isAuthenticated, logout, loginAsGuest, openLoginModal, openRegisterModal } = useAuth();
+  const { theme, toggleTheme, isBright, currentAccent } = useTheme();
 
   const currentPath = location.pathname;
 
-  // Exact Navigation Order: Home | Visualizer | DSA Hub | AI Tutor | Quiz
   const navLinks = [
-    { id: 'home', path: '/', label: 'Home' },
-    { id: 'visualizer', path: '/visualizer', label: 'Visualizer' },
-    { id: 'dsa', path: '/dsa', label: 'DSA Hub' },
-    { id: 'ai', path: '/ai', label: 'AI Tutor' },
-    { id: 'quiz', path: '/quiz', label: 'Quiz' },
+    { id: 'home', path: '/', label: 'Home', icon: '🏠' },
+    { id: 'visualizer', path: '/visualizer', label: '3D Studio', icon: '🧊' },
+    { id: 'dsa', path: '/dsa', label: 'DSA Hub', icon: '📚' },
+    { id: 'ai', path: '/ai', label: 'AI Tutor', icon: '🤖' },
+    { id: 'quiz', path: '/quiz', label: 'Quiz', icon: '🎯' },
   ];
 
   const isNavActive = (item) => {
@@ -34,6 +35,9 @@ export default function Navbar({ activeTab, setActiveTab }) {
   };
 
   const handleNavClick = (path) => {
+    if (!isAuthenticated && path !== '/') {
+      loginAsGuest('3D Explorer');
+    }
     navigate(path);
     if (setActiveTab) {
       if (path === '/') setActiveTab('dashboard');
@@ -49,7 +53,6 @@ export default function Navbar({ activeTab, setActiveTab }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (accountMenuRef.current && !accountMenuRef.current.contains(e.target)) {
@@ -61,34 +64,43 @@ export default function Navbar({ activeTab, setActiveTab }) {
   }, []);
 
   return (
-    <header className={`h-14 backdrop-blur-md border-b px-4 flex items-center justify-between z-30 sticky top-0 select-none transition-colors duration-200 ${
+    <header className={`h-13 backdrop-blur-xl border-b px-4 flex items-center justify-between z-30 sticky top-0 select-none transition-all duration-200 ${
       isBright
-        ? 'bg-white/95 border-slate-200 shadow-xs'
-        : 'bg-[#090d16]/95 border-slate-800/80 shadow-md shadow-black/20'
+        ? 'bg-[#ffffff]/95 border-[#e2ded5] shadow-xs'
+        : 'bg-[#111317]/95 border-[#242831] shadow-md shadow-black/20'
     }`}>
       {/* Brand Logo: CODE3D-AI */}
       <div
-        className="flex items-center gap-2 cursor-pointer transition hover:opacity-90 shrink-0"
+        className="flex items-center gap-2.5 cursor-pointer transition hover:opacity-95 shrink-0 group"
         onClick={() => navigate('/')}
-        title="CODE3D-AI"
+        title="CODE3D-AI Spatial Code Studio"
       >
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-md shadow-cyan-500/20">
-          <Box className="w-5 h-5 text-slate-950 stroke-[2.5]" />
+        <div className="w-7 h-7 rounded-lg bg-amber-500 flex items-center justify-center shadow-xs text-stone-950 font-bold group-hover:scale-105 transition-transform duration-150">
+          <Box className="w-4 h-4 text-stone-950 stroke-[2.5]" />
         </div>
         <div className="flex flex-col">
-          <div className="flex items-center gap-2">
-            <span className={`font-bold text-base tracking-wider font-sans ${isBright ? 'text-slate-900' : 'text-white'}`}>
-              CODE<span className="text-cyan-500 dark:text-cyan-400">3D</span> <span className="text-xs bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 rounded px-1.5 py-0.2 font-mono">AI</span>
+          <div className="flex items-center gap-1.5">
+            <span className={`font-black text-sm tracking-wider ${isBright ? 'text-stone-900' : 'text-stone-100'}`}>
+              CODE<span className="text-amber-500">3D</span>
             </span>
+            <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${
+              isBright
+                ? 'bg-stone-100 text-stone-700 border-stone-300'
+                : 'bg-stone-800 text-amber-400 border-stone-700'
+            }`}>
+              AI
+            </span>
+            {backendOnline && (
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Backend Service Connected" />
+            )}
           </div>
-          <span className={`text-[10px] hidden lg:inline tracking-tight -mt-0.5 ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>
-            Interactive 3D Code & Algorithm Execution
-          </span>
         </div>
       </div>
 
-      {/* Navigation: Home | Visualizer | DSA Hub | AI Tutor | Quiz */}
-      <nav className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto scrollbar-none py-1">
+      {/* Navigation: Home | 3D Studio | DSA Hub | AI Tutor | Quiz */}
+      <nav className={`flex items-center gap-1 p-0.5 rounded-lg border transition-colors ${
+        isBright ? 'bg-[#f4f2ec] border-[#e2ded5]' : 'bg-[#16191f] border-[#242831]'
+      }`}>
         {navLinks.map((item) => {
           const isActive = isNavActive(item);
 
@@ -96,16 +108,21 @@ export default function Navbar({ activeTab, setActiveTab }) {
             <button
               key={item.id}
               onClick={() => handleNavClick(item.path)}
-              className={`h-8 flex items-center justify-center px-3 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
+              className={`h-7.5 flex items-center gap-1.5 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
                 isActive
                   ? isBright
-                    ? 'bg-cyan-50 text-cyan-700 border border-cyan-300 shadow-xs font-bold'
-                    : 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/40 shadow-xs shadow-cyan-900/40 font-bold'
+                    ? 'bg-white text-stone-900 font-bold border shadow-xs'
+                    : 'bg-slate-800 text-white font-bold border shadow-xs'
                   : isBright
-                    ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                    ? 'text-stone-600 hover:text-stone-950 hover:bg-stone-200/60'
+                    : 'text-stone-400 hover:text-stone-200 hover:bg-stone-800/50'
               }`}
+              style={{
+                borderColor: isActive ? (isBright ? currentAccent.bright : currentAccent.dark) : undefined,
+                boxShadow: isActive ? `0 2px 10px ${currentAccent.glow}` : undefined,
+              }}
             >
+              <span className="text-xs">{item.icon}</span>
               <span>{item.label}</span>
             </button>
           );
@@ -114,39 +131,56 @@ export default function Navbar({ activeTab, setActiveTab }) {
 
       {/* Right Side: Theme Toggle & Authentication Controls */}
       <div className="flex items-center gap-2">
+        {/* Style & Palette Studio Trigger */}
+        <button
+          onClick={() => setIsStyleModalOpen(true)}
+          className={`h-7.5 flex items-center gap-1.5 px-2.5 rounded-lg border text-xs font-semibold transition-all duration-150 shadow-2xs cursor-pointer active:scale-95 ${
+            isBright
+              ? 'bg-white hover:bg-stone-50 text-stone-800 border-stone-300'
+              : 'bg-[#181c22] hover:bg-stone-800 text-stone-200 border-stone-700 hover:border-stone-500'
+          }`}
+          title="Customize Color Palette & Theme Template"
+        >
+          <span
+            className="w-2.5 h-2.5 rounded-full shadow-2xs"
+            style={{ backgroundColor: isBright ? currentAccent.bright : currentAccent.dark }}
+          />
+          <span className="hidden sm:inline font-medium">{currentTemplate?.name?.split(' ')?.[0] || 'Template'}</span>
+        </button>
+
         {/* Dynamic Dark / Bright Mode Toggle Button */}
         <button
           onClick={toggleTheme}
           aria-label={isBright ? 'Switch to Dark Mode' : 'Switch to Bright Mode'}
           title={isBright ? 'Switch to Dark Mode (🌙)' : 'Switch to Bright Mode (☀️)'}
-          className={`h-8 flex items-center gap-1.5 px-2.5 rounded-lg border text-xs font-semibold transition-all duration-200 shadow-2xs cursor-pointer ${
+          className={`h-7.5 flex items-center gap-1.5 px-2.5 rounded-lg border text-xs font-semibold transition-all duration-150 shadow-2xs cursor-pointer active:scale-95 ${
             isBright
-              ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-300'
-              : 'bg-slate-800/80 hover:bg-slate-700 text-slate-200 border-slate-700'
+              ? 'bg-stone-100 hover:bg-stone-200 text-stone-800 border-stone-300'
+              : 'bg-[#181c22] hover:bg-stone-800 text-stone-200 border-stone-700 hover:border-amber-500/40'
           }`}
         >
           {isBright ? (
             <>
-              <Sun size={14} className="text-amber-500 fill-amber-400 animate-spin-slow" />
-              <span className="hidden sm:inline">Bright</span>
+              <Sun size={13} className="text-amber-600 fill-amber-500" />
+              <span className="hidden sm:inline font-medium">Light</span>
             </>
           ) : (
             <>
-              <Moon size={14} className="text-cyan-400 fill-cyan-400/20" />
-              <span className="hidden sm:inline">Dark</span>
+              <Moon size={13} className="text-stone-300" />
+              <span className="hidden sm:inline font-medium">Dark</span>
             </>
           )}
         </button>
 
-        {/* Dynamic Auth Header: Logged in (Avatar + Dropdown) vs Logged out (Sign In / Register) */}
+        {/* Dynamic Auth Header */}
         {!isAuthenticated ? (
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => openLoginModal('login')}
-              className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-bold transition cursor-pointer shadow-xs ${
+              className={`h-7.5 flex items-center gap-1.5 px-3 rounded-lg text-xs font-bold transition cursor-pointer shadow-xs ${
                 isBright
-                  ? 'bg-cyan-600 hover:bg-cyan-500 text-white'
-                  : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950'
+                  ? 'bg-stone-900 hover:bg-stone-800 text-white'
+                  : 'bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold'
               }`}
             >
               <User size={13} />
@@ -154,10 +188,10 @@ export default function Navbar({ activeTab, setActiveTab }) {
             </button>
             <button
               onClick={() => openRegisterModal()}
-              className={`h-8 hidden sm:flex items-center gap-1.5 px-3 rounded-lg border text-xs font-semibold transition cursor-pointer ${
+              className={`h-7.5 hidden sm:flex items-center gap-1.5 px-3 rounded-lg border text-xs font-semibold transition cursor-pointer ${
                 isBright
-                  ? 'border-slate-300 hover:bg-slate-100 text-slate-700'
-                  : 'border-slate-700 hover:bg-slate-800 text-slate-200'
+                  ? 'border-stone-300 hover:bg-stone-100 text-stone-700'
+                  : 'border-stone-700 hover:bg-stone-800 text-stone-200'
               }`}
             >
               <UserPlus size={13} />
@@ -168,21 +202,21 @@ export default function Navbar({ activeTab, setActiveTab }) {
           <div className="relative" ref={accountMenuRef}>
             <button
               onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
-              className={`h-8 flex items-center gap-1.5 px-2.5 rounded-lg border text-xs font-semibold transition cursor-pointer ${
+              className={`h-7.5 flex items-center gap-1.5 px-2.5 rounded-lg border text-xs font-semibold transition cursor-pointer ${
                 isBright
-                  ? 'bg-slate-100 border-slate-200 hover:bg-slate-200/80 text-slate-800'
-                  : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-200'
+                  ? 'bg-stone-100 border-stone-300 hover:bg-stone-200/80 text-stone-800'
+                  : 'bg-[#181c22] border-stone-700 hover:border-stone-600 text-stone-200'
               }`}
             >
               <img
                 src={user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
                 alt={user?.fullName || user?.username || 'User'}
-                className="w-5 h-5 rounded-full object-cover border border-cyan-500/40"
+                className="w-4.5 h-4.5 rounded-full object-cover border border-amber-500/40"
               />
               <span className="hidden sm:inline font-bold">
                 {user?.fullName ? user.fullName.split(' ')[0] : (user?.username || 'Account')}
               </span>
-              <ChevronDown size={12} className={isBright ? 'text-slate-500' : 'text-slate-400'} />
+              <ChevronDown size={12} className={isBright ? 'text-stone-500' : 'text-stone-400'} />
             </button>
 
             {/* Account Dropdown Menu */}
@@ -193,8 +227,13 @@ export default function Navbar({ activeTab, setActiveTab }) {
             )}
           </div>
         )}
-
       </div>
+
+      {/* Interactive Template & Palette Studio Modal */}
+      <TemplateCustomizerModal
+        isOpen={isStyleModalOpen}
+        onClose={() => setIsStyleModalOpen(false)}
+      />
     </header>
   );
 }

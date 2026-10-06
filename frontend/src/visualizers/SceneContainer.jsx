@@ -112,7 +112,8 @@ export default function SceneContainer({
   onToggleFull3D,
   onSelectElement = null,
 }) {
-  const { isBright } = useTheme();
+  const { isBright, currentAccent } = useTheme();
+  const accentHex = isBright ? currentAccent.bright : currentAccent.dark;
   const [cameraPreset, setCameraPreset] = useState(null);
   const [isAutoRotating, setIsAutoRotating] = useState(false);
   const [isAnimationPaused, setIsAnimationPaused] = useState(false);
@@ -148,12 +149,12 @@ export default function SceneContainer({
       <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">
         {/* Camera Perspective Angle Presets */}
         <div className={`flex items-center backdrop-blur-md border rounded-lg p-0.5 shadow-md ${
-          isBright ? 'bg-white/90 border-slate-200 text-slate-700' : 'bg-slate-900/85 border-slate-800 text-slate-300'
+          isBright ? 'bg-white/90 border-stone-200 text-stone-700' : 'bg-stone-900/90 border-stone-800 text-stone-300'
         }`}>
           <button
             onClick={() => setCameraPreset('iso')}
-            className={`px-2 py-0.5 rounded text-[11px] font-semibold transition hover:text-cyan-500 cursor-pointer ${
-              cameraPreset === 'iso' ? 'bg-cyan-500/20 text-cyan-400 font-bold' : ''
+            className={`px-2 py-0.5 rounded text-[11px] font-semibold transition hover:text-amber-500 cursor-pointer ${
+              cameraPreset === 'iso' ? 'bg-amber-500/20 text-amber-400 font-bold' : ''
             }`}
             title="Isometric 3D Perspective"
           >
@@ -161,8 +162,8 @@ export default function SceneContainer({
           </button>
           <button
             onClick={() => setCameraPreset('front')}
-            className={`px-2 py-0.5 rounded text-[11px] font-semibold transition hover:text-cyan-500 cursor-pointer ${
-              cameraPreset === 'front' ? 'bg-cyan-500/20 text-cyan-400 font-bold' : ''
+            className={`px-2 py-0.5 rounded text-[11px] font-semibold transition hover:text-amber-500 cursor-pointer ${
+              cameraPreset === 'front' ? 'bg-amber-500/20 text-amber-400 font-bold' : ''
             }`}
             title="Front Elevation View"
           >
@@ -170,26 +171,40 @@ export default function SceneContainer({
           </button>
           <button
             onClick={() => setCameraPreset('top')}
-            className={`px-2 py-0.5 rounded text-[11px] font-semibold transition hover:text-cyan-500 cursor-pointer ${
-              cameraPreset === 'top' ? 'bg-cyan-500/20 text-cyan-400 font-bold' : ''
+            className={`px-2 py-0.5 rounded text-[11px] font-semibold transition hover:text-amber-500 cursor-pointer ${
+              cameraPreset === 'top' ? 'bg-amber-500/20 text-amber-400 font-bold' : ''
             }`}
             title="Top-Down Plan View"
           >
             Top
           </button>
+
           {/* Fit View Button */}
           <button
             onClick={() => setCameraPreset('fit')}
-            className="px-1.5 py-0.5 rounded text-[11px] font-semibold transition hover:text-cyan-500 flex items-center gap-0.5 cursor-pointer text-slate-400 hover:text-cyan-400"
+            className="px-1.5 py-0.5 rounded text-[11px] font-semibold transition hover:text-amber-400 flex items-center gap-0.5 cursor-pointer text-stone-400"
             title="Fit View: Auto-frame scene to fit all elements"
           >
             <Maximize2 size={11} />
             <span className="hidden sm:inline text-[10px]">Fit</span>
           </button>
+
+          {/* Dedicated Fit Tree button if Tree DS */}
+          {(dsState?.type === 'tree' || dsState?.type === 'bst') && (
+            <button
+              onClick={() => setCameraPreset('fit')}
+              className="px-1.5 py-0.5 rounded text-[11px] font-semibold transition bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 flex items-center gap-0.5 cursor-pointer"
+              title="Fit Tree: Recenter camera directly onto entire tree structure"
+            >
+              <Maximize2 size={11} />
+              <span className="text-[10px]">Fit Tree</span>
+            </button>
+          )}
+
           {/* Zoom In Button */}
           <button
             onClick={() => setCameraPreset('zoom-in')}
-            className="p-1 rounded text-[11px] transition hover:text-cyan-500 text-slate-400 cursor-pointer"
+            className="p-1 rounded text-[11px] transition hover:text-amber-400 text-stone-400 cursor-pointer"
             title="Zoom In"
           >
             <ZoomIn size={11} />
@@ -197,7 +212,7 @@ export default function SceneContainer({
           {/* Zoom Out Button */}
           <button
             onClick={() => setCameraPreset('zoom-out')}
-            className="p-1 rounded text-[11px] transition hover:text-cyan-500 text-slate-400 cursor-pointer"
+            className="p-1 rounded text-[11px] transition hover:text-amber-400 text-stone-400 cursor-pointer"
             title="Zoom Out"
           >
             <ZoomOut size={11} />
@@ -205,7 +220,7 @@ export default function SceneContainer({
           {/* Reset Camera Button */}
           <button
             onClick={() => setCameraPreset('reset')}
-            className="p-1 rounded text-[11px] transition hover:text-cyan-500 text-slate-400 cursor-pointer"
+            className="p-1 rounded text-[11px] transition hover:text-amber-400 text-stone-400 cursor-pointer"
             title="Reset Camera to Default Position"
           >
             <RefreshCw size={11} />
@@ -214,7 +229,7 @@ export default function SceneContainer({
           <button
             onClick={() => setIsAutoRotating(!isAutoRotating)}
             className={`px-1.5 py-0.5 rounded text-[11px] font-semibold transition flex items-center gap-0.5 cursor-pointer ${
-              isAutoRotating ? 'bg-cyan-500/20 text-cyan-400 font-bold' : 'text-slate-400 hover:text-cyan-400'
+              isAutoRotating ? 'bg-amber-500/20 text-amber-400 font-bold' : 'text-stone-400 hover:text-amber-400'
             }`}
             title="Toggle Continuous 360 Rotation"
           >
@@ -225,7 +240,7 @@ export default function SceneContainer({
           <button
             onClick={() => setIsAnimationPaused(!isAnimationPaused)}
             className={`px-1.5 py-0.5 rounded text-[11px] font-semibold transition flex items-center gap-0.5 cursor-pointer ${
-              isAnimationPaused ? 'bg-amber-500/20 text-amber-400 font-bold' : 'text-slate-400 hover:text-amber-400'
+              isAnimationPaused ? 'bg-amber-500/20 text-amber-400 font-bold' : 'text-stone-400 hover:text-amber-400'
             }`}
             title="Pause / Resume 3D Scene Animations"
           >
@@ -238,12 +253,12 @@ export default function SceneContainer({
         {onToggleFull3D && (
           <button
             onClick={onToggleFull3D}
-            className={`h-7 px-2 rounded-lg text-xs font-semibold backdrop-blur-md border transition shadow-md cursor-pointer flex items-center gap-1 ${
+            className={`h-7 px-2 rounded-md text-xs font-semibold backdrop-blur-md border transition shadow-xs cursor-pointer flex items-center gap-1 ${
               isFull3DView
-                ? 'bg-purple-600 border-purple-400 text-white shadow-purple-600/30'
+                ? 'bg-amber-500 border-amber-400 text-stone-950 font-bold'
                 : isBright
-                  ? 'bg-white/90 border-slate-200 text-slate-700 hover:text-purple-600 hover:bg-purple-50'
-                  : 'bg-slate-900/85 border-slate-800 text-slate-300 hover:text-purple-400 hover:bg-purple-950/40'
+                  ? 'bg-white/95 border-stone-300 text-stone-800 hover:text-amber-700'
+                  : 'bg-stone-900/90 border-stone-700 text-stone-300 hover:text-amber-400'
             }`}
             title={isFull3DView ? 'Exit 100% Fullscreen Theater Mode' : 'Enter 100% Fullscreen 3D Viewport'}
           >
@@ -276,7 +291,7 @@ export default function SceneContainer({
         camera={{ position: [0, 3.4, 8.5], fov: 38 }}
         className="w-full h-full cursor-grab active:cursor-grabbing"
       >
-        <color attach="background" args={[isBright ? '#f8fafc' : '#070b14']} />
+        <color attach="background" args={[isBright ? '#f7f6f3' : '#0e1013']} />
         
         {/* Dynamic Studio Lighting (Ambient + Directional Default Setup) */}
         <ambientLight intensity={isBright ? 1.25 : 0.85} />
@@ -287,8 +302,8 @@ export default function SceneContainer({
           shadow-mapSize-width={1024}
           shadow-mapSize-height={1024}
         />
-        <pointLight position={[-12, 10, -6]} intensity={0.6} color={isBright ? '#0284c7' : '#00f2fe'} />
-        <pointLight position={[12, 8, 6]} intensity={0.45} color={isBright ? '#6366f1' : '#818cf8'} />
+        <pointLight position={[-12, 10, -6]} intensity={0.65} color={accentHex} />
+        <pointLight position={[12, 8, 6]} intensity={0.35} color={isBright ? '#fef3c7' : '#9ca3af'} />
         <pointLight position={[0, 6, 2]} intensity={0.35} color="#ffffff" />
 
         <Suspense fallback={null}>
@@ -325,32 +340,32 @@ export default function SceneContainer({
             />
           )}
 
-          {/* Realistic Cyber Pedestal Stage */}
+          {/* Realistic Technical Pedestal Stage */}
           <group position={[0, -0.04, 0]}>
             <mesh receiveShadow>
               <cylinderGeometry args={[10.2, 10.8, 0.1, 64]} />
               <meshStandardMaterial
-                color={isBright ? '#e2e8f0' : '#080d1a'}
-                roughness={0.2}
-                metalness={0.85}
+                color={isBright ? '#e7e3da' : '#14171d'}
+                roughness={0.25}
+                metalness={0.7}
               />
             </mesh>
-            {/* Primary Glowing Perimeter Ring */}
+            {/* Primary Technical Perimeter Ring */}
             <mesh position={[0, 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <ringGeometry args={[10.0, 10.18, 64]} />
+              <ringGeometry args={[10.0, 10.16, 64]} />
               <meshBasicMaterial
-                color={isBright ? '#0284c7' : '#00f2fe'}
+                color={isBright ? '#d97706' : '#f59e0b'}
                 transparent
-                opacity={0.85}
+                opacity={0.8}
               />
             </mesh>
-            {/* Secondary Inner Pulsing Ring */}
+            {/* Secondary Inner Ring */}
             <mesh position={[0, 0.061, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <ringGeometry args={[7.2, 7.28, 64]} />
+              <ringGeometry args={[7.2, 7.26, 64]} />
               <meshBasicMaterial
-                color={isBright ? '#6366f1' : '#38bdf8'}
+                color={isBright ? '#b45309' : '#d97706'}
                 transparent
-                opacity={0.4}
+                opacity={0.3}
               />
             </mesh>
           </group>
@@ -362,7 +377,7 @@ export default function SceneContainer({
             size={3.0}
             speed={0.35}
             opacity={isBright ? 0.25 : 0.6}
-            color={isBright ? '#0284c7' : '#38bdf8'}
+            color={isBright ? '#0284c7' : '#f59e0b'}
           />
 
           {/* Soft Grounding Contact Shadows */}
@@ -405,19 +420,19 @@ export default function SceneContainer({
       {/* Subtle Camera Interaction Tips */}
       <div className={`absolute bottom-3 left-3 z-10 flex items-center gap-3 text-[11px] backdrop-blur-sm border rounded px-2.5 py-1 transition-colors ${
         isBright
-          ? 'bg-white/80 border-slate-200 text-slate-600'
-          : 'bg-slate-900/70 border-slate-800/60 text-slate-400'
+          ? 'bg-white/80 border-stone-200 text-stone-600'
+          : 'bg-stone-900/70 border-stone-800/60 text-stone-400'
       }`}>
         <span className="flex items-center gap-1">
-          <RotateCw size={11} className={isBright ? 'text-slate-600' : 'text-cyan-400'} /> Rotate: Left-drag
+          <RotateCw size={11} className={isBright ? 'text-stone-600' : 'text-amber-500'} /> Rotate: Left-drag
         </span>
         <span>•</span>
         <span className="flex items-center gap-1">
-          <ZoomIn size={11} className={isBright ? 'text-slate-600' : 'text-cyan-400'} /> Zoom: Scroll
+          <ZoomIn size={11} className={isBright ? 'text-stone-600' : 'text-amber-500'} /> Zoom: Scroll
         </span>
         <span>•</span>
         <span className="flex items-center gap-1">
-          <Compass size={11} className={isBright ? 'text-slate-600' : 'text-cyan-400'} /> Pan: Right-drag
+          <Compass size={11} className={isBright ? 'text-stone-600' : 'text-amber-500'} /> Pan: Right-drag
         </span>
       </div>
     </div>

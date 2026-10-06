@@ -69,11 +69,11 @@ function HashBucketSlot({ slotIndex, entries = [], isTargetSlot }) {
       {/* Guide Rails */}
       <mesh position={[-0.65, 0.5, 0]}>
         <cylinderGeometry args={[0.03, 0.03, 1.0, 12]} />
-        <meshStandardMaterial color="#38bdf8" emissive="#0284c7" emissiveIntensity={0.5} />
+        <meshStandardMaterial color="#f59e0b" emissive="#0284c7" emissiveIntensity={0.5} />
       </mesh>
       <mesh position={[0.65, 0.5, 0]}>
         <cylinderGeometry args={[0.03, 0.03, 1.0, 12]} />
-        <meshStandardMaterial color="#38bdf8" emissive="#0284c7" emissiveIntensity={0.5} />
+        <meshStandardMaterial color="#f59e0b" emissive="#0284c7" emissiveIntensity={0.5} />
       </mesh>
 
       {/* Slot Index Label */}
@@ -138,7 +138,7 @@ export default function HashTableVisualizer3D({ dataStructureState }) {
     <group position={[0, 0.5, 0]}>
       {/* Top Section: Original Input Array */}
       <group position={[0, 1.8, 0]}>
-        <Text position={[0, 0.9, 0]} fontSize={0.26} color="#38bdf8" fontWeight="bold">
+        <Text position={[0, 0.9, 0]} fontSize={0.26} color="#f59e0b" fontWeight="bold">
           {target !== null ? `INPUT ARRAY (Target Sum: ${target})` : 'INPUT STREAM'}
         </Text>
 
@@ -167,7 +167,7 @@ export default function HashTableVisualizer3D({ dataStructureState }) {
               </Text>
               {isActive && (
                 <Float speed={4} floatIntensity={0.2}>
-                  <Text position={[0, 0.65, 0]} fontSize={0.22} color="#38bdf8" fontWeight="bold">
+                  <Text position={[0, 0.65, 0]} fontSize={0.22} color="#f59e0b" fontWeight="bold">
                     ▼ SCANNING
                   </Text>
                 </Float>
@@ -182,7 +182,7 @@ export default function HashTableVisualizer3D({ dataStructureState }) {
         <group>
           <mesh position={[(targetSlot - 3.5) * 1.8, 0.2, 0]}>
             <cylinderGeometry args={[0.025, 0.025, 2.2, 16]} />
-            <meshBasicMaterial color="#38bdf8" transparent opacity={0.6} />
+            <meshBasicMaterial color="#f59e0b" transparent opacity={0.6} />
           </mesh>
           <Text
             position={[(targetSlot - 3.5) * 1.8, 0.3, 0.4]}

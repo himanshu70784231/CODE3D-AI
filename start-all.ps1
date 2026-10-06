@@ -25,7 +25,7 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$root\server'
 
 # 3. Start Frontend (Port 5173)
 Write-Host "📡 [3/3] Starting Frontend Vite Studio (Port 5173)..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$root\frontend'; npm run dev -- --host 127.0.0.1 --port 5173" -WindowStyle Minimized
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$root\frontend'; npm.cmd run dev -- --host 127.0.0.1 --port 5173" -WindowStyle Minimized
 
 Start-Sleep -Seconds 3
 

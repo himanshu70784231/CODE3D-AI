@@ -15,24 +15,8 @@ import {
   Zap,
   ShieldCheck,
   HelpCircle,
-  Layers,
-  Cpu,
 } from 'lucide-react';
 
-/**
- * CODE3D-AI — Elevated Login Page
- * 
- * Implements Phase 5 Specifications:
- * - Deep near-black background with subtle isometric grid & glowing cyan accents
- * - Geometric 3D wireframe illustration
- * - Logo / Wordmark: CODE3D AI
- * - Headline: "Turn Code Into 3D Intelligence."
- * - Supporting text: "Visualize, understand and explore your code in an interactive 3D workspace."
- * - Fields: Email/Username, Password (show/hide), Remember Session, Forgot Password
- * - Primary CTA: "Continue to Code3D"
- * - Instant 1-Click Demo Workspace option
- * - Full responsive layout with zero horizontal overflow
- */
 export default function LoginPage() {
   const { login, loginAsGuest, isAuthenticated } = useAuth();
   const { isBright } = useTheme();
@@ -48,7 +32,6 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
 
-  // If already authenticated, redirect to originally intended destination or /dashboard
   React.useEffect(() => {
     if (isAuthenticated) {
       const destination = location.state?.from?.pathname || '/dashboard';
@@ -78,7 +61,7 @@ export default function LoginPage() {
     try {
       const res = await login({ identifier: cleanIdentifier, password: cleanPassword });
       if (res && res.success) {
-        setSuccess('Authentication verified. Launching 3D Studio...');
+        setSuccess('Authentication verified. Launching Code3D AI...');
         const destination = location.state?.from?.pathname || '/dashboard';
         setTimeout(() => {
           navigate(destination, { replace: true });
@@ -98,104 +81,91 @@ export default function LoginPage() {
     setSuccess('Launching instant demo environment...');
     setTimeout(() => {
       loginAsGuest('Lead Architect');
-      const destination = location.state?.from?.pathname || '/dashboard';
-      navigate(destination, { replace: true });
+      navigate('/dashboard', { replace: true });
     }, 200);
   };
 
   return (
-    <div className={`min-h-screen w-full flex flex-col justify-between p-4 sm:p-6 md:p-8 relative overflow-x-hidden select-none transition-colors duration-200 ${
-      isBright ? 'bg-slate-50 text-slate-900' : 'bg-[#070b14] text-slate-100'
+    <div className={`min-h-screen w-full flex flex-col justify-between p-4 sm:p-6 select-none transition-colors duration-200 relative overflow-hidden ${
+      isBright ? 'bg-[#f7f6f3] text-stone-900' : 'bg-[#0e1013] text-stone-100'
     }`}>
-      {/* Background Subtle Grid & Ambient Glows */}
+      {/* Subtle Background Pattern */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div
-          className="absolute inset-0 opacity-[0.18]"
+          className="absolute inset-0 opacity-[0.03]"
           style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, ${isBright ? '#94a3b8' : '#38bdf8'} 1px, transparent 0)`,
-            backgroundSize: '32px 32px',
+            backgroundImage: `radial-gradient(circle at 1px 1px, ${isBright ? '#000000' : '#ffffff'} 1px, transparent 0)`,
+            backgroundSize: '24px 24px',
           }}
         />
-        <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full blur-[140px] bg-cyan-500/15" />
-        <div className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full blur-[140px] bg-blue-600/15" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full blur-[180px] bg-cyan-500/5 pointer-events-none" />
       </div>
 
       {/* Top Header / Branding */}
-      <header className="relative z-10 w-full max-w-6xl mx-auto flex items-center justify-between py-2">
+      <header className="relative z-10 w-full max-w-5xl mx-auto flex items-center justify-between py-2">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/25">
-            <Box className="w-5 h-5 text-slate-950 stroke-[2.5]" />
+          <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center shadow-md shadow-amber-500/20">
+            <Box className="w-4 h-4 text-stone-950 stroke-[2.5]" />
           </div>
-          <span className="font-extrabold text-lg tracking-wider font-sans">
-            CODE<span className="text-cyan-400">3D</span> <span className="text-[10px] font-mono bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 rounded px-1.5 py-0.5 ml-0.5">AI</span>
+          <span className="font-bold text-base tracking-tight font-sans">
+            CODE3D <span className="text-amber-500 font-mono text-xs">AI</span>
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-mono text-slate-400 hidden sm:inline">AST SPATIAL STUDIO</span>
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="System Online" />
+          <span className="text-[11px] font-mono text-stone-500 hidden sm:inline">TECHNICAL WORKSPACE</span>
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="System Ready" />
         </div>
       </header>
 
       {/* Main Centered Login Section */}
-      <main className="relative z-10 w-full max-w-md mx-auto my-auto py-6 sm:py-8">
-        {/* Hero Title & Supporting Text */}
-        <div className="text-center mb-6 space-y-2">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-400 text-[11px] font-mono font-medium tracking-wide mb-1">
-            <Sparkles size={12} className="text-cyan-400 animate-pulse" />
-            <span>Interactive 3D Code Intelligence</span>
+      <main className="relative z-10 w-full max-w-sm mx-auto my-auto py-6">
+        {/* Title */}
+        <div className="text-center mb-6 space-y-1.5">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500 text-[10px] font-mono font-bold tracking-wide">
+            <Sparkles size={11} className="text-amber-500" />
+            <span>Interactive Execution Engine</span>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight bg-gradient-to-r from-white via-cyan-100 to-sky-300 bg-clip-text text-transparent">
-            Turn Code Into 3D Intelligence.
+          <h1 className="text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
+            Sign In to Code3D AI
           </h1>
 
-          <p className={`text-xs sm:text-sm max-w-sm mx-auto leading-relaxed ${
-            isBright ? 'text-slate-600' : 'text-slate-400'
+          <p className={`text-xs max-w-xs mx-auto leading-relaxed ${
+            isBright ? 'text-stone-600' : 'text-stone-400'
           }`}>
-            Visualize, understand and explore your code in an interactive 3D workspace.
+            Visualize program flow, trace execution states, and learn algorithms spatially.
           </p>
         </div>
 
-        {/* Auth Glass Card */}
-        <div className={`p-6 sm:p-8 rounded-2xl border backdrop-blur-xl shadow-2xl relative transition-all duration-200 ${
+        {/* Auth Box */}
+        <div className={`p-6 rounded-xl border shadow-sm transition-all duration-200 ${
           isBright
-            ? 'bg-white/95 border-slate-200 shadow-slate-300/60'
-            : 'bg-[#0d1726]/90 border-slate-800 shadow-cyan-950/40 ring-1 ring-cyan-500/20'
+            ? 'bg-white border-[#e2dfd8]'
+            : 'bg-[#13161b] border-[#252932]'
         }`}>
-          {/* Subtle Geometric Cube Accent in Corner */}
-          <div className="absolute top-3 right-3 text-cyan-500/20 pointer-events-none">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-              <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-              <line x1="12" y1="22.08" x2="12" y2="12" />
-            </svg>
-          </div>
-
           {/* Feedback Alerts */}
           {error && (
-            <div role="alert" className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
-              <AlertCircle size={16} className="shrink-0 text-rose-400" />
+            <div role="alert" className="mb-4 p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+              <AlertCircle size={14} className="shrink-0 text-rose-400" />
               <span className="leading-snug">{error}</span>
             </div>
           )}
 
           {success && (
-            <div role="status" className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
-              <CheckCircle2 size={16} className="shrink-0 text-emerald-400" />
+            <div role="status" className="mb-4 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
+              <CheckCircle2 size={14} className="shrink-0 text-emerald-400" />
               <span className="leading-snug">{success}</span>
             </div>
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3.5">
             <div>
-              <label className={`block text-xs font-semibold mb-1.5 ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
+              <label className={`block text-xs font-semibold mb-1 ${isBright ? 'text-stone-700' : 'text-stone-300'}`}>
                 Email or Username
               </label>
               <div className="relative">
-                <User size={15} className={`absolute left-3.5 top-3 ${isBright ? 'text-slate-400' : 'text-slate-500'}`} />
+                <User size={14} className={`absolute left-3 top-2.5 ${isBright ? 'text-stone-400' : 'text-stone-500'}`} />
                 <input
                   type="text"
                   value={identifier}
@@ -204,10 +174,10 @@ export default function LoginPage() {
                     if (error) setError('');
                   }}
                   placeholder="dev_user or dev@code3d.ai"
-                  className={`w-full pl-10 pr-3 py-2.5 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-cyan-500 transition ${
+                  className={`w-full pl-9 pr-3 py-2 rounded-lg text-xs border focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition ${
                     isBright
-                      ? 'bg-slate-50 border-slate-300 text-slate-900'
-                      : 'bg-[#070b14] border-slate-700/80 text-white placeholder-slate-500'
+                      ? 'bg-[#f7f6f3] border-[#e2dfd8] text-stone-900 placeholder-stone-400'
+                      : 'bg-[#0e1013] border-[#252932] text-stone-100 placeholder-stone-500'
                   }`}
                   autoComplete="username"
                   required
@@ -216,21 +186,21 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className={`block text-xs font-semibold ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
+              <div className="flex items-center justify-between mb-1">
+                <label className={`block text-xs font-semibold ${isBright ? 'text-stone-700' : 'text-stone-300'}`}>
                   Password
                 </label>
                 <button
                   type="button"
                   onClick={() => setShowForgotModal(true)}
-                  className="text-[11px] text-cyan-400 hover:text-cyan-300 transition cursor-pointer"
+                  className="text-[11px] text-amber-500 hover:text-amber-400 transition cursor-pointer"
                 >
                   Forgot password?
                 </button>
               </div>
 
               <div className="relative">
-                <Lock size={15} className={`absolute left-3.5 top-3 ${isBright ? 'text-slate-400' : 'text-slate-500'}`} />
+                <Lock size={14} className={`absolute left-3 top-2.5 ${isBright ? 'text-stone-400' : 'text-stone-500'}`} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
@@ -239,10 +209,10 @@ export default function LoginPage() {
                     if (error) setError('');
                   }}
                   placeholder="••••••••"
-                  className={`w-full pl-10 pr-10 py-2.5 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-cyan-500 transition ${
+                  className={`w-full pl-9 pr-9 py-2 rounded-lg text-xs border focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition ${
                     isBright
-                      ? 'bg-slate-50 border-slate-300 text-slate-900'
-                      : 'bg-[#070b14] border-slate-700/80 text-white placeholder-slate-500'
+                      ? 'bg-[#f7f6f3] border-[#e2dfd8] text-stone-900 placeholder-stone-400'
+                      : 'bg-[#0e1013] border-[#252932] text-stone-100 placeholder-stone-500'
                   }`}
                   autoComplete="current-password"
                   required
@@ -250,29 +220,29 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2.5 p-1 text-slate-400 hover:text-cyan-400 transition"
+                  className="absolute right-2.5 top-2 p-1 text-stone-400 hover:text-amber-500 transition"
                   title={showPassword ? 'Hide password' : 'Show password'}
                   aria-label="Toggle password visibility"
                 >
-                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </div>
             </div>
 
             {/* Remember Me Checkbox */}
-            <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center justify-between pt-0.5">
               <label className="flex items-center gap-2 cursor-pointer select-none text-xs">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-3.5 h-3.5 rounded border-slate-700 bg-[#070b14] text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0 cursor-pointer"
+                  className="w-3.5 h-3.5 rounded border-[#252932] accent-amber-500 cursor-pointer"
                 />
-                <span className={isBright ? 'text-slate-600' : 'text-slate-400'}>Remember session</span>
+                <span className={isBright ? 'text-stone-600' : 'text-stone-400'}>Remember session</span>
               </label>
 
-              <span className="text-[10px] font-mono text-slate-400">
-                Demo: <code className="text-cyan-400">admin123</code>
+              <span className="text-[10px] font-mono text-stone-500">
+                Demo: <code className="text-amber-500">admin123</code>
               </span>
             </div>
 
@@ -280,25 +250,25 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`w-full mt-2 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition duration-150 shadow-lg cursor-pointer ${
+              className={`w-full mt-2 py-2.5 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition duration-150 shadow-md cursor-pointer ${
                 isSubmitting
-                  ? 'opacity-60 cursor-not-allowed bg-slate-700 text-slate-300'
-                  : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-cyan-500/25 active:scale-[0.99]'
+                  ? 'opacity-60 cursor-not-allowed bg-stone-700 text-stone-300'
+                  : 'bg-amber-500 hover:bg-amber-400 text-stone-950 shadow-amber-500/20 active:translate-y-px'
               }`}
             >
-              <span>{isSubmitting ? 'Authenticating...' : 'Continue to Code3D'}</span>
-              <ArrowRight size={15} />
+              <span>{isSubmitting ? 'Authenticating...' : 'Sign In'}</span>
+              <ArrowRight size={14} />
             </button>
           </form>
 
           {/* Quick Demo Access Divider */}
-          <div className="relative my-5 text-center">
+          <div className="relative my-4 text-center">
             <div className="absolute inset-0 flex items-center">
-              <div className={`w-full border-t ${isBright ? 'border-slate-200' : 'border-slate-800'}`} />
+              <div className={`w-full border-t ${isBright ? 'border-[#e2dfd8]' : 'border-[#252932]'}`} />
             </div>
-            <div className="relative flex justify-center text-[10px] uppercase font-mono tracking-widest">
-              <span className={`px-2.5 ${isBright ? 'bg-white text-slate-400' : 'bg-[#0d1726] text-slate-500'}`}>
-                OR EXPLORE INSTANTLY
+            <div className="relative flex justify-center text-[10px] uppercase font-mono tracking-wider">
+              <span className={`px-2.5 ${isBright ? 'bg-white text-stone-500' : 'bg-[#13161b] text-stone-500'}`}>
+                OR EXPLORE DIRECTLY
               </span>
             </div>
           </div>
@@ -307,21 +277,21 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={handleQuickDemo}
-            className={`w-full py-2.5 px-4 rounded-xl font-semibold text-xs border flex items-center justify-center gap-2 transition cursor-pointer group ${
+            className={`w-full py-2 px-4 rounded-lg font-semibold text-xs border flex items-center justify-center gap-2 transition cursor-pointer group active:translate-y-px ${
               isBright
-                ? 'bg-slate-50 hover:bg-slate-100 border-slate-300 text-slate-800'
-                : 'bg-[#070b14] hover:bg-slate-800/80 border-slate-700/80 text-cyan-300 hover:text-white'
+                ? 'bg-[#f7f6f3] hover:bg-[#edebe5] border-[#e2dfd8] text-stone-800'
+                : 'bg-[#0e1013] hover:bg-[#181c23] border-[#252932] text-stone-200 hover:text-white'
             }`}
           >
-            <Zap size={14} className="text-amber-400 group-hover:scale-110 transition-transform" />
-            <span>Launch Instant Demo Workspace (1-Click)</span>
+            <Zap size={13} className="text-amber-500" />
+            <span>Launch Instant Demo Workspace</span>
           </button>
 
           {/* Switch to Register */}
-          <div className="mt-5 pt-4 border-t border-slate-800/80 text-center">
-            <p className={`text-xs ${isBright ? 'text-slate-600' : 'text-slate-400'}`}>
+          <div className="mt-4 pt-3 border-t border-inherit text-center">
+            <p className={`text-xs ${isBright ? 'text-stone-600' : 'text-stone-400'}`}>
               Don't have an account?{' '}
-              <Link to="/register" className="font-semibold text-cyan-400 hover:underline">
+              <Link to="/register" className="font-semibold text-amber-500 hover:underline">
                 Create one
               </Link>
             </p>
@@ -329,18 +299,18 @@ export default function LoginPage() {
         </div>
 
         {/* Security badge footer */}
-        <div className="mt-4 text-center flex items-center justify-center gap-2 text-[10px] font-mono text-slate-500">
-          <ShieldCheck size={12} className="text-cyan-500" />
+        <div className="mt-3 text-center flex items-center justify-center gap-1.5 text-[10px] font-mono text-stone-500">
+          <ShieldCheck size={12} className="text-amber-500" />
           <span>Encrypted token authentication with zero eval execution</span>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 w-full max-w-6xl mx-auto py-2 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-400 border-t border-slate-800/40">
+      <footer className="relative z-10 w-full max-w-5xl mx-auto py-2 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-stone-500 border-t border-inherit">
         <div className="flex items-center gap-2">
-          <span>CODE3D AI Studio</span>
+          <span>Code3D AI</span>
           <span>•</span>
-          <span>Spatial AST 3D WebGL</span>
+          <span>Interactive Spatial Execution Engine</span>
         </div>
         <div className="flex items-center gap-4">
           <span className="font-mono text-[10px]">React 18 • Three.js • Vite</span>
@@ -349,18 +319,18 @@ export default function LoginPage() {
 
       {/* Forgot Password Modal */}
       {showForgotModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-sm p-6 rounded-2xl bg-[#0d1726] border border-slate-800 shadow-2xl space-y-4">
-            <div className="flex items-center gap-2 text-cyan-400">
-              <HelpCircle size={20} />
-              <h3 className="font-bold text-sm text-white">Reset Password</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/80 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-sm p-5 rounded-xl bg-[#13161b] border border-[#252932] shadow-2xl space-y-3">
+            <div className="flex items-center gap-2 text-amber-500">
+              <HelpCircle size={18} />
+              <h3 className="font-bold text-sm text-stone-100">Reset Password</h3>
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              In this environment, you can use the default test credentials <strong className="text-cyan-400">dev_user</strong> with password <strong className="text-cyan-400">admin123</strong>, or click <strong className="text-amber-400">Launch Instant Demo Workspace</strong> to access all features immediately.
+            <p className="text-xs text-stone-300 leading-relaxed">
+              In this environment, you can use the default test credentials <strong className="text-amber-400">dev_user</strong> with password <strong className="text-amber-400">admin123</strong>, or click <strong className="text-amber-400">Launch Instant Demo Workspace</strong> to access all features immediately.
             </p>
             <button
               onClick={() => setShowForgotModal(false)}
-              className="w-full py-2 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition cursor-pointer"
+              className="w-full py-2 px-4 rounded-lg bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs transition cursor-pointer"
             >
               Understood
             </button>

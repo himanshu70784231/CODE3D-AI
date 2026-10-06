@@ -25,11 +25,11 @@ export default function StackVisualizer3D({ dataStructureState }) {
       {/* Futuristic Stack Glass Guide Rails */}
       <mesh position={[-1.5, maxHeight / 2, 0]}>
         <cylinderGeometry args={[0.06, 0.06, maxHeight, 16]} />
-        <meshStandardMaterial color="#38bdf8" emissive="#0284c7" emissiveIntensity={0.6} />
+        <meshStandardMaterial color="#f59e0b" emissive="#0284c7" emissiveIntensity={0.6} />
       </mesh>
       <mesh position={[1.5, maxHeight / 2, 0]}>
         <cylinderGeometry args={[0.06, 0.06, maxHeight, 16]} />
-        <meshStandardMaterial color="#38bdf8" emissive="#0284c7" emissiveIntensity={0.6} />
+        <meshStandardMaterial color="#f59e0b" emissive="#0284c7" emissiveIntensity={0.6} />
       </mesh>
 
       {/* Transparent Glass Backing */}
@@ -102,7 +102,7 @@ export default function StackVisualizer3D({ dataStructureState }) {
               <boxGeometry args={[2.5, 1.1, 1.8]} />
               <meshStandardMaterial
                 color={isHovered ? '#0284c7' : isTop ? '#06b6d4' : '#1e293b'}
-                emissive={isHovered ? '#38bdf8' : isTop ? '#0891b2' : '#0f172a'}
+                emissive={isHovered ? '#f59e0b' : isTop ? '#0891b2' : '#0f172a'}
                 emissiveIntensity={isHovered ? 1.8 : isTop ? 0.9 : 0.2}
                 metalness={0.4}
                 roughness={0.2}
@@ -112,7 +112,7 @@ export default function StackVisualizer3D({ dataStructureState }) {
             {/* Glowing Wireframe Border */}
             <lineSegments>
               <edgesGeometry args={[new THREE.BoxGeometry(2.51, 1.11, 1.81)]} />
-              <lineBasicMaterial color={isHovered ? '#38bdf8' : isTop ? '#67e8f9' : '#334155'} />
+              <lineBasicMaterial color={isHovered ? '#f59e0b' : isTop ? '#67e8f9' : '#334155'} />
             </lineSegments>
 
             {/* Interactive Mouse Hover 3D Inspection Tooltip */}
@@ -125,9 +125,9 @@ export default function StackVisualizer3D({ dataStructureState }) {
                   </mesh>
                   <lineSegments position={[0, 0, -0.01]}>
                     <edgesGeometry args={[new THREE.BoxGeometry(2.82, 0.97, 0.01)]} />
-                    <lineBasicMaterial color="#38bdf8" />
+                    <lineBasicMaterial color="#f59e0b" />
                   </lineSegments>
-                  <Text position={[0, 0.25, 0.05]} fontSize={0.21} color="#38bdf8" fontWeight="bold">
+                  <Text position={[0, 0.25, 0.05]} fontSize={0.21} color="#f59e0b" fontWeight="bold">
                     {`Stack Node [${idx}] = ${val}`}
                   </Text>
                   <Text position={[0, -0.02, 0.05]} fontSize={0.14} color="#94a3b8">

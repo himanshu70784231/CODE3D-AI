@@ -4,7 +4,7 @@ import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 
 const POINTER_COLORS = {
-  i: '#38bdf8', // sky blue
+  i: '#f59e0b', // sky blue
   j: '#f59e0b', // amber
   left: '#10b981', // emerald
   right: '#ef4444', // red
@@ -25,7 +25,7 @@ export function IndexPointer({
   color = null,
 }) {
   const arrowRef = useRef();
-  const pointerColor = color || POINTER_COLORS[name] || '#38bdf8';
+  const pointerColor = color || POINTER_COLORS[name] || '#f59e0b';
 
   // Subtle bounce animation
   useFrame((state) => {

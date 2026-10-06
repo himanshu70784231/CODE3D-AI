@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getProblemBySlug, updateProgress } from '../services/dsa.js';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Layers, Play, CheckCircle2, Lightbulb, Clock, HardDrive, ArrowLeft, Code2 } from 'lucide-react';
+import { Play, CheckCircle2, Clock, HardDrive, ArrowLeft, Code2 } from 'lucide-react';
 
 export default function DsaProblemPage({ onVisualizeProblem }) {
   const { problemSlug } = useParams();
@@ -13,7 +13,6 @@ export default function DsaProblemPage({ onVisualizeProblem }) {
 
   const [problem, setProblem] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showHint, setShowHint] = useState(false);
   const [activeCodeTab, setActiveCodeTab] = useState('java');
 
   useEffect(() => {
@@ -43,7 +42,7 @@ export default function DsaProblemPage({ onVisualizeProblem }) {
         defaultInput: problem.defaultInput,
       });
     } else {
-      navigate('/visualize');
+      navigate('/visualizer');
     }
   };
 
@@ -57,7 +56,7 @@ export default function DsaProblemPage({ onVisualizeProblem }) {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8 text-slate-400 text-xs">
+      <div className="flex-1 flex items-center justify-center p-8 text-stone-400 text-xs font-mono">
         Loading problem details from database...
       </div>
     );
@@ -69,7 +68,7 @@ export default function DsaProblemPage({ onVisualizeProblem }) {
         <h2 className="text-xl font-bold">Problem Not Found</h2>
         <button
           onClick={() => navigate('/dsa')}
-          className="px-4 py-2 rounded-lg text-xs font-semibold bg-cyan-500 text-slate-950"
+          className="px-4 py-2 rounded-lg text-xs font-semibold bg-amber-500 text-stone-950"
         >
           Return to DSA Hub
         </button>
@@ -79,24 +78,24 @@ export default function DsaProblemPage({ onVisualizeProblem }) {
 
   return (
     <div className={`flex-1 overflow-y-auto p-4 md:p-8 select-none transition-colors ${
-      isBright ? 'bg-slate-50 text-slate-900' : 'bg-[#070b14] text-slate-100'
+      isBright ? 'bg-[#f7f6f3] text-stone-900' : 'bg-[#0e1013] text-stone-100'
     }`}>
       <div className="max-w-5xl mx-auto space-y-6">
         <button
           onClick={() => navigate('/dsa')}
-          className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-cyan-400 transition cursor-pointer"
+          className="flex items-center gap-1.5 text-xs font-semibold text-stone-400 hover:text-amber-500 transition cursor-pointer"
         >
           <ArrowLeft size={14} />
           <span>Back to Problem Hub</span>
         </button>
 
         {/* Problem Header */}
-        <div className={`p-6 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-          isBright ? 'bg-white border-slate-200' : 'bg-slate-900/80 border-slate-800'
+        <div className={`p-6 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+          isBright ? 'bg-white border-[#e2dfd8]' : 'bg-[#13161b] border-[#252932]'
         }`}>
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/30">
                 {problem.topic?.name || 'Algorithm'}
               </span>
               <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
@@ -109,7 +108,7 @@ export default function DsaProblemPage({ onVisualizeProblem }) {
                 {problem.difficulty}
               </span>
             </div>
-            <h1 className="text-2xl font-extrabold">{problem.title}</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{problem.title}</h1>
           </div>
 
           <div className="flex items-center gap-2">
@@ -124,7 +123,7 @@ export default function DsaProblemPage({ onVisualizeProblem }) {
             )}
             <button
               onClick={handleLaunch}
-              className="px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-md shadow-cyan-500/20 cursor-pointer"
+              className="px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-stone-950 shadow-md shadow-amber-500/20 cursor-pointer active:translate-y-px"
             >
               <Play size={13} className="fill-current" />
               <span>Visualize in 3D</span>
@@ -133,18 +132,18 @@ export default function DsaProblemPage({ onVisualizeProblem }) {
         </div>
 
         {/* Problem Description */}
-        <div className={`p-6 rounded-2xl border space-y-4 ${
-          isBright ? 'bg-white border-slate-200' : 'bg-slate-900/60 border-slate-800'
+        <div className={`p-6 rounded-xl border space-y-4 ${
+          isBright ? 'bg-white border-[#e2dfd8]' : 'bg-[#13161b] border-[#252932]'
         }`}>
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400">Problem Statement</h2>
+          <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-stone-500">Problem Statement</h2>
           <p className="text-sm leading-relaxed">{problem.description}</p>
 
-          <div className="flex items-center gap-6 pt-3 border-t border-slate-800 text-xs font-mono">
-            <div className="flex items-center gap-1.5 text-cyan-400">
+          <div className="flex items-center gap-6 pt-3 border-t border-inherit text-xs font-mono">
+            <div className="flex items-center gap-1.5 text-amber-500">
               <Clock size={13} />
               <span>Time: {problem.timeComplexity}</span>
             </div>
-            <div className="flex items-center gap-1.5 text-emerald-400">
+            <div className="flex items-center gap-1.5 text-emerald-500">
               <HardDrive size={13} />
               <span>Space: {problem.spaceComplexity}</span>
             </div>
@@ -153,12 +152,14 @@ export default function DsaProblemPage({ onVisualizeProblem }) {
 
         {/* Code tabs */}
         {problem.starterCode && (
-          <div className={`rounded-2xl border overflow-hidden ${
-            isBright ? 'bg-white border-slate-200' : 'bg-slate-950 border-slate-800'
+          <div className={`rounded-xl border overflow-hidden ${
+            isBright ? 'bg-white border-[#e2dfd8]' : 'bg-[#13161b] border-[#252932]'
           }`}>
-            <div className="flex items-center justify-between border-b border-slate-800 px-4 py-2 bg-slate-900/60">
+            <div className={`flex items-center justify-between border-b px-4 py-2 ${
+              isBright ? 'bg-stone-50 border-[#e2dfd8]' : 'bg-[#181c23] border-[#252932]'
+            }`}>
               <div className="flex items-center gap-2">
-                <Code2 size={14} className="text-cyan-400" />
+                <Code2 size={14} className="text-amber-500" />
                 <span className="text-xs font-bold">Solution Implementation</span>
               </div>
               <div className="flex items-center gap-1">
@@ -168,8 +169,8 @@ export default function DsaProblemPage({ onVisualizeProblem }) {
                     onClick={() => setActiveCodeTab(lang)}
                     className={`px-2.5 py-1 rounded text-[11px] font-mono font-semibold transition cursor-pointer ${
                       activeCodeTab === lang
-                        ? 'bg-cyan-500 text-slate-950'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-amber-500 text-stone-950'
+                        : isBright ? 'text-stone-600 hover:text-stone-900' : 'text-stone-400 hover:text-white'
                     }`}
                   >
                     {lang.toUpperCase()}
@@ -177,7 +178,7 @@ export default function DsaProblemPage({ onVisualizeProblem }) {
                 ))}
               </div>
             </div>
-            <pre className="p-4 text-xs font-mono text-cyan-300 overflow-x-auto leading-relaxed">
+            <pre className="p-4 text-xs font-mono text-amber-300 overflow-x-auto leading-relaxed bg-[#0e1013]">
               {problem.starterCode[activeCodeTab] || '// No starter code available'}
             </pre>
           </div>

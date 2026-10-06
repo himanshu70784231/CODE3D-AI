@@ -5,22 +5,22 @@ import * as THREE from 'three';
 import { safeArray, safeIncludes } from '../utils/safeRender';
 
 const POINTER_COLORS = {
-  i: '#38bdf8',
-  j: '#f59e0b',
+  i: '#f59e0b',
+  j: '#ea580c',
   left: '#10b981',
   right: '#ef4444',
   start: '#a855f7',
   end: '#ec4899',
   maxStart: '#facc15',
   maxEnd: '#f59e0b',
-  curr: '#06b6d4',
+  curr: '#fbbf24',
   pivot: '#eab308'
 };
 
 /**
  * Rotating Holographic Ring around the Active Array Cell
  */
-function CellHoloRing({ color = '#00f2fe' }) {
+function CellHoloRing({ color = '#f59e0b' }) {
   const ringRef = useRef();
 
   useFrame((_, delta) => {
@@ -148,14 +148,14 @@ function ArrayCell({
   });
 
   // Dynamic colors based on active, target found, LIS, negative, or subarray state
-  let boxColor = '#1e293b';
-  let emissiveColor = '#0f172a';
-  let wireColor = '#334155';
+  let boxColor = '#1e2229';
+  let emissiveColor = '#121519';
+  let wireColor = '#383e4a';
 
   if (isHovered) {
-    boxColor = '#0284c7';
-    emissiveColor = '#0ea5e9';
-    wireColor = '#38bdf8';
+    boxColor = '#d97706';
+    emissiveColor = '#f59e0b';
+    wireColor = '#fbbf24';
   } else if (isTargetFound) {
     boxColor = '#eab308';
     emissiveColor = '#ca8a04';
@@ -165,17 +165,17 @@ function ArrayCell({
     emissiveColor = '#b45309';
     wireColor = '#fde68a';
   } else if (isActive) {
-    boxColor = isNegative ? '#9f1239' : '#06b6d4';
-    emissiveColor = isNegative ? '#e11d48' : '#0891b2';
-    wireColor = isNegative ? '#fda4af' : '#67e8f9';
+    boxColor = isNegative ? '#9f1239' : '#f59e0b';
+    emissiveColor = isNegative ? '#e11d48' : '#d97706';
+    wireColor = isNegative ? '#fda4af' : '#fde68a';
   } else if (isInWindow) {
-    boxColor = isNegative ? '#4c0519' : '#164e63';
-    emissiveColor = isNegative ? '#881337' : '#0e7490';
-    wireColor = isNegative ? '#f43f5e' : '#22d3ee';
+    boxColor = isNegative ? '#4c0519' : '#3d301b';
+    emissiveColor = isNegative ? '#881337' : '#78350f';
+    wireColor = isNegative ? '#f43f5e' : '#f59e0b';
   } else if (isPrevious) {
-    boxColor = '#334155';
-    emissiveColor = '#1e293b';
-    wireColor = '#64748b';
+    boxColor = '#2b303b';
+    emissiveColor = '#181b21';
+    wireColor = '#4b5563';
   } else if (isNegative) {
     boxColor = '#271217';
     emissiveColor = '#3f121d';
@@ -208,7 +208,7 @@ function ArrayCell({
             color={isXRayMode ? '#0284c7' : boxColor}
             metalness={isXRayMode ? 0.85 : 0.55}
             roughness={isXRayMode ? 0.1 : 0.18}
-            emissive={isXRayMode ? '#38bdf8' : emissiveColor}
+            emissive={isXRayMode ? '#f59e0b' : emissiveColor}
             emissiveIntensity={isHovered ? 1.8 : isTargetFound ? 1.5 : isActive ? 1.1 : isInWindow ? 0.6 : 0.25}
             transparent={isXRayMode}
             opacity={isXRayMode ? 0.55 : 1.0}
@@ -228,16 +228,16 @@ function ArrayCell({
             <group position={[0, baseHeight / 2 + 1.25, 0]}>
               <mesh position={[0, 0, -0.02]}>
                 <planeGeometry args={[2.8, 1.05]} />
-                <meshBasicMaterial color="#080e1e" transparent opacity={0.94} />
+                <meshBasicMaterial color="#14171d" transparent opacity={0.94} />
               </mesh>
               <lineSegments position={[0, 0, -0.01]}>
                 <edgesGeometry args={[new THREE.BoxGeometry(2.82, 1.07, 0.01)]} />
-                <lineBasicMaterial color="#38bdf8" />
+                <lineBasicMaterial color="#f59e0b" />
               </lineSegments>
-              <Text position={[0, 0.32, 0.05]} fontSize={0.22} color="#38bdf8" fontWeight="bold">
+              <Text position={[0, 0.32, 0.05]} fontSize={0.22} color="#f59e0b" fontWeight="bold">
                 {`arr[${index}] = ${value}`}
               </Text>
-              <Text position={[0, 0.04, 0.05]} fontSize={0.14} color="#94a3b8">
+              <Text position={[0, 0.04, 0.05]} fontSize={0.14} color="#a1a1aa">
                 {`Box Size: 1.45 × ${baseHeight.toFixed(2)} × 1.45`}
               </Text>
               <Text position={[0, -0.24, 0.05]} fontSize={0.13} color="#22c55e" fontStyle="italic">
@@ -353,7 +353,7 @@ function ArrayCell({
             <mesh position={[0, -0.28, 0]}>
               <cylinderGeometry args={[0.02, 0.02, 0.55, 8]} />
               <meshBasicMaterial
-                color={POINTER_COLORS[pointerNames[0]] || '#38bdf8'}
+                color={POINTER_COLORS[pointerNames[0]] || '#f59e0b'}
                 transparent
                 opacity={0.8}
               />
@@ -362,7 +362,7 @@ function ArrayCell({
               <mesh position={[0, 0, 0]} rotation={[Math.PI, 0, 0]}>
                 <coneGeometry args={[0.24, 0.48, 16]} />
                 <meshStandardMaterial
-                  color={POINTER_COLORS[pointerNames[0]] || '#38bdf8'}
+                  color={POINTER_COLORS[pointerNames[0]] || '#f59e0b'}
                   emissive={POINTER_COLORS[pointerNames[0]] || '#0284c7'}
                   emissiveIntensity={1.2}
                 />
@@ -375,7 +375,7 @@ function ArrayCell({
                 <Text
                   position={[0, 0, 0]}
                   fontSize={0.22}
-                  color={POINTER_COLORS[pointerNames[0]] || '#38bdf8'}
+                  color={POINTER_COLORS[pointerNames[0]] || '#f59e0b'}
                   anchorX="center"
                   anchorY="middle"
                   fontWeight="bold"
@@ -425,7 +425,7 @@ function ArrayCell({
             <Text
               position={[0, 0, 0]}
               fontSize={0.16}
-              color="#38bdf8"
+              color="#f59e0b"
               fontWeight="bold"
               anchorX="center"
               anchorY="middle"

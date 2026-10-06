@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight, ChevronDown, Cpu, Sparkles, Hash, Type, Brackets } from 'lucide-react';
+import { ChevronRight, ChevronDown, Cpu, Sparkles } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 function inferType(val) {
@@ -29,7 +29,7 @@ function formatValue(val) {
   return String(val);
 }
 
-export default function VariableInspector({ variables = {}, scope = 'main', changedVariable = null }) {
+export default function VariableInspector({ variables = {}, scope = 'main', changedVariable = null, onSelectVariable = null }) {
   const { isBright } = useTheme();
   const [expandedArrays, setExpandedArrays] = useState({});
 
@@ -40,37 +40,33 @@ export default function VariableInspector({ variables = {}, scope = 'main', chan
   const entries = Object.entries(variables || {});
 
   return (
-    <div className={`p-3.5 rounded-xl border select-none transition-colors ${
-      isBright ? 'bg-white border-slate-200' : 'bg-slate-900/80 border-slate-800'
-    }`}>
+    <div className="space-y-2 select-none">
       {/* Header */}
-      <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800/80">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-cyan-400">
-          <Cpu size={14} />
-          <span>Variables Panel</span>
+      <div className="flex items-center justify-between pb-1.5 border-b border-inherit">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-amber-500 font-mono uppercase tracking-wider">
+          <Cpu size={13} />
+          <span>Variables</span>
         </div>
-        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-inherit opacity-75">
           scope: {scope}
         </span>
       </div>
 
       {entries.length === 0 ? (
-        <div className="py-4 text-center text-slate-500 text-xs italic font-mono">
+        <div className="py-3 text-center text-stone-500 text-xs italic font-mono">
           No variables initialized in current frame.
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-mono">
             <thead>
-              <tr className={`border-b text-[10px] uppercase tracking-wider ${
-                isBright ? 'text-slate-500 border-slate-200' : 'text-slate-400 border-slate-800'
-              }`}>
-                <th className="py-1.5 px-2 font-semibold">Variable</th>
-                <th className="py-1.5 px-2 font-semibold">Type</th>
-                <th className="py-1.5 px-2 font-semibold">Value</th>
+              <tr className="border-b border-inherit text-[10px] uppercase tracking-wider text-stone-500">
+                <th className="py-1 px-1 font-semibold">Identifier</th>
+                <th className="py-1 px-1 font-semibold">Type</th>
+                <th className="py-1 px-1 font-semibold text-right">Value</th>
               </tr>
             </thead>
-            <tbody className={`divide-y ${isBright ? 'divide-slate-100' : 'divide-slate-800/60'}`}>
+            <tbody className="divide-y divide-inherit">
               {entries.map(([name, val]) => {
                 const isChanged = changedVariable === name;
                 const isArray = Array.isArray(val);
@@ -81,65 +77,65 @@ export default function VariableInspector({ variables = {}, scope = 'main', chan
                 return (
                   <React.Fragment key={name}>
                     <tr
-                      className={`transition-colors ${
+                      onClick={() => onSelectVariable && onSelectVariable(name, val)}
+                      className={`transition-colors cursor-pointer ${
                         isChanged
                           ? isBright
-                            ? 'bg-amber-50 text-amber-900 font-semibold'
-                            : 'bg-amber-500/15 text-amber-200 font-semibold'
+                            ? 'bg-amber-100/60 text-amber-950 font-bold'
+                            : 'bg-amber-500/15 text-amber-200 font-bold'
                           : isBright
-                            ? 'hover:bg-slate-50 text-slate-800'
-                            : 'hover:bg-slate-800/30 text-slate-200'
+                            ? 'hover:bg-stone-50 text-stone-800'
+                            : 'hover:bg-stone-800/40 text-stone-200'
                       }`}
+                      title="Click to highlight variable in 3D"
                     >
-                      {/* Variable Name */}
-                      <td className="py-1.5 px-2 font-bold whitespace-nowrap">
+                      <td className="py-1.5 px-1 font-bold whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           {isArray ? (
                             <button
-                              onClick={() => toggleArray(name)}
-                              className="text-slate-400 hover:text-white cursor-pointer"
-                              title="Toggle array elements"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleArray(name);
+                              }}
+                              className="text-stone-400 hover:text-amber-500 cursor-pointer"
                             >
                               {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                             </button>
                           ) : (
-                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
+                            <span className="w-3" />
                           )}
-                          <span className={isChanged ? 'text-amber-400' : 'text-slate-200'}>{name}</span>
+                          <span className={isChanged ? 'text-amber-500' : ''}>{name}</span>
                           {isChanged && (
-                            <span className="text-[9px] px-1 py-0.2 rounded font-sans font-bold bg-amber-500 text-slate-950 animate-pulse">
-                              UPDATED
+                            <span className="text-[9px] px-1 rounded bg-amber-500/20 text-amber-400 font-normal">
+                              mutated
                             </span>
                           )}
                         </div>
                       </td>
-
-                      {/* Type */}
-                      <td className="py-1.5 px-2 whitespace-nowrap">
-                        <span className={`text-[11px] px-1.5 py-0.5 rounded font-mono ${
-                          isBright ? 'bg-slate-100 text-slate-700' : 'bg-slate-800/80 text-cyan-300'
-                        }`}>
-                          {typeStr}
-                        </span>
+                      <td className="py-1.5 px-1 opacity-70 whitespace-nowrap text-[11px]">
+                        {typeStr}
                       </td>
-
-                      {/* Value */}
-                      <td className="py-1.5 px-2 font-bold">
-                        <span className={isChanged ? 'text-amber-300' : 'text-emerald-400'}>
-                          {valStr}
-                        </span>
+                      <td className="py-1.5 px-1 text-right font-bold whitespace-nowrap">
+                        <span className={isChanged ? 'text-amber-400' : ''}>{valStr}</span>
                       </td>
                     </tr>
 
-                    {/* Expandable array slots */}
+                    {/* Array Expanded View */}
                     {isArray && isExpanded && (
                       <tr>
-                        <td colSpan={3} className="py-1.5 px-4 bg-slate-950/40 border-l-2 border-cyan-500">
-                          <div className="space-y-1 text-[11px]">
-                            {val.map((elem, slotIdx) => (
-                              <div key={slotIdx} className="flex items-center justify-between text-slate-400">
-                                <span>[{slotIdx}]:</span>
-                                <span className="font-bold text-slate-200">{formatValue(elem)}</span>
+                        <td colSpan={3} className="py-1.5 pl-6 pr-2 bg-stone-900/20 dark:bg-stone-950/40">
+                          <div className="flex flex-wrap gap-1">
+                            {val.map((item, idx) => (
+                              <div
+                                key={idx}
+                                className={`px-1.5 py-0.5 rounded text-[10px] border ${
+                                  isBright
+                                    ? 'bg-white border-stone-200 text-stone-800'
+                                    : 'bg-[#181c22] border-stone-700 text-stone-200'
+                                }`}
+                              >
+                                <span className="opacity-60 font-mono">[{idx}]:</span>{' '}
+                                <span className="font-bold">{formatValue(item)}</span>
                               </div>
                             ))}
                           </div>

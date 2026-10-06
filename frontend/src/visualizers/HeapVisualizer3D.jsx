@@ -110,7 +110,7 @@ export default function HeapVisualizer3D({ dataStructureState }) {
         <Text position={[0, -0.6, 0]} fontSize={0.22} color="#64748b" anchorX="right">
           Level 2
         </Text>
-        <Text position={[0, -2.5, 0]} fontSize={0.22} color="#38bdf8" anchorX="right">
+        <Text position={[0, -2.5, 0]} fontSize={0.22} color="#f59e0b" anchorX="right">
           Array Memory
         </Text>
       </group>
@@ -305,7 +305,7 @@ export default function HeapVisualizer3D({ dataStructureState }) {
           <Text
             position={[0, 0, 0.05]}
             fontSize={0.2}
-            color="#38bdf8"
+            color="#f59e0b"
             anchorX="center"
             anchorY="middle"
           >
