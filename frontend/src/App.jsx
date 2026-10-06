@@ -15,7 +15,6 @@ import SheetsPage from './pages/SheetsPage';
 import DsaProblemPage from './pages/DsaProblemPage';
 import SavedVisualizationsPage from './pages/SavedVisualizationsPage';
 import ProfilePage from './pages/ProfilePage';
-import NotFoundPage from './pages/NotFoundPage';
 import LoginModal from './components/LoginModal';
 import CodeDoctorModal from './components/CodeDoctorModal';
 import { AppErrorBoundary } from './components/ErrorBoundaries';
@@ -34,16 +33,18 @@ function MainAppContent() {
   // Loading Session Guard
   if (loading) {
     return (
-      <div className={`min-h-screen w-full flex flex-col items-center justify-center p-4 transition-colors ${
-        isBright ? 'bg-[#f7f6f3] text-stone-900' : 'bg-[#0e1013] text-stone-100'
-      }`}>
+      <div
+        className={`min-h-screen w-full flex flex-col items-center justify-center p-4 transition-colors ${
+          isBright ? 'bg-[#f7f6f3] text-stone-900' : 'bg-[#0e1013] text-stone-100'
+        }`}
+      >
         <div className="relative flex items-center justify-center mb-4">
-          <div className="w-12 h-12 rounded-xl border-2 border-amber-500/20 border-t-amber-500 animate-spin" />
-          <div className="absolute w-7 h-7 rounded-lg bg-amber-500 flex items-center justify-center text-stone-950 font-mono font-bold text-xs shadow-sm">
+          <div className="w-12 h-12 rounded-xl border-2 border-orange-500/20 border-t-orange-500 animate-spin" />
+          <div className="absolute w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center text-white font-mono font-bold text-xs shadow-sm">
             3D
           </div>
         </div>
-        <p className="text-xs font-mono text-amber-500 font-medium tracking-wider animate-pulse">
+        <p className="text-xs font-mono text-orange-500 font-medium tracking-wider animate-pulse">
           SYNCHRONIZING ENVIRONMENT...
         </p>
       </div>
@@ -67,14 +68,24 @@ function MainAppContent() {
     );
   }
 
-  const currentTab = location.pathname === '/' ? 'dashboard' : location.pathname.slice(1);
+  const currentTab =
+    location.pathname === '/' || location.pathname === '/app' || location.pathname === '/dashboard'
+      ? 'home'
+      : location.pathname.slice(1);
 
   const handleLaunchConcept = (concept) => {
     setSelectedConcept(concept);
     navigate('/visualizer');
   };
 
-  const handleApplyDoctorCode = ({ code, language, trace, problemTitle, timeComplexity, spaceComplexity }) => {
+  const handleApplyDoctorCode = ({
+    code,
+    language,
+    trace,
+    problemTitle,
+    timeComplexity,
+    spaceComplexity,
+  }) => {
     setSelectedConcept({
       id: 'personal-problem',
       title: problemTitle ? `💡 ${problemTitle}` : `💡 Personal Problem (${(language || 'java').toUpperCase()})`,
@@ -103,13 +114,15 @@ function MainAppContent() {
   };
 
   return (
-    <div className={`flex flex-col h-[100dvh] w-full overflow-hidden transition-colors duration-200 ${
-      isBright ? 'bg-slate-50 text-slate-900' : 'bg-[#070b14] text-slate-100'
-    }`}>
-      {/* Top Application Navbar — visible to authenticated users in workspace */}
+    <div
+      className={`flex flex-col h-[100dvh] w-full overflow-hidden transition-colors duration-200 ${
+        isBright ? 'bg-slate-50 text-slate-900' : 'bg-[#070b14] text-slate-100'
+      }`}
+    >
+      {/* Top Application Navbar */}
       <Navbar
         activeTab={currentTab}
-        setActiveTab={(id) => navigate(id === 'dashboard' ? '/' : `/${id}`)}
+        setActiveTab={(id) => navigate(id === 'home' || id === 'dashboard' ? '/app' : `/${id}`)}
         onOpenCodeDoctor={() => setIsDoctorOpen(true)}
         onOpenPersonalProblem={() => setIsDoctorOpen(true)}
       />
@@ -117,46 +130,64 @@ function MainAppContent() {
       {/* Main View Container */}
       <main className="flex-1 flex flex-col overflow-hidden pb-14 md:pb-0">
         <Routes>
-          {/* Core Educational Platform Experience */}
+          {/* Core App Routes — /app is canonical workspace dashboard */}
           <Route
             path="/"
-            element={<Dashboard onNavigate={(tab) => navigate(tab === 'dashboard' ? '/' : `/${tab}`)} onLaunchConcept={handleLaunchConcept} />}
+            element={
+              <Dashboard
+                onNavigate={(tab) => navigate(tab === 'dashboard' || tab === 'home' ? '/app' : `/${tab}`)}
+                onLaunchConcept={handleLaunchConcept}
+              />
+            }
           />
           <Route
-            path="/dashboard"
-            element={<Dashboard onNavigate={(tab) => navigate(tab === 'dashboard' ? '/' : `/${tab}`)} onLaunchConcept={handleLaunchConcept} />}
+            path="/app"
+            element={
+              <Dashboard
+                onNavigate={(tab) => navigate(tab === 'dashboard' || tab === 'home' ? '/app' : `/${tab}`)}
+                onLaunchConcept={handleLaunchConcept}
+              />
+            }
+          />
+          <Route path="/dashboard" element={<Navigate to="/app" replace />} />
+          <Route path="/home" element={<Navigate to="/app" replace />} />
+
+          {/* 3D Code Editor & Visualizer Studio */}
+          <Route
+            path="/editor"
+            element={<Visualizer initialConcept={selectedConcept} key="code-editor" />}
           />
           <Route
             path="/workspace"
-            element={<Visualizer initialConcept={selectedConcept} />}
-          />
-          <Route
-            path="/projects"
-            element={<Dashboard onNavigate={(tab) => navigate(tab === 'dashboard' ? '/' : `/${tab}`)} onLaunchConcept={handleLaunchConcept} />}
+            element={<Visualizer initialConcept={selectedConcept} key="workspace" />}
           />
           <Route
             path="/visualizer"
-            element={<Visualizer initialConcept={selectedConcept} />}
+            element={<Visualizer initialConcept={selectedConcept} key="visualizer" />}
           />
           <Route
             path="/visualize"
-            element={<Visualizer initialConcept={selectedConcept} />}
+            element={<Visualizer initialConcept={selectedConcept} key="visualize" />}
           />
+
+          {/* 3D Landing Showcase */}
           <Route
             path="/showcase"
             element={<Website3D onLaunchConcept={handleLaunchConcept} />}
           />
           <Route
-            path="/algorithms"
-            element={<DsaHub initialTab="algorithms" onSelectConcept={handleLaunchConcept} />}
+            path="/landing"
+            element={<Website3D onLaunchConcept={handleLaunchConcept} />}
           />
-          <Route
-            path="/ai"
-            element={<AiTutorPage onSendToVisualizer={handleLaunchConcept} />}
-          />
+
+          {/* DSA Curriculum & Problems */}
           <Route
             path="/dsa"
             element={<DsaHub initialTab="curriculum" onSelectConcept={handleLaunchConcept} />}
+          />
+          <Route
+            path="/algorithms"
+            element={<DsaHub initialTab="algorithms" onSelectConcept={handleLaunchConcept} />}
           />
           <Route
             path="/dsa/:problemSlug"
@@ -174,14 +205,20 @@ function MainAppContent() {
             path="/striver"
             element={<DsaHub initialTab="striver" onSelectConcept={handleLaunchConcept} />}
           />
+
+          {/* AI Algorithmic Tutor */}
           <Route
-            path="/quiz"
-            element={<QuizArena />}
+            path="/ai"
+            element={<AiTutorPage onSendToVisualizer={handleLaunchConcept} />}
           />
-          <Route
-            path="/settings"
-            element={<SettingsPage />}
-          />
+
+          {/* Quiz Arena */}
+          <Route path="/quiz" element={<QuizArena />} />
+
+          {/* Settings */}
+          <Route path="/settings" element={<SettingsPage />} />
+
+          {/* Protected Routes */}
           <Route
             path="/saved"
             element={
@@ -206,75 +243,88 @@ function MainAppContent() {
               </ProtectedRoute>
             }
           />
-          {/* Unknown routes show 404 page */}
-          <Route path="*" element={<NotFoundPage />} />
+
+          {/* Any other unknown route seamlessly defaults to /app */}
+          <Route path="*" element={<Navigate to="/app" replace />} />
         </Routes>
       </main>
 
-      {/* Mobile Bottom Navigation Bar for authenticated workspace */}
-      <nav className={`md:hidden fixed bottom-0 left-0 right-0 h-14 backdrop-blur-xl border-t px-2 flex items-center justify-around z-40 select-none transition-colors ${
-        isBright
-          ? 'bg-white/95 border-slate-200 shadow-lg text-slate-700'
-          : 'bg-slate-950/95 border-slate-800/80 text-slate-400'
-      }`}>
+      {/* Mobile Bottom Navigation Bar */}
+      <nav
+        className={`md:hidden fixed bottom-0 left-0 right-0 h-14 backdrop-blur-xl border-t px-2 flex items-center justify-around z-40 select-none transition-colors ${
+          isBright
+            ? 'bg-white/95 border-slate-200 shadow-lg text-slate-700'
+            : 'bg-slate-950/95 border-slate-800/80 text-slate-400'
+        }`}
+      >
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/app')}
           className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition ${
-            location.pathname === '/' || location.pathname === '/dashboard'
-              ? 'text-amber-600 font-semibold dark:text-amber-400'
-              : isBright ? 'text-stone-500 hover:text-stone-900' : 'text-stone-400 hover:text-stone-200'
+            location.pathname === '/' || location.pathname === '/app' || location.pathname === '/dashboard'
+              ? 'text-orange-500 font-bold'
+              : isBright
+              ? 'text-stone-500 hover:text-stone-900'
+              : 'text-stone-400 hover:text-stone-200'
           }`}
         >
-          <span className="text-lg">🏠</span>
+          <span className="text-base">🏠</span>
           <span className="text-[9px] font-medium">Home</span>
+        </button>
+
+        <button
+          onClick={() => navigate('/editor')}
+          className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition ${
+            location.pathname === '/editor'
+              ? 'text-orange-500 font-bold'
+              : isBright
+              ? 'text-stone-500 hover:text-stone-900'
+              : 'text-stone-400 hover:text-stone-200'
+          }`}
+        >
+          <span className="text-base">⚡</span>
+          <span className="text-[9px] font-medium">Editor</span>
         </button>
 
         <button
           onClick={() => navigate('/visualizer')}
           className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition ${
             location.pathname === '/visualizer' || location.pathname === '/workspace'
-              ? 'text-amber-600 font-semibold dark:text-amber-400'
-              : isBright ? 'text-stone-500 hover:text-stone-900' : 'text-stone-400 hover:text-stone-200'
+              ? 'text-orange-500 font-bold'
+              : isBright
+              ? 'text-stone-500 hover:text-stone-900'
+              : 'text-stone-400 hover:text-stone-200'
           }`}
         >
-          <span className="text-lg">🧊</span>
+          <span className="text-base">🧊</span>
           <span className="text-[9px] font-medium">3D Code</span>
-        </button>
-
-        <button
-          onClick={() => navigate('/quiz')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition ${
-            location.pathname === '/quiz'
-              ? 'text-amber-600 font-semibold dark:text-amber-400'
-              : isBright ? 'text-stone-500 hover:text-stone-900' : 'text-stone-400 hover:text-stone-200'
-          }`}
-        >
-          <span className="text-lg">🎯</span>
-          <span className="text-[9px] font-medium">Quiz</span>
-        </button>
-
-        <button
-          onClick={() => navigate('/ai')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition ${
-            location.pathname === '/ai'
-              ? 'text-amber-600 font-semibold dark:text-amber-400'
-              : isBright ? 'text-stone-500 hover:text-stone-900' : 'text-stone-400 hover:text-stone-200'
-          }`}
-        >
-          <span className="text-lg">🤖</span>
-          <span className="text-[9px] font-medium">AI Tutor</span>
         </button>
 
         <button
           onClick={() => navigate('/dsa')}
           className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition ${
             location.pathname === '/dsa' || location.pathname === '/striver'
-              ? 'text-amber-600 font-semibold dark:text-amber-400'
-              : isBright ? 'text-stone-500 hover:text-stone-900' : 'text-stone-400 hover:text-stone-200'
+              ? 'text-orange-500 font-bold'
+              : isBright
+              ? 'text-stone-500 hover:text-stone-900'
+              : 'text-stone-400 hover:text-stone-200'
           }`}
         >
-          <span className="text-lg">📚</span>
+          <span className="text-base">📚</span>
           <span className="text-[9px] font-medium">DSA Hub</span>
+        </button>
+
+        <button
+          onClick={() => navigate('/ai')}
+          className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition ${
+            location.pathname === '/ai'
+              ? 'text-orange-500 font-bold'
+              : isBright
+              ? 'text-stone-500 hover:text-stone-900'
+              : 'text-stone-400 hover:text-stone-200'
+          }`}
+        >
+          <span className="text-base">🤖</span>
+          <span className="text-[9px] font-medium">AI Tutor</span>
         </button>
 
         <button
@@ -283,8 +333,8 @@ function MainAppContent() {
             isBright ? 'text-amber-600 hover:text-amber-700' : 'text-amber-400 hover:text-amber-300'
           }`}
         >
-          <span className="text-lg">💡</span>
-          <span className="text-[9px] font-medium">Personal</span>
+          <span className="text-base">💡</span>
+          <span className="text-[9px] font-medium">Doctor</span>
         </button>
       </nav>
 

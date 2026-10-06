@@ -17,10 +17,12 @@ import {
   Zap,
   Flame,
   Search,
+  Trophy,
+  ShieldCheck,
+  Compass,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ALGORITHM_CATALOG } from '../algorithms/index.js';
-import { SAMPLE_PROGRAMS } from '../utils/sampleCodes.js';
 import { getExecutionHistory } from '../services/apiService.js';
 import { getDashboardStats } from '../services/dashboard.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -110,308 +112,533 @@ export default function Dashboard({ onNavigate, onLaunchConcept }) {
   };
 
   const handleStartVisualizing = () => {
-    navigate('/visualizer');
+    navigate('/editor');
   };
 
   const categories = ['All', 'Arrays', 'Sorting', 'Trees', 'Graphs', 'Searching', 'Stack & Queue'];
 
   const filteredAlgorithms = ALGORITHM_CATALOG.filter((algo) => {
     const matchesCat = activeCategory === 'All' || algo.category === activeCategory;
-    const matchesSearch = !searchQuery.trim() ||
+    const matchesSearch =
+      !searchQuery.trim() ||
       algo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       algo.category.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCat && matchesSearch;
   });
 
+  const userDisplayName = (
+    user?.fullName ||
+    user?.name ||
+    user?.username ||
+    'Developer'
+  ).split(' ')[0];
+
+  const workspaceCards = [
+    {
+      icon: Code2,
+      title: 'Code Editor',
+      description: 'Write, execute and visualize your algorithms with step-by-step 3D execution.',
+      action: 'Open Editor',
+      path: '/editor',
+      accent: 'orange',
+    },
+    {
+      icon: BookOpen,
+      title: 'DSA Hub',
+      description: 'Explore data structures, algorithms, patterns and problems in one place.',
+      action: 'Explore DSA',
+      path: '/dsa',
+      accent: 'cyan',
+    },
+    {
+      icon: Sparkles,
+      title: 'AI Tutor',
+      description: 'Get intelligent explanations, debugging help, AST analysis and guidance.',
+      action: 'Ask AI',
+      path: '/ai',
+      accent: 'violet',
+    },
+    {
+      icon: Trophy,
+      title: 'Quiz Arena',
+      description: 'Challenge yourself with topic-based DSA quizzes and track your progress.',
+      action: 'Take Quiz',
+      path: '/quiz',
+      accent: 'emerald',
+    },
+  ];
+
   return (
-    <div className={`flex-1 overflow-y-auto selection:bg-amber-500 selection:text-stone-950 transition-colors duration-150 ${
-      isBright ? 'bg-[#f7f6f3] text-stone-900' : 'bg-[#0e1013] text-stone-100'
-    }`}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-16">
-
+    <div
+      className={`min-h-full flex-1 overflow-y-auto selection:bg-orange-500 selection:text-white transition-colors duration-200 ${
+        isBright ? 'bg-[#f7f9fc] text-slate-900' : 'bg-[#070b14] text-slate-100'
+      }`}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-6 sm:py-8 md:py-10 space-y-8 md:space-y-12">
         {/* ========================================================
-            1. HERO: SEE YOUR CODE EXECUTE (Strong, Editorial, Confident)
+            1. HERO WORKSPACE WELCOME (Matching code-3d-ai.vercel.app/#/app)
             ======================================================== */}
-        <section className="space-y-6 pt-2">
-          {/* Technical Pill Indicator */}
-          <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold uppercase tracking-wider border ${
-              isBright
-                ? 'bg-stone-200/70 text-stone-800 border-stone-300'
-                : 'bg-stone-800 text-stone-300 border-stone-700'
-            }`}>
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-              Spatial Code Engine 2.0
-            </span>
-            <span className={`text-xs font-mono hidden sm:inline ${isBright ? 'text-stone-500' : 'text-stone-500'}`}>
-              AST Interpreter • 3D WebGL • Synchronized Execution
-            </span>
-          </div>
+        <section
+          className={`relative overflow-hidden rounded-3xl border p-6 sm:p-8 md:p-10 shadow-sm transition-all duration-200 ${
+            isBright ? 'bg-white border-slate-200' : 'bg-[#0b111d] border-slate-800'
+          }`}
+        >
+          {/* Ambient Lighting Orbs */}
+          <div
+            className={`absolute -top-32 -right-32 h-72 w-72 rounded-full blur-3xl pointer-events-none ${
+              isBright ? 'bg-orange-200/40' : 'bg-orange-500/10'
+            }`}
+          />
+          <div
+            className={`absolute -bottom-40 left-1/3 h-80 w-80 rounded-full blur-3xl pointer-events-none ${
+              isBright ? 'bg-violet-200/30' : 'bg-violet-500/10'
+            }`}
+          />
 
-          {/* Main Statement */}
-          <div className="space-y-3">
-            <h1 className="text-4xl sm:text-6xl font-black tracking-tight font-display leading-[1.08]">
-              SEE YOUR CODE <span className="text-amber-500">EXECUTE.</span>
-            </h1>
-            <p className={`text-base sm:text-lg max-w-2xl leading-relaxed ${
-              isBright ? 'text-stone-600' : 'text-stone-300'
-            }`}>
-              Watch memory mutate, pointers shift, conditions evaluate, and algorithms physically unfold.
-              Code3D AI maps every statement directly to spatial 3D execution.
-            </p>
-          </div>
-
-          {/* Core Call to Actions */}
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <button
-              onClick={handleStartVisualizing}
-              style={{
-                backgroundColor: isBright ? currentAccent.bright : currentAccent.dark,
-                boxShadow: `0 4px 14px ${currentAccent.glow}`,
-              }}
-              className="inline-flex items-center gap-2 h-11 px-6 rounded-xl text-stone-950 font-bold text-sm transition-all active:scale-97 cursor-pointer shadow-md"
-            >
-              <Play size={16} className="fill-current" />
-              <span>Start Visualizing</span>
-              <ArrowRight size={16} />
-            </button>
-
-            <button
-              onClick={() => {
-                const el = document.getElementById('algorithm-catalog-section');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className={`inline-flex items-center gap-2 h-11 px-5 rounded-xl border text-sm font-semibold transition-all cursor-pointer ${
-                isBright
-                  ? 'bg-white hover:bg-stone-100 border-stone-300 text-stone-800'
-                  : 'bg-[#14171c] hover:bg-stone-800 border-stone-700 text-stone-200'
-              }`}
-            >
-              <span>Explore Algorithms</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/dsa')}
-              className={`inline-flex items-center gap-2 h-11 px-4 rounded-xl border text-sm font-medium transition-all cursor-pointer ${
-                isBright
-                  ? 'border-transparent text-stone-600 hover:text-stone-900 hover:bg-stone-200/50'
-                  : 'border-transparent text-stone-400 hover:text-stone-200 hover:bg-stone-800/40'
-              }`}
-            >
-              <BookOpen size={15} />
-              <span>SDE Sheet (182 Problems)</span>
-            </button>
-          </div>
-        </section>
-
-        {/* ========================================================
-            2. THE CORE RELATIONSHIP: CODE -> EXECUTION -> UNDERSTANDING
-            ======================================================== */}
-        <section className={`p-6 rounded-2xl border transition-colors template-card ${
-          isBright ? 'bg-white border-[#e2ded5] shadow-xs' : 'bg-[#13161b] border-[#242831]'
-        }`}>
-          <div className="text-[11px] font-mono uppercase tracking-widest font-bold text-amber-500 mb-3">
-            Core Mental Model
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 sm:gap-2 items-center text-center font-mono">
-            <div className={`p-3 rounded-lg border ${
-              isBright ? 'bg-stone-50 border-stone-200' : 'bg-[#181c22] border-stone-700'
-            }`}>
-              <div className="text-xs font-bold uppercase tracking-wider text-amber-500">1. Code</div>
-              <div className="text-[11px] mt-1 opacity-70">Source Input (Java/Py/C)</div>
-            </div>
-
-            <div className="hidden sm:flex justify-center text-stone-500 font-bold">→</div>
-
-            <div className={`p-3 rounded-lg border ${
-              isBright ? 'bg-stone-50 border-stone-200' : 'bg-[#181c22] border-stone-700'
-            }`}>
-              <div className="text-xs font-bold uppercase tracking-wider text-amber-500">2. Execution</div>
-              <div className="text-[11px] mt-1 opacity-70">AST Steps &amp; Mutations</div>
-            </div>
-
-            <div className="hidden sm:flex justify-center text-stone-500 font-bold">→</div>
-
-            <div className={`p-3 rounded-lg border ${
-              isBright ? 'bg-stone-50 border-stone-200' : 'bg-[#181c22] border-stone-700'
-            }`}>
-              <div className="text-xs font-bold uppercase tracking-wider text-amber-500">3. Visualization</div>
-              <div className="text-[11px] mt-1 opacity-70">Physical 3D Geometry</div>
-            </div>
-          </div>
-        </section>
-
-        {/* ========================================================
-            3. INTERACTIVE HERO PREVIEW (Immediate Visual Proof)
-            ======================================================== */}
-        <section className={`rounded-2xl border overflow-hidden transition-colors template-card ${
-          isBright ? 'bg-white border-[#e2ded5] shadow-xs' : 'bg-[#13161b] border-[#242831]'
-        }`}>
-          {/* Header of preview */}
-          <div className={`px-4 py-2.5 border-b flex items-center justify-between text-xs font-mono ${
-            isBright ? 'bg-stone-50 border-stone-200 text-stone-700' : 'bg-[#16191f] border-stone-800 text-stone-300'
-          }`}>
-            <div className="flex items-center gap-2">
+          <div className="relative">
+            {/* System Status Chips */}
+            <div className="flex flex-wrap items-center gap-2 mb-5">
               <span
-                className="w-2.5 h-2.5 rounded-full"
-                style={{ backgroundColor: isBright ? currentAccent.bright : currentAccent.dark }}
-              />
-              <span className="font-bold">Live Execution Preview: Bubble Sort Iteration</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-stone-500 text-[11px]">
-                Step {demoStep + 1} of {DEMO_TRACE.length}
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold tracking-wide ${
+                  isBright
+                    ? 'bg-slate-50 border-slate-200 text-slate-600'
+                    : 'bg-slate-900 border-slate-800 text-slate-400'
+                }`}
+              >
+                <Terminal size={13} className="text-orange-500" />
+                CODE3D AI WORKSPACE
+              </span>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold ${
+                  isBright
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                    : 'bg-emerald-950/40 text-emerald-400 border border-emerald-800/40'
+                }`}
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                SYSTEM READY
+              </span>
+              <span
+                className={`hidden sm:inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold ${
+                  isBright
+                    ? 'bg-orange-50 text-orange-700 border border-orange-200/60'
+                    : 'bg-orange-950/40 text-orange-400 border border-orange-800/40'
+                }`}
+              >
+                <Zap size={11} className="text-orange-500" />
+                AST ENGINE 2.0
               </span>
             </div>
+
+            {/* Greeting with Gradient Text */}
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight">
+              Welcome,{' '}
+              <span className="bg-gradient-to-r from-orange-500 via-violet-500 to-cyan-500 bg-clip-text text-transparent">
+                {userDisplayName}
+              </span>
+              <span className="ml-2 inline-block animate-bounce">👋</span>
+            </h1>
+
+            <p
+              className={`mt-4 max-w-2xl text-sm md:text-base leading-7 ${
+                isBright ? 'text-slate-600' : 'text-slate-400'
+              }`}
+            >
+              Your coding workspace is ready. Build, visualize and understand algorithms with the power of
+              AI and interactive 3D execution.
+            </p>
+
+            {/* Action Buttons */}
+            <div className="mt-7 flex flex-wrap gap-3">
+              <button
+                onClick={() => navigate('/editor')}
+                className="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-400 active:scale-95 px-5 py-3 text-sm font-bold text-white transition-all shadow-lg shadow-orange-500/25 cursor-pointer"
+              >
+                <Play size={16} fill="white" />
+                <span>Start Coding</span>
+                <ArrowRight size={15} />
+              </button>
+
+              <button
+                onClick={() => navigate('/dsa')}
+                className={`inline-flex items-center gap-2 rounded-xl border px-5 py-3 text-sm font-bold transition-all hover:-translate-y-0.5 cursor-pointer ${
+                  isBright
+                    ? 'bg-white border-slate-300 hover:bg-slate-50 text-slate-800'
+                    : 'bg-slate-900 border-slate-700 hover:bg-slate-800 text-slate-200'
+                }`}
+              >
+                <BookOpen size={16} className="text-cyan-500" />
+                <span>Explore DSA</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/ai')}
+                className={`inline-flex items-center gap-2 rounded-xl border px-5 py-3 text-sm font-bold transition-all hover:-translate-y-0.5 cursor-pointer ${
+                  isBright
+                    ? 'bg-violet-50/80 border-violet-200 text-violet-700 hover:bg-violet-100'
+                    : 'bg-violet-950/30 border-violet-800/60 text-violet-300 hover:bg-violet-900/40'
+                }`}
+              >
+                <Sparkles size={16} className="text-violet-400" />
+                <span>AI Tutor</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* ========================================================
+            2. 4 QUICK STAT BADGES
+            ======================================================== */}
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { icon: Code2, label: 'Code Workspace', value: '3D WebGL', accent: 'orange' },
+            { icon: Sparkles, label: 'AI Powered', value: 'AST ON', accent: 'violet' },
+            { icon: BookOpen, label: 'DSA Curriculum', value: '180+ Patterns', accent: 'cyan' },
+            { icon: Zap, label: 'Execution', value: 'Live 60 FPS', accent: 'emerald' },
+          ].map(({ icon: Icon, label, value, accent }) => (
+            <div
+              key={label}
+              className={`rounded-2xl border p-5 transition-all duration-200 hover:-translate-y-0.5 ${
+                isBright ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#0b111d] border-slate-800'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div
+                  className={`flex h-9 w-9 items-center justify-center rounded-xl ${
+                    accent === 'orange'
+                      ? 'bg-orange-500/10 text-orange-500'
+                      : accent === 'violet'
+                      ? 'bg-violet-500/10 text-violet-500'
+                      : accent === 'cyan'
+                      ? 'bg-cyan-500/10 text-cyan-500'
+                      : 'bg-emerald-500/10 text-emerald-500'
+                  }`}
+                >
+                  <Icon size={18} />
+                </div>
+                <span className="text-xs font-mono font-bold tracking-wider">{value}</span>
+              </div>
+              <p className={`mt-3 text-xs font-medium ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>
+                {label}
+              </p>
+            </div>
+          ))}
+        </section>
+
+        {/* ========================================================
+            3. "YOUR WORKSPACE" CORE 4 CARDS (Exact Layout & Visuals)
+            ======================================================== */}
+        <section className="space-y-4">
+          <div className="flex items-end justify-between">
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold tracking-tight">Your Workspace</h2>
+              <p className={`mt-1 text-sm ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>
+                Everything you need to learn, practice and improve.
+              </p>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-inherit">
-            {/* Left: Code Snippet with Active Line Highlight */}
-            <div className="p-4 sm:p-6 font-mono text-xs space-y-3">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-stone-500">
-                Source Code (Java)
-              </div>
-              <div className="space-y-1 font-mono text-[12px] leading-relaxed">
-                <div className={`px-2 py-1 rounded transition-colors ${currentDemo.line === 1 ? 'bg-amber-500/20 text-amber-400 font-bold border-l-2 border-amber-500' : 'opacity-70'}`}>
-                  1&nbsp; int[] arr = &#123; 28, 14, 35, 12, 42 &#125;;
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {workspaceCards.map(({ icon: Icon, title, description, action, path, accent }) => (
+              <button
+                key={title}
+                onClick={() => navigate(path)}
+                className={`group text-left rounded-2xl border p-6 transition-all duration-200 hover:-translate-y-1 cursor-pointer ${
+                  isBright
+                    ? 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-xl'
+                    : 'bg-[#0b111d] border-slate-800 hover:border-slate-700 hover:bg-[#0d1421]'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div
+                    className={`flex h-12 w-12 items-center justify-center rounded-xl transition-transform group-hover:scale-105 ${
+                      accent === 'orange'
+                        ? 'bg-orange-500/10 text-orange-500'
+                        : accent === 'cyan'
+                        ? 'bg-cyan-500/10 text-cyan-500'
+                        : accent === 'violet'
+                        ? 'bg-violet-500/10 text-violet-500'
+                        : 'bg-emerald-500/10 text-emerald-500'
+                    }`}
+                  >
+                    <Icon size={24} />
+                  </div>
+                  <div
+                    className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
+                      isBright
+                        ? 'bg-slate-100 group-hover:bg-slate-200'
+                        : 'bg-slate-900 group-hover:bg-slate-800'
+                    }`}
+                  >
+                    <ArrowRight
+                      size={16}
+                      className="transition-transform group-hover:translate-x-0.5 text-slate-400 group-hover:text-slate-200"
+                    />
+                  </div>
                 </div>
-                <div className={`px-2 py-1 rounded transition-colors ${currentDemo.line === 2 ? 'bg-amber-500/20 text-amber-400 font-bold border-l-2 border-amber-500' : 'opacity-70'}`}>
-                  2&nbsp; if (arr[i] &gt; arr[i + 1]) &#123;
-                </div>
-                <div className={`px-2 py-1 rounded transition-colors ${currentDemo.line === 3 ? 'bg-amber-500/20 text-amber-400 font-bold border-l-2 border-amber-500' : 'opacity-70'}`}>
-                  3&nbsp; &nbsp;&nbsp;swap(arr, i, i + 1);
-                </div>
-                <div className={`px-2 py-1 rounded transition-colors ${currentDemo.line === 4 ? 'bg-amber-500/20 text-amber-400 font-bold border-l-2 border-amber-500' : 'opacity-70'}`}>
-                  4&nbsp; &#125;
-                </div>
-                <div className={`px-2 py-1 rounded transition-colors ${currentDemo.line === 5 ? 'bg-amber-500/20 text-amber-400 font-bold border-l-2 border-amber-500' : 'opacity-70'}`}>
-                  5&nbsp; i++;
-                </div>
-              </div>
 
-              {/* Event Explanation */}
-              <div className={`p-3 rounded-md border text-xs font-sans mt-4 ${
-                isBright ? 'bg-stone-50 border-stone-200 text-stone-800' : 'bg-[#181c22] border-stone-700 text-stone-200'
-              }`}>
-                <div className="text-[10px] font-mono font-bold uppercase text-amber-500 mb-1">
-                  Event: {currentDemo.event}
+                <h3 className="mt-6 text-lg font-bold tracking-tight">{title}</h3>
+                <p
+                  className={`mt-2 text-sm leading-6 ${
+                    isBright ? 'text-slate-600' : 'text-slate-400'
+                  }`}
+                >
+                  {description}
+                </p>
+
+                <div
+                  className={`mt-5 text-xs font-bold flex items-center gap-1 ${
+                    accent === 'orange'
+                      ? 'text-orange-500'
+                      : accent === 'cyan'
+                      ? 'text-cyan-500'
+                      : accent === 'violet'
+                      ? 'text-violet-500'
+                      : 'text-emerald-500'
+                  }`}
+                >
+                  <span>{action}</span>
+                  <span className="transition-transform group-hover:translate-x-1">→</span>
                 </div>
-                <div>{currentDemo.desc}</div>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* ========================================================
+            4. AI TUTOR ASSISTANCE BANNER
+            ======================================================== */}
+        <section
+          className={`relative overflow-hidden rounded-2xl border p-6 md:p-7 transition-all ${
+            isBright
+              ? 'bg-gradient-to-r from-violet-50 via-white to-cyan-50 border-slate-200 shadow-xs'
+              : 'bg-gradient-to-r from-violet-950/20 via-[#0b111d] to-cyan-950/20 border-slate-800'
+          }`}
+        >
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+            <div className="flex items-start gap-4">
+              <div
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+                  isBright ? 'bg-violet-100 text-violet-600' : 'bg-violet-950/50 text-violet-400'
+                }`}
+              >
+                <Sparkles size={20} />
+              </div>
+              <div>
+                <h3 className="font-bold text-base">Need help with your code?</h3>
+                <p className={`mt-1 text-sm ${isBright ? 'text-slate-600' : 'text-slate-400'}`}>
+                  Ask Code3D AI to explain, debug or improve your solution with instant multi-language AST diagnostics.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/ai')}
+              className={`inline-flex items-center justify-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-bold transition hover:-translate-y-0.5 shrink-0 cursor-pointer ${
+                isBright
+                  ? 'bg-white border-slate-300 hover:bg-slate-50 text-slate-800'
+                  : 'bg-slate-900 border-slate-700 hover:bg-slate-800 text-slate-200'
+              }`}
+            >
+              <span>Open AI Tutor</span>
+              <ArrowRight size={15} />
+            </button>
+          </div>
+        </section>
+
+        {/* ========================================================
+            5. INTERACTIVE LIVE 3D EXECUTION SIMULATOR PREVIEW
+            ======================================================== */}
+        <section
+          className={`rounded-2xl border overflow-hidden transition-colors ${
+            isBright ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#0b111d] border-slate-800'
+          }`}
+        >
+          {/* Header of preview */}
+          <div
+            className={`px-6 py-4 border-b flex flex-wrap items-center justify-between gap-3 ${
+              isBright ? 'bg-slate-50 border-slate-200' : 'bg-[#0e131d] border-slate-800'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse" />
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-orange-500">
+                Live Memory Trace Simulator
+              </span>
+              <span className={`text-[11px] font-mono hidden sm:inline ${isBright ? 'text-slate-400' : 'text-slate-500'}`}>
+                • Bubble Sort (arr: [28, 14, 35, 12, 42])
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsDemoPlaying(!isDemoPlaying)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono font-bold transition cursor-pointer ${
+                  isDemoPlaying
+                    ? 'bg-orange-500 text-white border-orange-600'
+                    : isBright
+                    ? 'bg-white hover:bg-slate-100 border-slate-300 text-slate-800'
+                    : 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-200'
+                }`}
+              >
+                {isDemoPlaying ? <Pause size={12} /> : <Play size={12} className="fill-current" />}
+                <span>{isDemoPlaying ? 'PAUSE' : 'AUTO-STEP'}</span>
+              </button>
+
+              <button
+                onClick={() => setDemoStep(0)}
+                className={`p-1.5 rounded-lg border text-xs transition cursor-pointer ${
+                  isBright
+                    ? 'bg-white hover:bg-slate-100 border-slate-300 text-slate-600'
+                    : 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-400'
+                }`}
+                title="Reset simulation to step 1"
+              >
+                <RotateCcw size={13} />
+              </button>
+
+              <button
+                onClick={handleStartVisualizing}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-400 text-white text-xs font-mono font-bold transition cursor-pointer"
+              >
+                <span>3D STUDIO</span>
+                <ChevronRight size={13} />
+              </button>
+            </div>
+          </div>
+
+          {/* Interactive memory preview content */}
+          <div className="p-6 space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4 font-mono text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase font-bold text-slate-500">EVENT:</span>
+                <span className="px-2 py-0.5 rounded bg-orange-500/10 text-orange-500 border border-orange-500/20 font-bold">
+                  {currentDemo.event}
+                </span>
+                <span className={`hidden sm:inline ${isBright ? 'text-slate-600' : 'text-slate-400'}`}>
+                  {currentDemo.desc}
+                </span>
+              </div>
+              <div className="text-slate-500 text-[11px]">
+                Step {demoStep + 1} of {DEMO_TRACE.length}
               </div>
             </div>
 
-            {/* Right: Live Array State Representation */}
-            <div className="p-4 sm:p-6 flex flex-col justify-between space-y-4">
-              <div className="text-[10px] font-mono font-bold uppercase tracking-widest text-stone-500">
-                Spatial Memory Representation
+            {/* Visual Heap / Memory Cells Simulation */}
+            <div className="space-y-2">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 flex items-center justify-between">
+                <span>HEAP ARRAY MEMORY CELLS (PHYSICAL LAYOUT)</span>
+                <span>INDICES [0..4]</span>
               </div>
 
-              {/* Memory slots */}
-              <div className="flex items-end justify-center gap-2 sm:gap-3 py-6">
+              <div className="grid grid-cols-5 gap-2 sm:gap-3">
                 {currentDemo.values.map((val, idx) => {
+                  const isPointerActive = currentDemo.active === idx;
                   const isCompared = currentDemo.comp && currentDemo.comp.includes(idx);
-                  const isActive = currentDemo.active === idx;
-                  const heightPx = Math.max(40, val * 2.2);
 
                   return (
-                    <div key={idx} className="flex flex-col items-center gap-1.5">
-                      <span className={`text-[10px] font-mono font-bold ${
-                        isCompared ? 'text-amber-500' : isBright ? 'text-stone-600' : 'text-stone-400'
-                      }`}>
+                    <div
+                      key={idx}
+                      className={`relative flex flex-col items-center justify-center h-20 sm:h-24 rounded-xl border font-mono transition-all duration-300 ${
+                        isPointerActive
+                          ? 'border-orange-500 bg-orange-500/10 shadow-lg shadow-orange-500/15 scale-102'
+                          : isCompared
+                          ? 'border-cyan-500 bg-cyan-500/10'
+                          : isBright
+                          ? 'bg-slate-50 border-slate-200'
+                          : 'bg-[#0f1420] border-slate-800'
+                      }`}
+                    >
+                      <span className="text-xs font-bold text-slate-500 mb-1">
                         [{idx}]
                       </span>
-                      <div
-                        style={{ height: `${heightPx}px` }}
-                        className={`w-10 sm:w-12 rounded-md flex items-center justify-center font-mono font-bold text-sm border transition-all duration-300 ${
-                          isCompared
-                            ? 'bg-amber-500 text-stone-950 border-amber-400 shadow-sm scale-105'
-                            : isActive
-                              ? 'bg-stone-800 text-amber-400 border-amber-500/50'
-                              : isBright
-                                ? 'bg-stone-100 text-stone-800 border-stone-300'
-                                : 'bg-[#181c22] text-stone-300 border-stone-700'
-                        }`}
-                      >
-                        {val}
-                      </div>
+                      <span className="text-lg sm:text-2xl font-black">{val}</span>
+
+                      {isPointerActive && (
+                        <div className="absolute -bottom-2.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-500 text-white shadow-xs">
+                          POINTER
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
+            </div>
 
-              {/* Scrubber Playback Controls */}
-              <div className="flex items-center justify-between pt-2 border-t border-inherit text-xs">
-                <div className="flex items-center gap-2">
+            {/* Stepper buttons */}
+            <div className="flex items-center justify-between pt-2 border-t border-slate-800/40">
+              <div className="font-mono text-xs text-orange-500 truncate max-w-xs sm:max-w-md">
+                <code>{currentDemo.expr}</code>
+              </div>
+
+              <div className="flex items-center gap-1">
+                {DEMO_TRACE.map((_, i) => (
                   <button
-                    onClick={() => setIsDemoPlaying(!isDemoPlaying)}
-                    className="px-3 py-1 rounded bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold flex items-center gap-1 cursor-pointer"
-                  >
-                    {isDemoPlaying ? <Pause size={12} className="fill-current" /> : <Play size={12} className="fill-current" />}
-                    <span>{isDemoPlaying ? 'Pause' : 'Play'}</span>
-                  </button>
-                  <button
-                    onClick={() => setDemoStep((prev) => (prev + 1) % DEMO_TRACE.length)}
-                    className={`px-3 py-1 rounded border font-medium cursor-pointer ${
-                      isBright ? 'border-stone-300 hover:bg-stone-100 text-stone-800' : 'border-stone-700 hover:bg-stone-800 text-stone-200'
+                    key={i}
+                    onClick={() => setDemoStep(i)}
+                    className={`w-2.5 h-2.5 rounded-full transition-all cursor-pointer ${
+                      demoStep === i
+                        ? 'bg-orange-500 scale-125'
+                        : isBright
+                        ? 'bg-slate-300 hover:bg-slate-400'
+                        : 'bg-slate-700 hover:bg-slate-600'
                     }`}
-                  >
-                    Step Next →
-                  </button>
-                </div>
-
-                <button
-                  onClick={handleStartVisualizing}
-                  className="font-semibold text-amber-500 hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <span>Open Full 3D Studio</span>
-                  <ArrowRight size={13} />
-                </button>
+                    title={`Jump to step ${i + 1}`}
+                  />
+                ))}
               </div>
             </div>
           </div>
         </section>
 
         {/* ========================================================
-            4. ALGORITHM EXPLORATION (Editorial List Rows — NOT Cards)
+            6. ALGORITHM QUICK LAUNCH CATALOG
             ======================================================== */}
-        <section id="algorithm-catalog-section" className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+        <section id="algorithm-catalog-section" className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
-              <div className="text-[11px] font-mono uppercase tracking-widest font-bold text-amber-500 mb-1">
-                Curriculum
+              <div className="text-[11px] font-mono uppercase tracking-widest font-bold text-orange-500 mb-1">
+                Spatial Catalog
               </div>
-              <h2 className="text-2xl font-bold tracking-tight">
-                Explore Algorithms in 3D
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+                Launch 3D Visualizer
               </h2>
+              <p className={`text-xs sm:text-sm mt-1 ${isBright ? 'text-slate-500' : 'text-slate-400'}`}>
+                1-click simulation for canonical data structures and algorithms.
+              </p>
             </div>
 
-            {/* Search Input */}
-            <div className="relative w-full sm:w-64">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+            {/* Search Box */}
+            <div className="relative w-full sm:w-72">
+              <Search
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
               <input
                 type="text"
                 placeholder="Search algorithms..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full h-9 pl-9 pr-3 rounded-md text-xs font-mono border focus:outline-none focus:border-amber-500 transition-colors ${
-                  isBright ? 'bg-white border-stone-300 text-stone-900' : 'bg-[#14171c] border-stone-700 text-stone-100'
+                className={`w-full pl-9 pr-4 py-2 rounded-xl text-xs border font-mono transition-colors outline-hidden ${
+                  isBright
+                    ? 'bg-white border-slate-300 focus:border-orange-500 text-slate-900'
+                    : 'bg-[#0b111d] border-slate-800 focus:border-orange-500 text-slate-100'
                 }`}
               />
             </div>
           </div>
 
-          {/* Clean Category Filter Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          {/* Category Filter Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none">
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`px-3 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition cursor-pointer ${
                   activeCategory === cat
-                    ? 'bg-amber-500 text-stone-950 font-bold'
+                    ? 'bg-orange-500 text-white font-bold shadow-xs'
                     : isBright
-                      ? 'bg-white border border-stone-200 text-stone-600 hover:text-stone-900'
-                      : 'bg-[#14171c] border border-stone-800 text-stone-400 hover:text-stone-200'
+                    ? 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                    : 'bg-[#0b111d] text-slate-400 border border-slate-800 hover:bg-slate-800/60 hover:text-slate-200'
                 }`}
               >
                 {cat}
@@ -419,57 +646,56 @@ export default function Dashboard({ onNavigate, onLaunchConcept }) {
             ))}
           </div>
 
-          {/* Clean Algorithmic Rows (Anti-Box Design) */}
-          <div className={`rounded-2xl border overflow-hidden divide-y divide-inherit template-card ${
-            isBright ? 'bg-white border-[#e2ded5] shadow-xs' : 'bg-[#13161b] border-[#242831]'
-          }`}>
-            {filteredAlgorithms.slice(0, 10).map((algo) => (
+          {/* Catalog Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredAlgorithms.slice(0, 9).map((algo) => (
               <div
                 key={algo.id}
                 onClick={() => handleLaunchAlgorithm(algo)}
-                className={`px-4 py-3 flex items-center justify-between gap-4 transition-colors cursor-pointer ${
-                  isBright ? 'hover:bg-stone-50' : 'hover:bg-[#181c22]'
+                className={`group p-5 rounded-2xl border transition-all duration-200 hover:-translate-y-1 cursor-pointer flex flex-col justify-between ${
+                  isBright
+                    ? 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-lg'
+                    : 'bg-[#0b111d] border-slate-800 hover:border-slate-700 hover:bg-[#0d1421]'
                 }`}
               >
-                <div className="min-w-0 flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded flex items-center justify-center font-bold text-xs font-mono ${
-                    isBright ? 'bg-stone-100 text-stone-800' : 'bg-stone-800 text-stone-200'
-                  }`}>
-                    {algo.category[0]}
-                  </div>
-                  <div>
-                    <div className="font-semibold text-xs sm:text-sm flex items-center gap-2">
-                      <span>{algo.name}</span>
-                      <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded border ${
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-orange-500/10 text-orange-500 border border-orange-500/20">
+                      {algo.category}
+                    </span>
+                    <span
+                      className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
                         algo.difficulty === 'Easy'
-                          ? 'text-emerald-500 border-emerald-500/30'
+                          ? 'bg-emerald-500/10 text-emerald-500'
                           : algo.difficulty === 'Medium'
-                            ? 'text-amber-500 border-amber-500/30'
-                            : 'text-rose-500 border-rose-500/30'
-                      }`}>
-                        {algo.difficulty}
-                      </span>
-                    </div>
-                    <p className={`text-[11px] truncate max-w-sm sm:max-w-md mt-0.5 ${
-                      isBright ? 'text-stone-500' : 'text-stone-400'
-                    }`}>
-                      {algo.description}
-                    </p>
+                          ? 'bg-amber-500/10 text-amber-500'
+                          : 'bg-rose-500/10 text-rose-500'
+                      }`}
+                    >
+                      {algo.difficulty}
+                    </span>
                   </div>
+
+                  <h3 className="mt-3 font-bold text-base group-hover:text-orange-500 transition-colors">
+                    {algo.name}
+                  </h3>
+
+                  <p
+                    className={`mt-1.5 text-xs line-clamp-2 leading-relaxed ${
+                      isBright ? 'text-slate-600' : 'text-slate-400'
+                    }`}
+                  >
+                    {algo.description}
+                  </p>
                 </div>
 
-                <div className="flex items-center gap-4 shrink-0 font-mono text-xs">
-                  <div className="hidden md:flex flex-col items-end">
-                    <span className="text-[10px] text-stone-500">TIME</span>
-                    <span className="font-bold">{algo.timeComplexity}</span>
-                  </div>
-                  <div className="hidden lg:flex flex-col items-end">
-                    <span className="text-[10px] text-stone-500">SPACE</span>
-                    <span className="font-bold">{algo.spaceComplexity}</span>
-                  </div>
-                  <div className="flex items-center text-amber-500 font-semibold gap-1 hover:underline">
-                    <span className="hidden sm:inline">Launch 3D</span>
-                    <ChevronRight size={15} />
+                <div className="mt-5 pt-3 border-t border-slate-800/40 flex items-center justify-between text-xs font-mono">
+                  <span className="text-[11px] text-slate-500">
+                    O({algo.timeComplexity || 'n'})
+                  </span>
+                  <div className="flex items-center gap-1 font-bold text-orange-500 group-hover:translate-x-0.5 transition-transform">
+                    <span>Launch 3D</span>
+                    <ChevronRight size={14} />
                   </div>
                 </div>
               </div>
@@ -478,117 +704,96 @@ export default function Dashboard({ onNavigate, onLaunchConcept }) {
         </section>
 
         {/* ========================================================
-            5. RECENT ACTIVITY (Clean Activity Table — NOT 10 Cards)
+            7. RECENT EXECUTIONS ACTIVITY LEDGER
             ======================================================== */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-mono uppercase tracking-widest font-bold text-amber-500 mb-1">
-                Ledger
+              <div className="text-[11px] font-mono uppercase tracking-widest font-bold text-orange-500 mb-1">
+                Execution History
               </div>
-              <h2 className="text-xl font-bold tracking-tight">
-                Recent Executions
-              </h2>
+              <h2 className="text-xl font-bold tracking-tight">Recent Simulations</h2>
             </div>
             <button
               onClick={() => navigate('/history')}
-              className="text-xs font-mono font-semibold text-amber-500 hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-xs font-mono font-semibold text-orange-500 hover:underline flex items-center gap-1 cursor-pointer"
             >
               <span>View Full History</span>
               <ArrowRight size={12} />
             </button>
           </div>
 
-          <div className={`rounded-xl border overflow-hidden ${
-            isBright ? 'bg-white border-[#e2ded5]' : 'bg-[#13161b] border-[#242831]'
-          }`}>
+          <div
+            className={`rounded-2xl border overflow-hidden ${
+              isBright ? 'bg-white border-slate-200' : 'bg-[#0b111d] border-slate-800'
+            }`}
+          >
             <table className="w-full text-left text-xs font-mono">
               <thead>
-                <tr className={`border-b text-[10px] uppercase tracking-wider text-stone-500 ${
-                  isBright ? 'bg-stone-50 border-stone-200' : 'bg-[#16191f] border-stone-800'
-                }`}>
-                  <th className="py-2.5 px-4 font-semibold">Program</th>
-                  <th className="py-2.5 px-3 font-semibold">Runtime</th>
-                  <th className="py-2.5 px-3 font-semibold">Trace Steps</th>
-                  <th className="py-2.5 px-3 font-semibold">Status</th>
-                  <th className="py-2.5 px-4 font-semibold text-right">Action</th>
+                <tr
+                  className={`border-b text-[10px] uppercase tracking-wider text-slate-500 ${
+                    isBright ? 'bg-slate-50 border-slate-200' : 'bg-[#0e131d] border-slate-800'
+                  }`}
+                >
+                  <th className="py-3 px-4 font-semibold">Program</th>
+                  <th className="py-3 px-3 font-semibold">Language</th>
+                  <th className="py-3 px-3 font-semibold">Steps</th>
+                  <th className="py-3 px-3 font-semibold">Status</th>
+                  <th className="py-3 px-4 font-semibold text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-inherit">
-                {historyStats.recentExecutions.length > 0 ? (
-                  historyStats.recentExecutions.map((rec) => (
-                    <tr
-                      key={rec.id}
-                      className={`transition-colors ${isBright ? 'hover:bg-stone-50' : 'hover:bg-[#181c22]'}`}
-                    >
-                      <td className="py-3 px-4 font-semibold">
-                        <div className="flex items-center gap-2">
-                          <Code2 size={13} className="text-amber-500 shrink-0" />
-                          <span className="truncate max-w-[200px]">{rec.programTitle}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-3 uppercase text-stone-400">
-                        {rec.language || 'Java'}
-                      </td>
-                      <td className="py-3 px-3">
-                        {rec.totalSteps} steps
-                      </td>
-                      <td className="py-3 px-3">
-                        <span className="inline-flex items-center gap-1 text-emerald-500 font-bold text-[11px]">
-                          <CheckCircle2 size={11} />
-                          <span>{rec.status}</span>
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={handleStartVisualizing}
-                          className="font-bold text-amber-500 hover:underline cursor-pointer"
-                        >
-                          Replay in 3D →
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  [
-                    { title: 'Bubble Sort (3D Cell Swaps)', lang: 'Java', steps: 14, status: 'VERIFIED' },
-                    { title: 'Binary Search Tree Balancing', lang: 'Python', steps: 22, status: 'VERIFIED' },
-                    { title: 'Kadane Max Subarray Wavefront', lang: 'C++', steps: 18, status: 'VERIFIED' },
-                  ].map((row, i) => (
-                    <tr
-                      key={i}
-                      className={`transition-colors ${isBright ? 'hover:bg-stone-50' : 'hover:bg-[#181c22]'}`}
-                    >
-                      <td className="py-3 px-4 font-semibold">
-                        <div className="flex items-center gap-2">
-                          <Code2 size={13} className="text-amber-500 shrink-0" />
-                          <span>{row.title}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-3 uppercase text-stone-400">{row.lang}</td>
-                      <td className="py-3 px-3">{row.steps} steps</td>
-                      <td className="py-3 px-3">
-                        <span className="inline-flex items-center gap-1 text-emerald-500 font-bold text-[11px]">
-                          <CheckCircle2 size={11} />
-                          <span>{row.status}</span>
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={handleStartVisualizing}
-                          className="font-bold text-amber-500 hover:underline cursor-pointer"
-                        >
-                          Launch in 3D →
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
+              <tbody className="divide-y divide-slate-800/30">
+                {(historyStats.recentExecutions.length > 0
+                  ? historyStats.recentExecutions
+                  : [
+                      { title: 'Bubble Sort (3D Cell Swaps)', lang: 'Java', steps: 14, status: 'VERIFIED' },
+                      { title: 'Binary Search Tree Balancing', lang: 'Python', steps: 22, status: 'VERIFIED' },
+                      { title: 'Kadane Max Subarray Wavefront', lang: 'C++', steps: 18, status: 'VERIFIED' },
+                    ]
+                ).map((row, i) => (
+                  <tr
+                    key={i}
+                    className={`transition-colors ${
+                      isBright ? 'hover:bg-slate-50' : 'hover:bg-[#111726]'
+                    }`}
+                  >
+                    <td className="py-3 px-4 font-semibold">
+                      <div className="flex items-center gap-2">
+                        <Code2 size={13} className="text-orange-500 shrink-0" />
+                        <span className="truncate max-w-[200px]">{row.programTitle || row.title}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-3 uppercase text-slate-400">{row.language || row.lang}</td>
+                    <td className="py-3 px-3">{row.totalSteps || row.steps} steps</td>
+                    <td className="py-3 px-3">
+                      <span className="inline-flex items-center gap-1 text-emerald-500 font-bold text-[11px]">
+                        <CheckCircle2 size={11} />
+                        <span>{row.status}</span>
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <button
+                        onClick={handleStartVisualizing}
+                        className="font-bold text-orange-500 hover:underline cursor-pointer"
+                      >
+                        Launch in 3D →
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         </section>
 
+        {/* Footer */}
+        <div
+          className={`pt-6 pb-6 text-center text-xs font-mono ${
+            isBright ? 'text-slate-400' : 'text-slate-600'
+          }`}
+        >
+          CODE3D AI · Learn. Code. Visualize.
+        </div>
       </div>
     </div>
   );

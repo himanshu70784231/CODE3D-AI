@@ -1,4 +1,4 @@
-/* CODE3D-AI Dashboard Styles — Editorial Learning Platform */
+/* CODE3D-AI Dashboard Styles — Modern Workspace Experience */
 
 .dashboard-container {
   background-color: var(--bg-main);
@@ -8,19 +8,36 @@
 .ide-card {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+  border-radius: 16px;
+  transition: border-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
 }
 
 .ide-card:hover {
   border-color: var(--border-strong);
-  box-shadow: var(--shadow-card);
-  transform: translateY(-1px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+  transform: translateY(-2px);
 }
 
 .metric-pill {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+}
+
+/* Subtle glow effects */
+.glow-orange {
+  box-shadow: 0 0 24px rgba(249, 115, 22, 0.2);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 24px rgba(6, 182, 212, 0.2);
+}
+
+.glow-violet {
+  box-shadow: 0 0 24px rgba(139, 92, 246, 0.2);
+}
+
+.glow-emerald {
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.2);
 }
