@@ -15,7 +15,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
   const [isStyleModalOpen, setIsStyleModalOpen] = useState(false);
   const accountMenuRef = useRef(null);
   const { user, isAuthenticated, logout, loginAsGuest, openLoginModal, openRegisterModal } = useAuth();
-  const { theme, toggleTheme, isBright, currentAccent } = useTheme();
+  const { theme, toggleTheme, isBright, currentAccent, currentTemplate } = useTheme();
 
   const currentPath = location.pathname;
 
