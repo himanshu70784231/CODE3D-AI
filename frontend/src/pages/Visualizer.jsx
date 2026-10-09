@@ -29,6 +29,7 @@ import { executionManager } from '../execution';
 import { getExecutionTrace } from '../services/executionSimulator';
 import { historyApi } from '../services/api';
 import { safeIncludes } from '../utils/safeRender';
+import { getAlgorithmCode } from '../utils/multiLanguageTemplates';
 
 /**
  * Visualizer Component - Main Composition & Orchestration Root
@@ -191,7 +192,11 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
 
   // Reset to original starter code
   const handleResetCode = useCallback(() => {
-    const origCode = currentConcept?.code || currentConcept?.starterCode || '';
+    const origCode = getAlgorithmCode(
+      currentConcept?.id || 'array-loop',
+      language,
+      currentConcept?.code || currentConcept?.starterCode || ''
+    );
     setCode(origCode);
     setLastExecutedCode(origCode);
     setExecutionError(null);
@@ -210,11 +215,21 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     setExecutionError(null);
   }, []);
 
-  // Language Change
+  // Language Change: update language and load corresponding language template
   const handleLanguageChange = useCallback((newLang) => {
     setLanguage(newLang);
     setExecutionError(null);
-  }, []);
+
+    const newCode = getAlgorithmCode(
+      currentConcept?.id || 'array-loop',
+      newLang,
+      currentConcept?.code || currentConcept?.starterCode || ''
+    );
+    if (newCode) {
+      setCode(newCode);
+      setLastExecutedCode(newCode);
+    }
+  }, [currentConcept]);
 
   // Bidirectional: Variable click -> seek timeline or highlight 3D
   const handleSelectVariable = useCallback((name) => {

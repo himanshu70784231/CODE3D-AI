@@ -175,6 +175,38 @@ export default function CodeEditorPanel({
     decorationsRef.current = editor.deltaDecorations(decorationsRef.current, newDecorations);
   }, [currentLineNumber, breakpoints]);
 
+  // Sync execution error markers on Monaco model
+  useEffect(() => {
+    if (!editorRef.current || !monacoRef.current) return;
+    const editor = editorRef.current;
+    const monaco = monacoRef.current;
+    const model = editor.getModel();
+    if (!model) return;
+
+    if (executionError) {
+      const msg = typeof executionError === 'object' ? executionError.message : String(executionError);
+      const match = msg.match(/line\s+(\d+)/i);
+      const lineNum = typeof executionError === 'object' && executionError.line
+        ? executionError.line
+        : (match ? parseInt(match[1], 10) : 1);
+      const colNum = typeof executionError === 'object' && executionError.column ? executionError.column : 1;
+      const targetLine = Math.min(model.getLineCount(), Math.max(1, lineNum || 1));
+
+      monaco.editor.setModelMarkers(model, 'code3d-error', [
+        {
+          startLineNumber: targetLine,
+          startColumn: colNum,
+          endLineNumber: targetLine,
+          endColumn: model.getLineMaxColumn(targetLine),
+          message: msg,
+          severity: monaco.MarkerSeverity.Error,
+        },
+      ]);
+    } else {
+      monaco.editor.setModelMarkers(model, 'code3d-error', []);
+    }
+  }, [executionError]);
+
   const handleFormatCode = () => {
     if (editorRef.current) {
       editorRef.current.getAction('editor.action.formatDocument')?.run();
@@ -290,6 +322,31 @@ export default function CodeEditorPanel({
           >
             Re-run (Ctrl+Enter)
           </button>
+        </div>
+      )}
+
+      {/* Execution / Syntax Error Alert Bar */}
+      {executionError && (
+        <div
+          className={`px-3 py-2 text-[11px] border-b flex items-start justify-between shrink-0 select-none ${
+            isBright
+              ? 'bg-rose-50 border-rose-200 text-rose-800'
+              : 'bg-rose-950/40 border-rose-850 text-rose-300'
+          }`}
+        >
+          <div className="flex items-start gap-1.5 min-w-0 flex-1">
+            <AlertTriangle size={13} className="text-rose-500 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <span className="font-semibold font-mono block">
+                {typeof executionError === 'object' ? executionError.message : String(executionError)}
+              </span>
+              {typeof executionError === 'object' && executionError.suggestion && (
+                <span className="text-[10px] opacity-80 block mt-0.5">
+                  💡 {executionError.suggestion}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

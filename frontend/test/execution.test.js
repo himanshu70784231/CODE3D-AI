@@ -202,5 +202,97 @@ test('Frontend Execution & Validation Suite', async (t) => {
     assert.strictEqual(clampIndex(NaN, totalSteps), 0);
     assert.strictEqual(clampIndex(undefined, totalSteps), 0);
   });
+
+  await t.test('10. Multi-Language Templates & Starter Code Retrieval', async () => {
+    const { getAlgorithmCode, MULTI_LANG_TEMPLATES } = await import('../src/utils/multiLanguageTemplates.js');
+    const languages = ['java', 'python', 'cpp', 'c', 'javascript'];
+
+    for (const lang of languages) {
+      const bubbleCode = getAlgorithmCode('bubble-sort', lang);
+      assert.ok(bubbleCode && bubbleCode.length > 20, `Bubble sort code exists for ${lang}`);
+
+      const arrayCode = getAlgorithmCode('array-loop', lang);
+      assert.ok(arrayCode && arrayCode.length > 20, `Array loop code exists for ${lang}`);
+
+      const bsCode = getAlgorithmCode('binary-search', lang);
+      assert.ok(bsCode && bsCode.length > 20, `Binary search code exists for ${lang}`);
+    }
+  });
+
+  await t.test('11. Master Algorithm Catalog Trace Synthesis', async () => {
+    const {
+      generateBubbleSortSteps,
+      generateSelectionSortSteps,
+      generateInsertionSortSteps,
+      generateMergeSortSteps,
+      generateQuickSortSteps,
+      generateLinearSearchSteps,
+      generateBinarySearchSteps,
+      generateStackSteps,
+      generateQueueSteps,
+      generateBstSteps,
+      generateHeapSteps,
+    } = await import('../src/algorithms/index.js');
+
+    const getStepsArray = (res) => (Array.isArray(res) ? res : (res?.steps || []));
+
+    // Test sorting on reversed array
+    const revArr = [50, 40, 30, 20, 10];
+    const bubbleSteps = getStepsArray(generateBubbleSortSteps(revArr));
+    assert.ok(bubbleSteps.length > 5, 'Bubble sort generates steps on reversed array');
+
+    const mergeSteps = getStepsArray(generateMergeSortSteps([38, 27, 43, 3, 9]));
+    assert.ok(mergeSteps.length > 3, 'Merge sort generates steps');
+
+    const quickSteps = getStepsArray(generateQuickSortSteps([10, 80, 30, 90, 40]));
+    assert.ok(quickSteps.length > 3, 'Quick sort generates steps');
+
+    // Searching
+    const linSteps = getStepsArray(generateLinearSearchSteps([10, 20, 30], 20));
+    assert.ok(linSteps.length > 0, 'Linear search generates steps');
+
+    const binSteps = getStepsArray(generateBinarySearchSteps([10, 20, 30, 40, 50], 30));
+    assert.ok(binSteps.length > 0, 'Binary search generates steps');
+
+    // Data structure operations
+    const stackSteps = getStepsArray(generateStackSteps([5, 10, 15]));
+    assert.ok(stackSteps.length > 0, 'Stack operations trace generated');
+
+    const queueSteps = getStepsArray(generateQueueSteps([1, 2, 3]));
+    assert.ok(queueSteps.length > 0, 'Queue operations trace generated');
+
+    const bstSteps = getStepsArray(generateBstSteps([50, 30, 70, 20]));
+    assert.ok(bstSteps.length > 0, 'BST trace generated');
+
+    const heapSteps = getStepsArray(generateHeapSteps([20, 15, 30, 10]));
+    assert.ok(heapSteps.length > 0, 'Heap trace generated');
+  });
+
+  await t.test('12. Trace Normalization Schema Invariance', async () => {
+    const { normalizeTrace, normalizeExecutionStep } = await import('../src/features/execution/normalizeTrace.js');
+
+    const rawSteps = [
+      { step: 1, line: 2, eventType: 'COMPARE', variables: { i: 0, j: 1 }, dataStructure: { type: 'array', values: [1, 2] } },
+      { step: 2, line: 3, eventType: 'SWAP', variables: { i: 0, j: 1 }, dataStructure: { type: 'array', values: [2, 1] } },
+    ];
+
+    const normalized = normalizeTrace(rawSteps);
+    assert.strictEqual(normalized.length, 2);
+    assert.strictEqual(normalized[0].operation, 'COMPARE');
+    assert.strictEqual(normalized[1].operation, 'SWAP');
+    assert.ok(normalized[0].dataStructureState);
+    assert.deepStrictEqual(normalized[0].dataStructureState.values, [1, 2]);
+    assert.deepStrictEqual(normalized[1].dataStructureState.values, [2, 1]);
+  });
+
+  await t.test('13. Algorithm Detection & Invariant Edge Cases', () => {
+    // Already sorted array
+    const sortedTrace = getExecutionTrace('int[] arr = {1, 2, 3, 4, 5};', 'java');
+    assert.ok(sortedTrace && sortedTrace.length > 0);
+
+    // Array with all duplicates
+    const dupTrace = getExecutionTrace('int[] arr = {7, 7, 7, 7};', 'java');
+    assert.ok(dupTrace && dupTrace.length > 0);
+  });
 });
 

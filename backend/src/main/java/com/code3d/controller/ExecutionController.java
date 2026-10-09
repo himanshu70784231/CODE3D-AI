@@ -16,7 +16,7 @@ public class ExecutionController {
         this.executionService = executionService;
     }
 
-    @PostMapping("/execute")
+    @PostMapping({"/execute", "/executions/run", "/execute/run"})
     public ResponseEntity<ExecuteResponse> execute(@RequestBody ExecuteRequest request) {
         try {
             ExecuteResponse response = executionService.execute(request);
