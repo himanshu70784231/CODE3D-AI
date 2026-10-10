@@ -112,21 +112,48 @@ export class EditorErrorBoundary extends Component {
     console.error('EditorErrorBoundary caught editor error:', error, info);
   }
 
+  handleRetry = () => {
+    this.setState({ hasError: false, error: null });
+  };
+
   render() {
     if (this.state.hasError) {
+      const isBright = this.props.isBright;
       return (
-        <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-slate-950 text-white">
-          <AlertTriangle size={24} className="text-amber-400 mb-2" />
-          <h3 className="text-sm font-bold mb-1">Code Editor Error</h3>
-          <p className="text-xs text-slate-400 mb-3 text-center font-mono">
-            {this.state.error?.message || 'Monaco editor crashed.'}
-          </p>
-          <button
-            onClick={() => this.setState({ hasError: false, error: null })}
-            className="px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs"
-          >
-            Reload Editor
-          </button>
+        <div className={`w-full h-full flex flex-col font-mono overflow-hidden ${
+          isBright ? 'bg-white text-stone-900 border-stone-200' : 'bg-[#13161b] text-stone-100 border-stone-800'
+        }`}>
+          {/* Recovery Notification Header */}
+          <div className={`px-3 py-2 border-b flex items-center justify-between shrink-0 text-xs ${
+            isBright ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+          }`}>
+            <div className="flex items-center gap-2 truncate">
+              <AlertTriangle size={13} className="text-amber-500 shrink-0" />
+              <span className="truncate">Editor fallback active ({this.state.error?.message || 'Monaco initialization error'})</span>
+            </div>
+            <button
+              type="button"
+              onClick={this.handleRetry}
+              className="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-stone-950 font-semibold text-[11px] shrink-0 ml-2 transition cursor-pointer"
+            >
+              Retry Editor
+            </button>
+          </div>
+
+          {/* Interactive Fallback Code Textarea */}
+          <div className="flex-1 p-3 flex flex-col min-h-0">
+            <textarea
+              value={this.props.code || ''}
+              onChange={(e) => this.props.onChangeCode && this.props.onChangeCode(e.target.value)}
+              placeholder="// Write your code here..."
+              spellCheck="false"
+              className={`flex-1 w-full p-3 font-mono text-xs rounded border focus:outline-none resize-none leading-relaxed ${
+                isBright
+                  ? 'bg-stone-50 border-stone-300 text-stone-900 focus:border-amber-500'
+                  : 'bg-[#0d1015] border-stone-800 text-stone-200 focus:border-amber-500 placeholder-stone-600'
+              }`}
+            />
+          </div>
         </div>
       );
     }

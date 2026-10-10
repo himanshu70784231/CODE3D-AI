@@ -91,43 +91,6 @@ export function executeJavaCode(sourceCode, customInput = null, archetype = null
   const clean = sourceCode.toLowerCase();
   const inputNumbers = extractNumbers(customInput);
 
-  // Check for specialized algorithm traces if requested or clearly detected
-  if (archetype) {
-    const arch = archetype.toLowerCase();
-    if (arch.includes('bubble-sort')) {
-      const steps = generateBubbleSortTrace(inputNumbers.length >= 2 ? inputNumbers : null);
-      return { success: true, steps, totalSteps: steps.length };
-    }
-    if (arch.includes('selection-sort')) {
-      const steps = generateSelectionSortTrace(inputNumbers.length >= 2 ? inputNumbers : null);
-      return { success: true, steps, totalSteps: steps.length };
-    }
-    if (arch.includes('insertion-sort')) {
-      const steps = generateInsertionSortTrace(inputNumbers.length >= 2 ? inputNumbers : null);
-      return { success: true, steps, totalSteps: steps.length };
-    }
-    if (arch.includes('merge-sort')) {
-      const steps = generateMergeSortTrace(inputNumbers.length >= 2 ? inputNumbers : null);
-      return { success: true, steps, totalSteps: steps.length };
-    }
-    if (arch.includes('quick-sort')) {
-      const steps = generateQuickSortTrace(inputNumbers.length >= 2 ? inputNumbers : null);
-      return { success: true, steps, totalSteps: steps.length };
-    }
-    if (arch.includes('binary-search')) {
-      const target = inputNumbers.length > 0 ? inputNumbers[inputNumbers.length - 1] : 42;
-      const arr = inputNumbers.length > 1 ? inputNumbers.slice(0, -1) : null;
-      const steps = generateBinarySearchTrace(arr, target);
-      return { success: true, steps, totalSteps: steps.length };
-    }
-    if (arch.includes('linear-search') || arch.includes('search')) {
-      const target = inputNumbers.length > 0 ? inputNumbers[inputNumbers.length - 1] : 23;
-      const arr = inputNumbers.length > 1 ? inputNumbers.slice(0, -1) : null;
-      const steps = generateLinearSearchTrace(arr, target);
-      return { success: true, steps, totalSteps: steps.length };
-    }
-  }
-
   // 1. TOKENIZE
   let tokens;
   try {

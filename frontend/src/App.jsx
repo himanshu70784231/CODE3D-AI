@@ -15,6 +15,8 @@ import SheetsPage from './pages/SheetsPage';
 import DsaProblemPage from './pages/DsaProblemPage';
 import SavedVisualizationsPage from './pages/SavedVisualizationsPage';
 import ProfilePage from './pages/ProfilePage';
+import PlaygroundPage from './pages/PlaygroundPage';
+import NlTo3dPage from './pages/NlTo3dPage';
 import LoginModal from './components/LoginModal';
 import CodeDoctorModal from './components/CodeDoctorModal';
 import { AppErrorBoundary } from './components/ErrorBoundaries';
@@ -214,6 +216,13 @@ function MainAppContent() {
 
           {/* Quiz Arena */}
           <Route path="/quiz" element={<QuizArena />} />
+
+          {/* Sandboxed 3D Code Playground */}
+          <Route path="/playground" element={<PlaygroundPage />} />
+
+          {/* Natural Language to 3D Scene Generator */}
+          <Route path="/nl-to-3d" element={<NlTo3dPage />} />
+          <Route path="/scene-generator" element={<NlTo3dPage />} />
 
           {/* Settings */}
           <Route path="/settings" element={<SettingsPage />} />

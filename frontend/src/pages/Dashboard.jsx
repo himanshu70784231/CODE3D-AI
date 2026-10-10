@@ -18,6 +18,7 @@ import {
   Flame,
   Search,
   Trophy,
+  Award,
   ShieldCheck,
   Compass,
 } from 'lucide-react';
@@ -249,37 +250,73 @@ export default function Dashboard({ onNavigate, onLaunchConcept }) {
             </p>
 
             {/* Action Buttons */}
-            <div className="mt-7 flex flex-wrap gap-3">
+            <div className="mt-7 flex flex-wrap gap-2.5">
               <button
                 onClick={() => navigate('/editor')}
-                className="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-400 active:scale-95 px-5 py-3 text-sm font-bold text-white transition-all shadow-lg shadow-orange-500/25 cursor-pointer"
+                className="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-400 active:scale-95 px-4 py-2.5 text-xs font-bold text-white transition-all shadow-lg shadow-orange-500/25 cursor-pointer"
               >
-                <Play size={16} fill="white" />
+                <Play size={14} fill="white" />
                 <span>Start Coding</span>
-                <ArrowRight size={15} />
+                <ArrowRight size={13} />
               </button>
 
               <button
                 onClick={() => navigate('/dsa')}
-                className={`inline-flex items-center gap-2 rounded-xl border px-5 py-3 text-sm font-bold transition-all hover:-translate-y-0.5 cursor-pointer ${
+                className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold transition-all hover:-translate-y-0.5 cursor-pointer ${
                   isBright
                     ? 'bg-white border-slate-300 hover:bg-slate-50 text-slate-800'
                     : 'bg-slate-900 border-slate-700 hover:bg-slate-800 text-slate-200'
                 }`}
               >
-                <BookOpen size={16} className="text-cyan-500" />
+                <BookOpen size={14} className="text-cyan-500" />
                 <span>Explore DSA</span>
               </button>
 
               <button
+                onClick={() => navigate('/quiz')}
+                className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold transition-all hover:-translate-y-0.5 cursor-pointer ${
+                  isBright
+                    ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
+                    : 'bg-amber-950/30 border-amber-800/60 text-amber-300 hover:bg-amber-900/40'
+                }`}
+              >
+                <Award size={14} className="text-amber-400" />
+                <span>AI Quiz</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/playground')}
+                className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold transition-all hover:-translate-y-0.5 cursor-pointer ${
+                  isBright
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                    : 'bg-emerald-950/30 border-emerald-800/60 text-emerald-300 hover:bg-emerald-900/40'
+                }`}
+              >
+                <Code2 size={14} className="text-emerald-400" />
+                <span>3D Playground</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/nl-to-3d')}
+                className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold transition-all hover:-translate-y-0.5 cursor-pointer ${
+                  isBright
+                    ? 'bg-cyan-50 border-cyan-200 text-cyan-700 hover:bg-cyan-100'
+                    : 'bg-cyan-950/30 border-cyan-800/60 text-cyan-300 hover:bg-cyan-900/40'
+                }`}
+              >
+                <Sparkles size={14} className="text-cyan-400" />
+                <span>NL-to-3D</span>
+              </button>
+
+              <button
                 onClick={() => navigate('/ai')}
-                className={`inline-flex items-center gap-2 rounded-xl border px-5 py-3 text-sm font-bold transition-all hover:-translate-y-0.5 cursor-pointer ${
+                className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold transition-all hover:-translate-y-0.5 cursor-pointer ${
                   isBright
                     ? 'bg-violet-50/80 border-violet-200 text-violet-700 hover:bg-violet-100'
                     : 'bg-violet-950/30 border-violet-800/60 text-violet-300 hover:bg-violet-900/40'
                 }`}
               >
-                <Sparkles size={16} className="text-violet-400" />
+                <Sparkles size={14} className="text-violet-400" />
                 <span>AI Tutor</span>
               </button>
             </div>

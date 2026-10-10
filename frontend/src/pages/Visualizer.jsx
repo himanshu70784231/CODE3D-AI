@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 // Design System & Common
-import { VisualizerErrorBoundary } from '../components/ErrorBoundaries';
+import { VisualizerErrorBoundary, EditorErrorBoundary } from '../components/ErrorBoundaries';
 
 // Feature Layers
 import ThreePanelWorkspace from '../features/workspace/ThreePanelWorkspace';
@@ -322,22 +322,24 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
         onViewModeChange={setViewMode}
         showConsole={showConsole}
         codePanel={
-          <CodeEditorPanel
-            code={code}
-            onChangeCode={setCode}
-            currentLineNumber={currentStep?.lineNumber || 1}
-            language={language}
-            isCodeDirty={isCodeDirty}
-            isExecuting={isExecuting}
-            executionError={executionError}
-            onRunCode={handleRunCode}
-            onResetCode={handleResetCode}
-            onClearCode={handleClearCode}
-            customInput={customInput}
-            onChangeCustomInput={setCustomInput}
-            breakpoints={breakpoints}
-            onToggleBreakpoint={toggleBreakpoint}
-          />
+          <EditorErrorBoundary code={code} onChangeCode={setCode}>
+            <CodeEditorPanel
+              code={code}
+              onChangeCode={setCode}
+              currentLineNumber={currentStep?.lineNumber || 1}
+              language={language}
+              isCodeDirty={isCodeDirty}
+              isExecuting={isExecuting}
+              executionError={executionError}
+              onRunCode={handleRunCode}
+              onResetCode={handleResetCode}
+              onClearCode={handleClearCode}
+              customInput={customInput}
+              onChangeCustomInput={setCustomInput}
+              breakpoints={breakpoints}
+              onToggleBreakpoint={toggleBreakpoint}
+            />
+          </EditorErrorBoundary>
         }
         scenePanel={
           <VisualizationViewport

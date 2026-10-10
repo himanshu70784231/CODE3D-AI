@@ -32,7 +32,7 @@ public class DsaExecutionService {
         if (code != null && !code.isBlank()) {
             if (language == null || "java".equalsIgnoreCase(language)) {
                 ExecuteResponse javaResp = javaAstExecutionEngine.execute(code, request.getInput());
-                if (javaResp != null && "SUCCESS".equalsIgnoreCase(javaResp.getStatus())) {
+                if (javaResp != null) {
                     return javaResp;
                 }
             }

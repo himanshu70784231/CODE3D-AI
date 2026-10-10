@@ -1,8 +1,10 @@
 /**
- * AI Tutor Controller (Section 47)
+ * CODE3D-AI - AI Algorithmic Tutor Controller (Feature 4)
+ * 
  * Contextual explanation engine for execution steps, code, errors, algorithms, and complexity.
  * Private API keys remain strictly server-side.
- * If AI_API_KEY is not configured, provides transparent status without fabricating fake responses.
+ * Explanations are grounded in the supplied code and verified execution trace.
+ * Clearly distinguishes verified execution results from AI pedagogical inferences.
  */
 
 export async function explainContext(req, res) {
@@ -10,58 +12,79 @@ export async function explainContext(req, res) {
     const {
       action = 'Explain Step',
       code = '',
+      language = 'java',
       lineNumber = null,
       currentStep = null,
       variables = {},
       callStack = [],
       condition = null,
+      dataStructureState = null,
       dsaType = 'array',
       error = null,
-      complexity = null,
       question = null,
       prompt: reqPrompt = null,
-      language = 'java',
     } = req.body;
 
     const userQuestion = question || reqPrompt;
     const apiKey = process.env.AI_API_KEY || null;
+    const isStepExplanation = action === 'Explain Step' || action === 'explain-step';
+    const isVerifiedTrace = Boolean(currentStep && currentStep.stepNumber);
+
+    // Context summary constructed from verified execution data
+    const executionContextSummary = {
+      isVerifiedTrace,
+      stepNumber: currentStep?.stepNumber || 1,
+      activeLine: lineNumber || currentStep?.lineNumber || 1,
+      variablesState: currentStep?.variables || variables || {},
+      changedVariable: currentStep?.changedVariable || null,
+      evaluatedCondition: currentStep?.condition || condition || null,
+      stackFrames: currentStep?.callStack || callStack || ['main'],
+      dataStructure: currentStep?.dataStructureState || dataStructureState || { type: dsaType },
+      stdout: currentStep?.output || [],
+    };
 
     if (apiKey) {
-      // Live call to Google Gemini API
       try {
-        const prompt = userQuestion
+        const promptText = userQuestion
           ? `You are the CODE3D-AI Educational Computer Science & DSA Tutor.
-User Question: "${userQuestion}"
-Programming Language: ${language}
-Source Code:
+Context:
+- Programming Language: ${language}
+- Source Code:
 \`\`\`${language}
 ${code}
 \`\`\`
-Active Line: ${lineNumber || 'N/A'}
-Variables State: ${JSON.stringify(variables)}
-Error (if any): ${error || 'None'}
+- Active Line: ${executionContextSummary.activeLine}
+- Active Memory Variables: ${JSON.stringify(executionContextSummary.variablesState)}
+- Call Stack: ${JSON.stringify(executionContextSummary.stackFrames)}
+- Condition Result: ${JSON.stringify(executionContextSummary.evaluatedCondition)}
+- Data Structure State: ${JSON.stringify(executionContextSummary.dataStructure)}
+- User Question: "${userQuestion}"
 
-Provide an insightful, crystal-clear 2-3 paragraph pedagogical explanation explaining the core mechanism, time/space complexities, edge cases, and memory model.`
+Rules:
+1. Ground your answer in the actual code and execution trace state above.
+2. Provide a clear, pedagogical explanation.
+3. If discussing complexity, specify both Time and Auxiliary Space complexity in Big-O notation.
+4. Distinguish what is directly observed in memory vs algorithmic principles.`
           : `You are the CODE3D-AI Educational Computer Science Tutor.
 Action: ${action}
-Language: ${language}
-DSA Structure: ${dsaType}
-Current Line: ${lineNumber || 'N/A'}
-Active Code Line: ${code.split('\n')[(lineNumber || 1) - 1] || ''}
-Variables: ${JSON.stringify(variables)}
-Call Stack: ${JSON.stringify(callStack)}
-Condition Evaluated: ${condition ? JSON.stringify(condition) : 'None'}
-Error: ${error || 'None'}
-Complexity: ${complexity ? JSON.stringify(complexity) : 'N/A'}
+- Language: ${language}
+- Line Number: ${executionContextSummary.activeLine}
+- Active Code Line: ${(code.split('\n')[executionContextSummary.activeLine - 1] || '').trim()}
+- State Variables: ${JSON.stringify(executionContextSummary.variablesState)}
+- Mutated Variable: ${executionContextSummary.changedVariable || 'None'}
+- Condition Evaluated: ${JSON.stringify(executionContextSummary.evaluatedCondition)}
+- Data Structure: ${JSON.stringify(executionContextSummary.dataStructure)}
+- Error (if any): ${error || 'None'}
 
-Provide a concise, crystal-clear 2-3 paragraph explanation of what this step does in the 3D execution world and memory model.`;
+Provide a crystal-clear 2-3 paragraph pedagogical explanation of what happens at this execution step in memory and in the 3D visualization.`;
 
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
         const response = await fetch(geminiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
+            contents: [{ parts: [{ text: promptText }] }],
+            generationConfig: { temperature: 0.35 },
           }),
         });
 
@@ -74,36 +97,62 @@ Provide a concise, crystal-clear 2-3 paragraph explanation of what this step doe
               action,
               explanation,
               answer: explanation,
+              isVerifiedTrace,
+              context: executionContextSummary,
+              source: 'AI_MODEL',
             });
           }
         }
       } catch (aiErr) {
-        console.warn('AI API upstream warning, falling back to local DSA tutor engine:', aiErr.message);
+        console.warn('AI Tutor upstream notice, using built-in reasoning engine:', aiErr.message);
       }
     }
 
-    // High-performance Built-in Algorithmic Tutor Reasoning Engine
+    // Built-in Deterministic Algorithmic Tutor Reasoning Engine
     let explanation = '';
     const cleanCode = (code || '').toLowerCase();
     const hasLoops = cleanCode.includes('for') || cleanCode.includes('while');
-    const isKadane = cleanCode.includes('maxsubarray') || cleanCode.includes('max(') && cleanCode.includes('sum');
-    const isBinarySearch = cleanCode.includes('binary') || cleanCode.includes('mid =');
-    const isTwoSum = cleanCode.includes('twosum') || cleanCode.includes('target -');
+    const hasNestedLoops = (cleanCode.match(/for|while/g) || []).length >= 2;
+    const isRecursion = cleanCode.includes('return') && cleanCode.includes('(') && executionContextSummary.stackFrames.length > 1;
+
+    let timeComp = hasNestedLoops ? 'O(n²)' : hasLoops ? 'O(n)' : 'O(1)';
+    let spaceComp = isRecursion ? 'O(n)' : 'O(1)';
 
     if (userQuestion) {
       if (/complex|time|space|big-o/i.test(userQuestion)) {
-        explanation = `Complexity Analysis: The code operates with ${hasLoops ? 'O(n) linear' : 'O(1) constant'} time complexity. Auxiliary memory is O(1) as state variables are maintained in local CPU registers without secondary heap allocation.`;
+        explanation = `Complexity Analysis:
+• Time Complexity: ${timeComp} — ${hasNestedLoops ? 'Two nested loops iterate over the data structure.' : hasLoops ? 'A single linear traversal touches each element once.' : 'Direct arithmetic/constant operations.'}
+• Auxiliary Space Complexity: ${spaceComp} — ${isRecursion ? 'Call stack depth grows with recursive subproblems.' : 'State is maintained in-place with scalar stack variables without heap reallocation.'}`;
       } else if (/edge|bound|null|empty/i.test(userQuestion)) {
-        explanation = `Edge Cases & Guards: Ensure defensive checks for null or empty collections (size = 0). For single-element arrays, verify that loop invariants terminate immediately without index violation.`;
-      } else if (/3d|visual/i.test(userQuestion)) {
-        explanation = `In CODE3D-AI, memory cells are rendered as physical 3D cylinders whose elevation mirrors their integer value. Pointers appear as glowing metallic rings that shift across memory addresses.`;
+        explanation = `Defensive Edge Case Analysis:
+1. Null / Empty Checks: Ensure collection length > 0 before indexing.
+2. Single Element: Verify that loop invariants terminate immediately when n = 1.
+3. Boundary Guards: Array indexing in Java is strictly 0 to (n - 1). Accessing index n throws ArrayIndexOutOfBoundsException.`;
+      } else if (/hint|debug|stuck/i.test(userQuestion)) {
+        explanation = `Debugging Guidance & Invariant Check:
+• Inspect variable '${executionContextSummary.changedVariable || 'state'}': Currently holding ${JSON.stringify(executionContextSummary.variablesState)}.
+• Check loop termination condition: Ensure the loop index increments monotonically towards the upper bound.
+• Trace memory pointers: Verify that pointer movements correspond to expected array cells.`;
       } else {
-        explanation = `AI Tutor Response: Regarding "${userQuestion}": When executing in ${language.toUpperCase()}, operations evaluate sequentially. Variable registers mutate state upon assignment, and conditional invariants govern branch redirection.`;
+        explanation = `Algorithmic Breakdown:
+The program operates on language '${language}' at line ${executionContextSummary.activeLine}.
+Active variables: ${Object.entries(executionContextSummary.variablesState).map(([k, v]) => `${k} = ${JSON.stringify(v)}`).join(', ') || 'None'}.
+Memory model: ${executionContextSummary.isVerifiedTrace ? 'Directly verified from execution step trace.' : 'Inferred from static source structure.'}`;
       }
-    } else if (error) {
-      explanation = `Debugging Analysis: Error '${error}' detected. Verify array bounds [0, length - 1], ensure null pointers are checked before dereferencing, and confirm loop termination conditions converge.`;
     } else {
-      explanation = `Execution Step ${currentStep || 1} at line ${lineNumber || 1}: Evaluates expression in ${language.toUpperCase()} execution frame. Scalar variables update in memory and control flow proceeds according to conditional invariants.`;
+      // Step explanation
+      const activeLineCode = (code.split('\n')[executionContextSummary.activeLine - 1] || '').trim();
+      const condInfo = executionContextSummary.evaluatedCondition
+        ? ` Condition (${executionContextSummary.evaluatedCondition.expression || 'check'}) evaluated to ${executionContextSummary.evaluatedCondition.result}.`
+        : '';
+      const varInfo = executionContextSummary.changedVariable
+        ? ` Variable '${executionContextSummary.changedVariable}' updated to ${JSON.stringify(executionContextSummary.variablesState[executionContextSummary.changedVariable])}.`
+        : '';
+
+      explanation = `Step ${executionContextSummary.stepNumber} (Line ${executionContextSummary.activeLine}):
+"${activeLineCode}"
+${varInfo}${condInfo}
+In the 3D scene, this corresponds to active highlight on memory location, reflecting real runtime state.`;
     }
 
     return res.json({
@@ -111,17 +160,15 @@ Provide a concise, crystal-clear 2-3 paragraph explanation of what this step doe
       action,
       explanation,
       answer: explanation,
-      hint: 'Track how variable states change monotonically across each loop cycle.',
-      keyTakeaway: 'Loop invariants protect runtime memory boundaries and guarantee deterministic termination.',
+      isVerifiedTrace,
+      complexity: { time: timeComp, space: spaceComp },
+      context: executionContextSummary,
+      source: 'BUILTIN_ENGINE',
     });
   } catch (err) {
     return res.status(500).json({
       success: false,
-      error: {
-        code: 'AI_SERVER_ERROR',
-        message: 'Internal server error while processing AI request.',
-      },
+      error: { code: 'TUTOR_ERROR', message: err.message || 'AI explanation error.' },
     });
   }
 }
-

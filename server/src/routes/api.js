@@ -8,6 +8,7 @@ import * as savedController from '../controllers/savedController.js';
 import * as projectController from '../controllers/projectController.js';
 import * as quizController from '../controllers/quizController.js';
 import * as aiController from '../controllers/aiController.js';
+import * as sceneController from '../controllers/sceneController.js';
 import * as settingsController from '../controllers/settingsController.js';
 import * as dsaController from '../controllers/dsaController.js';
 import * as dashboardController from '../controllers/dashboardController.js';
@@ -75,15 +76,22 @@ router.post('/projects', requireAuth, projectController.createProject);
 router.put('/projects/:id', requireAuth, projectController.updateProject);
 router.delete('/projects/:id', requireAuth, projectController.deleteProject);
 
-// Quiz Attempts Routes (Section 48 & Section 39)
+// Quiz Routes (Feature 3)
+router.post('/quiz/generate', quizController.generateQuiz);
+router.post('/quiz/submit-answer', quizController.submitAnswer);
+router.post('/quiz/verify', quizController.submitAnswer);
 router.get('/quiz/attempts', requireAuth, quizController.getQuizAttempts);
 router.post('/quiz/attempts', requireAuth, quizController.recordQuizAttempt);
 router.get('/quiz', requireAuth, quizController.getQuizAttempts);
 router.post('/quiz/submit', requireAuth, quizController.recordQuizAttempt);
 
-// AI Contextual Explanation Routes (Section 47)
+// AI Contextual Explanation Routes (Feature 4)
 router.post('/ai/explain', aiController.explainContext);
+router.post('/ai/tutor', aiController.explainContext);
 router.post('/explain', aiController.explainContext);
+
+// Natural Language to 3D Scene Generation (Feature 5)
+router.post('/scene/generate', sceneController.generateScene);
 
 // Settings Routes
 router.get('/settings', requireAuth, settingsController.getSettings);

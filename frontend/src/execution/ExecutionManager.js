@@ -51,31 +51,14 @@ export class ExecutionManager {
       const localRes = await executionEngine.execute(code, language, { input, archetype });
       if (localRes.success && localRes.steps && localRes.steps.length > 0) {
         result = localRes;
-      } else if (localRes.error && localRes.error.type === 'COMPILE_ERROR') {
-        // Return syntax error immediately
+      } else if (localRes.error) {
+        // Return genuine syntax/compile/runtime error immediately - NEVER fabricate traces
         return {
           success: false,
           error: localRes.error,
           language,
           steps: [],
         };
-      }
-    }
-
-    // 3. Resilient simulator fallback for rich DSA animations
-    if (!result || !result.steps || result.steps.length === 0) {
-      try {
-        const simSteps = getExecutionTrace(code, language, input, archetype);
-        if (simSteps && simSteps.length > 0) {
-          result = {
-            success: true,
-            language,
-            steps: simSteps,
-            totalSteps: simSteps.length,
-          };
-        }
-      } catch (simErr) {
-        // Keep checking
       }
     }
 

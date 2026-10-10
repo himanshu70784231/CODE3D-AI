@@ -227,4 +227,89 @@ test('API Endpoints Test Suite', async (t) => {
     assert.strictEqual(res.data.success, true);
     assert.ok(typeof res.data.stats.totalExecutions === 'number');
   });
+
+  // Feature 3: Dynamic Quiz Generation & Hidden Answer Keys
+  let activeQuizSessionId = null;
+  let firstQuestionId = null;
+
+  await t.test('POST /api/quiz/generate creates session and hides answer keys from client', async () => {
+    const res = await request('/api/quiz/generate', {
+      method: 'POST',
+      body: { topic: 'arrays', difficulty: 'medium', count: 3 },
+    });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.success, true);
+    assert.ok(res.data.sessionId);
+    assert.strictEqual(res.data.questions.length, 3);
+
+    // CRITICAL SECURITY ASSERTION: correctIndex and explanation MUST NOT be sent to client
+    for (const q of res.data.questions) {
+      assert.strictEqual(q.correctIndex, undefined, 'correctIndex must NOT be exposed in client response');
+      assert.strictEqual(q.explanation, undefined, 'explanation must NOT be exposed before answering');
+      assert.strictEqual(q.options.length, 4, 'Each question must have exactly 4 options');
+    }
+
+    activeQuizSessionId = res.data.sessionId;
+    firstQuestionId = res.data.questions[0].id;
+  });
+
+  await t.test('POST /api/quiz/submit-answer validates server-side and returns explanation', async () => {
+    const res = await request('/api/quiz/submit-answer', {
+      method: 'POST',
+      body: {
+        sessionId: activeQuizSessionId,
+        questionId: firstQuestionId,
+        selectedOption: 0,
+      },
+    });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.success, true);
+    assert.ok(typeof res.data.isCorrect === 'boolean');
+    assert.ok(typeof res.data.correctIndex === 'number');
+    assert.ok(typeof res.data.explanation === 'string');
+    assert.ok(res.data.explanation.length > 5);
+  });
+
+  // Feature 4: AI Contextual Explanation Grounded in Trace
+  await t.test('POST /api/ai/explain provides grounded pedagogical breakdown', async () => {
+    const res = await request('/api/ai/explain', {
+      method: 'POST',
+      body: {
+        action: 'explain-step',
+        code: 'int[] arr = {10, 20, 30};\nint x = arr[0];',
+        language: 'java',
+        lineNumber: 2,
+        currentStep: {
+          stepNumber: 2,
+          lineNumber: 2,
+          variables: { arr: [10, 20, 30], x: 10 },
+          changedVariable: 'x',
+        },
+      },
+    });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.success, true);
+    assert.ok(res.data.explanation);
+    assert.strictEqual(res.data.isVerifiedTrace, true);
+  });
+
+  // Feature 5: Natural Language to 3D Scene Generation
+  await t.test('POST /api/scene/generate returns schema-validated 3D scene descriptor', async () => {
+    const res = await request('/api/scene/generate', {
+      method: 'POST',
+      body: { prompt: 'Create a binary search tree with 7 nodes' },
+    });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.success, true);
+    assert.ok(res.data.scene);
+    assert.ok(Array.isArray(res.data.scene.objects));
+    assert.ok(res.data.scene.objects.length >= 7);
+
+    // Validate geometry bounds and schema conformance
+    for (const obj of res.data.scene.objects) {
+      assert.ok(obj.id);
+      assert.ok(['box', 'sphere', 'cylinder', 'cone', 'torus', 'connection_line', 'pointer_ring'].includes(obj.type));
+      assert.ok(obj.position.every(coord => coord >= -25 && coord <= 25));
+    }
+  });
 });

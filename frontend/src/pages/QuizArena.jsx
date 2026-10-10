@@ -13,398 +13,520 @@ import {
   Layers,
   Timer,
   Check,
+  ShieldCheck,
+  AlertCircle,
+  BarChart3,
+  Sliders,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { fetchQuizQuestions, recordQuizHistory } from '../services/apiService';
-import { QUIZ_BANK, getQuizForConcept } from '../utils/quizBank';
 import { useTheme } from '../context/ThemeContext';
 
-const TOPIC_CHIPS = [
-  { id: 'bubble-sort', label: 'Bubble Sort', icon: '⚡' },
-  { id: 'binary-search', label: 'Binary Search', icon: '🔍' },
-  { id: 'linked-list', label: 'Linked List', icon: '🔗' },
-  { id: 'array-loop', label: '1D Arrays', icon: '🧊' },
-  { id: 'matrix', label: '2D Matrices', icon: '▦' },
-  { id: 'stack', label: 'Stack LIFO', icon: '📚' },
-  { id: 'bst', label: 'BST Trees', icon: '🌳' },
-  { id: 'graphs', label: 'Graphs', icon: '🕸️' },
-  { id: 'dp-hashing', label: 'DP & Hashing', icon: '🧠' },
+const TOPIC_OPTIONS = [
+  { id: 'arrays', label: '1D & 2D Arrays', icon: '🧊' },
+  { id: 'linked-list', label: 'Linked Lists', icon: '🔗' },
+  { id: 'stacks-queues', label: 'Stacks & Queues', icon: '📚' },
+  { id: 'trees', label: 'Trees & BSTs', icon: '🌳' },
+  { id: 'sorting', label: 'Sorting & Searching', icon: '⚡' },
+  { id: 'dp', label: 'Dynamic Programming', icon: '🧠' },
+  { id: 'graphs', label: 'Graphs & Traversals', icon: '🕸️' },
+  { id: 'java', label: 'Java OOP & Memory', icon: '☕' },
 ];
+
+const DIFFICULTY_OPTIONS = [
+  { id: 'easy', label: 'Beginner' },
+  { id: 'medium', label: 'Intermediate' },
+  { id: 'hard', label: 'Advanced' },
+];
+
+const COUNT_OPTIONS = [3, 5, 10];
 
 export default function QuizArena() {
   const { isBright, currentAccent } = useTheme();
   const navigate = useNavigate();
   const accentHex = isBright ? currentAccent.bright : currentAccent.dark;
 
-  const [selectedConcept, setSelectedConcept] = useState('bubble-sort');
+  // Configuration State
+  const [topic, setTopic] = useState('arrays');
+  const [difficulty, setDifficulty] = useState('medium');
+  const [questionCount, setQuestionCount] = useState(5);
+
+  // Quiz Lifecycle State
+  const [sessionId, setSessionId] = useState(null);
   const [questions, setQuestions] = useState([]);
-  const [currentQIndex, setCurrentQIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Interaction State for Current Question
   const [selectedOption, setSelectedOption] = useState(null);
-  const [isAnswered, setIsAnswered] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [currentVerification, setCurrentVerification] = useState(null); // { isCorrect, correctIndex, explanation }
+
+  // Game Stats
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [maxStreak, setMaxStreak] = useState(0);
   const [quizFinished, setQuizFinished] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [answerHistory, setAnswerHistory] = useState([]); // for final review
 
-  useEffect(() => {
+  // Generate / Start Quiz via Server AI Endpoint
+  const startQuiz = async () => {
     setLoading(true);
-    fetchQuizQuestions(selectedConcept)
-      .then((data) => {
-        if (data && data.length > 0) {
-          setQuestions(data);
-        } else {
-          setQuestions(getQuizForConcept(selectedConcept));
-        }
-        setLoading(false);
-        resetQuiz();
-      })
-      .catch(() => {
-        setQuestions(getQuizForConcept(selectedConcept));
-        setLoading(false);
-        resetQuiz();
-      });
-  }, [selectedConcept]);
-
-  const resetQuiz = () => {
-    setCurrentQIndex(0);
+    setError(null);
     setSelectedOption(null);
-    setIsAnswered(false);
+    setCurrentVerification(null);
+    setQuizFinished(false);
+    setCurrentIndex(0);
     setScore(0);
     setStreak(0);
-    setQuizFinished(false);
-  };
+    setAnswerHistory([]);
 
-  const handleSelect = (idx) => {
-    if (isAnswered) return;
-    setSelectedOption(idx);
-    setIsAnswered(true);
-
-    const isCorrect = idx === questions[currentQIndex].correctIndex;
-    if (isCorrect) {
-      setScore((s) => s + 1);
-      setStreak((st) => {
-        const next = st + 1;
-        setMaxStreak((ms) => Math.max(ms, next));
-        return next;
+    try {
+      const res = await fetch('/api/quiz/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic,
+          difficulty,
+          count: questionCount,
+        }),
       });
-    } else {
-      setStreak(0);
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data?.error?.message || 'Failed to initialize quiz session.');
+      }
+
+      setSessionId(data.sessionId);
+      setQuestions(data.questions || []);
+    } catch (err) {
+      setError(err.message || 'Failed to connect to quiz service.');
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Submit Answer to Backend for Server-Side Verification
+  const handleSelectOption = async (optionIdx) => {
+    if (currentVerification || submitting || !sessionId) return;
+
+    setSelectedOption(optionIdx);
+    setSubmitting(true);
+    setError(null);
+
+    const currentQ = questions[currentIndex];
+
+    try {
+      const res = await fetch('/api/quiz/submit-answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          questionId: currentQ.id,
+          selectedOption: optionIdx,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data?.error?.message || 'Answer submission failed.');
+      }
+
+      setCurrentVerification(data);
+
+      if (data.isCorrect) {
+        setScore((s) => s + 1);
+        setStreak((st) => {
+          const next = st + 1;
+          setMaxStreak((ms) => Math.max(ms, next));
+          return next;
+        });
+      } else {
+        setStreak(0);
+      }
+
+      setAnswerHistory((prev) => [
+        ...prev,
+        {
+          question: currentQ.question,
+          codeSnippet: currentQ.codeSnippet,
+          options: currentQ.options,
+          userSelected: optionIdx,
+          correctIndex: data.correctIndex,
+          isCorrect: data.isCorrect,
+          explanation: data.explanation,
+        },
+      ]);
+    } catch (err) {
+      setError(err.message || 'Submission error.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Next Question
   const handleNext = () => {
-    if (currentQIndex < questions.length - 1) {
-      setCurrentQIndex((prev) => prev + 1);
+    if (currentIndex < questions.length - 1) {
+      setCurrentIndex((prev) => prev + 1);
       setSelectedOption(null);
-      setIsAnswered(false);
+      setCurrentVerification(null);
     } else {
       setQuizFinished(true);
-      recordQuizHistory({
-        conceptId: selectedConcept,
-        score,
-        totalQuestions: questions.length,
-      });
     }
   };
 
-  const currentQ = questions[currentQIndex];
-  const progressPercent = questions.length > 0 ? Math.round(((currentQIndex + 1) / questions.length) * 100) : 0;
+  // Auto-start on initial mount
+  useEffect(() => {
+    startQuiz();
+  }, []);
 
-  const handleLaunch3DStudy = () => {
-    navigate('/visualizer');
-  };
+  const currentQ = questions[currentIndex];
+  const progressPercent = questions.length > 0 ? ((currentIndex + 1) / questions.length) * 100 : 0;
 
   return (
     <div
-      className={`flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 select-none transition-colors duration-300 ${
-        isBright ? 'bg-[#f8fafc] text-slate-900' : 'bg-[#040711] text-slate-100'
+      className={`min-h-[calc(100vh-3.5rem)] select-none transition-colors p-4 md:p-8 flex flex-col items-center ${
+        isBright ? 'bg-slate-50 text-slate-800' : 'bg-[#090d16] text-slate-100'
       }`}
     >
-      <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
-        {/* Header with Topic Badges & Gamified Streak */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="badge-neon">
-                <HelpCircle size={13} />
-                <span>ALGORITHMIC ARENA</span>
+      <div className="w-full max-w-4xl flex flex-col gap-6">
+        {/* Top Header & Settings Bar */}
+        <div
+          className={`p-5 rounded-2xl border backdrop-blur-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
+            isBright ? 'bg-white/90 border-slate-200 shadow-sm' : 'bg-[#0e1424]/90 border-slate-800/80 shadow-xl'
+          }`}
+        >
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span
+                className="p-1.5 rounded-lg text-white"
+                style={{ backgroundColor: accentHex }}
+              >
+                <Award className="w-4 h-4" />
               </span>
-
-              {streak >= 2 && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-amber-500/15 text-amber-500 border border-amber-500/40 animate-pulse">
-                  <Flame size={14} className="fill-amber-500" />
-                  <span>{streak}x Combo Streak!</span>
-                </span>
-              )}
+              <h1 className="text-lg font-black tracking-tight">AI Quiz Arena</h1>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20 flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3" /> Server-Verified
+              </span>
             </div>
-
-            <h1 className={`text-2xl sm:text-3xl font-black font-display tracking-tight ${isBright ? 'text-slate-950' : 'text-white'}`}>
-              Interactive Assessment Arena
-            </h1>
-            <p className={`text-xs sm:text-sm max-w-xl ${isBright ? 'text-slate-600' : 'text-slate-400'}`}>
-              Predict asymptotic bounds, trace variable mutations, and master interview problem heuristics with instant visual feedback.
+            <p className="text-xs text-slate-400">
+              Interactive DSA questions validated server-side. Answer keys remain concealed until submission.
             </p>
           </div>
 
-          {/* Gamified Live Score Counter */}
-          <div className={`p-3 rounded-2xl border flex items-center gap-4 self-start md:self-auto ${
-            isBright ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900/80 border-slate-800'
-          }`}>
-            <div className="text-center px-2">
-              <span className="text-[10px] font-mono uppercase opacity-60 block">Score</span>
-              <span className="text-xl font-black font-mono" style={{ color: accentHex }}>
-                {score}/{questions.length || 0}
-              </span>
-            </div>
+          {/* Quick Config Dropdowns */}
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              className={`h-8 px-2.5 rounded-xl text-xs font-semibold border outline-none cursor-pointer ${
+                isBright ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-slate-900 border-slate-700 text-slate-200'
+              }`}
+            >
+              {TOPIC_OPTIONS.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.icon} {t.label}
+                </option>
+              ))}
+            </select>
 
-            <div className="h-8 w-px bg-slate-500/20" />
+            <select
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value)}
+              className={`h-8 px-2.5 rounded-xl text-xs font-semibold border outline-none cursor-pointer ${
+                isBright ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-slate-900 border-slate-700 text-slate-200'
+              }`}
+            >
+              {DIFFICULTY_OPTIONS.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
 
-            <div className="text-center px-2">
-              <span className="text-[10px] font-mono uppercase opacity-60 block">Best Streak</span>
-              <span className="text-xl font-black font-mono text-amber-500">
-                {maxStreak} 🔥
-              </span>
-            </div>
+            <select
+              value={questionCount}
+              onChange={(e) => setQuestionCount(Number(e.target.value))}
+              className={`h-8 px-2.5 rounded-xl text-xs font-semibold border outline-none cursor-pointer ${
+                isBright ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-slate-900 border-slate-700 text-slate-200'
+              }`}
+            >
+              {COUNT_OPTIONS.map((c) => (
+                <option key={c} value={c}>
+                  {c} Questions
+                </option>
+              ))}
+            </select>
+
+            <button
+              onClick={startQuiz}
+              disabled={loading}
+              style={{ backgroundColor: accentHex }}
+              className="h-8 px-3 rounded-xl text-xs font-bold text-slate-950 flex items-center gap-1.5 transition hover:opacity-90 active:scale-97 cursor-pointer shadow-sm disabled:opacity-50"
+            >
+              <RotateCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              New Quiz
+            </button>
           </div>
         </div>
 
-        {/* Interactive Topic Selector Chips */}
-        <div className="space-y-2">
-          <span className="text-[11px] font-mono uppercase font-bold opacity-60 block">
-            Select Topic Arena:
-          </span>
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5">
-            {TOPIC_CHIPS.map((chip) => (
-              <button
-                key={chip.id}
-                onClick={() => setSelectedConcept(chip.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
-                  selectedConcept === chip.id
-                    ? 'font-bold text-white shadow-md'
-                    : isBright
-                      ? 'bg-white hover:bg-slate-100 border border-slate-200 text-slate-700'
-                      : 'bg-slate-900/60 hover:bg-slate-800 border border-slate-800 text-slate-300'
-                }`}
-                style={{
-                  backgroundColor: selectedConcept === chip.id ? accentHex : undefined,
-                  boxShadow: selectedConcept === chip.id ? `0 4px 14px ${currentAccent.glow}` : undefined,
-                }}
-              >
-                <span>{chip.icon}</span>
-                <span>{chip.label}</span>
-              </button>
-            ))}
+        {/* Loading State */}
+        {loading && (
+          <div
+            className={`p-12 rounded-2xl border text-center flex flex-col items-center justify-center gap-3 ${
+              isBright ? 'bg-white border-slate-200' : 'bg-[#0e1424] border-slate-800'
+            }`}
+          >
+            <div className="w-10 h-10 rounded-full border-3 border-cyan-400 border-t-transparent animate-spin" />
+            <h3 className="text-sm font-bold text-slate-200">Synthesizing Pedagogical Questions...</h3>
+            <p className="text-xs text-slate-400">Validating schemas and locking answer keys on server.</p>
           </div>
-        </div>
+        )}
 
-        {/* Main Quiz Card */}
-        <div className="bento-card template-card p-6 md:p-8">
-          {loading ? (
-            <div className="py-20 text-center space-y-3">
+        {/* Error State */}
+        {error && !loading && (
+          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+            <button
+              onClick={startQuiz}
+              className="px-3 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 font-bold text-xs"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* Active Quiz Question Card */}
+        {!loading && !quizFinished && currentQ && (
+          <div
+            className={`p-6 md:p-8 rounded-2xl border backdrop-blur-md flex flex-col gap-6 shadow-xl ${
+              isBright ? 'bg-white/95 border-slate-200' : 'bg-[#0e1424]/95 border-slate-800/80'
+            }`}
+          >
+            {/* Question Progress & Live Stats */}
+            <div className="flex items-center justify-between gap-4 border-b border-inherit pb-4">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-slate-400">
+                  Question {currentIndex + 1} of {questions.length}
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 uppercase font-mono font-bold">
+                  {currentQ.topic || topic} • {currentQ.difficulty || difficulty}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3 text-xs font-semibold">
+                <span className="flex items-center gap-1 text-amber-400">
+                  <Flame className="w-4 h-4" /> Streak: {streak}
+                </span>
+                <span className="text-emerald-400 font-mono">
+                  Score: {score}/{currentIndex + (currentVerification ? 1 : 0)}
+                </span>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
               <div
-                className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin mx-auto"
-                style={{ borderColor: `${accentHex} transparent ${accentHex} ${accentHex}` }}
+                className="h-full transition-all duration-300 rounded-full"
+                style={{
+                  width: `${progressPercent}%`,
+                  backgroundColor: accentHex,
+                }}
               />
-              <p className="text-xs font-mono opacity-70">
-                Loading algorithmic problem set...
-              </p>
             </div>
-          ) : quizFinished ? (
-            /* Completion Card with Trophy & 3D Launch CTA */
-            <div className="text-center py-10 space-y-6">
-              <div
-                className="w-24 h-24 rounded-full flex items-center justify-center mx-auto shadow-2xl animate-bounce"
-                style={{
-                  backgroundColor: isBright ? `${currentAccent.bright}20` : `${currentAccent.dark}25`,
-                  color: accentHex,
-                }}
-              >
-                <Award size={48} />
-              </div>
 
-              <div className="space-y-2">
-                <span className="badge-neon">ASSESSMENT COMPLETE</span>
-                <h3 className={`text-2xl sm:text-3xl font-black font-display ${isBright ? 'text-slate-950' : 'text-white'}`}>
-                  Excellent Problem Solving!
-                </h3>
-                <p className={`text-sm max-w-md mx-auto ${isBright ? 'text-slate-600' : 'text-slate-300'}`}>
-                  You solved <strong style={{ color: accentHex }}>{score}</strong> out of {questions.length} questions correctly (
-                  <strong>{Math.round((score / Math.max(1, questions.length)) * 100)}%</strong> accuracy) with a max streak of{' '}
-                  <strong className="text-amber-500">{maxStreak}</strong>.
-                </p>
-              </div>
-
-              <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
-                <button
-                  onClick={resetQuiz}
-                  className={`px-5 py-2.5 rounded-xl text-xs font-bold border flex items-center gap-2 transition cursor-pointer ${
-                    isBright
-                      ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
-                      : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'
-                  }`}
-                >
-                  <RotateCcw size={15} />
-                  <span>Retry Quiz</span>
-                </button>
-
-                <button
-                  onClick={handleLaunch3DStudy}
-                  className="px-6 py-2.5 rounded-xl text-xs font-bold text-white flex items-center gap-2 shadow-lg transition cursor-pointer"
-                  style={{
-                    backgroundColor: accentHex,
-                    boxShadow: `0 4px 16px ${currentAccent.glow}`,
-                  }}
-                >
-                  <Sparkles size={15} />
-                  <span>Visualize in 3D Studio</span>
-                  <ArrowRight size={15} />
-                </button>
-              </div>
-            </div>
-          ) : currentQ ? (
-            <div className="space-y-6">
-              {/* Question Progress Tracker Bar */}
-              <div className="space-y-2 pb-2">
-                <div className="flex items-center justify-between text-xs font-mono opacity-75">
-                  <span>
-                    Question {currentQIndex + 1} of {questions.length}
-                  </span>
-                  <span>{progressPercent}% Complete</span>
-                </div>
-
-                <div className="w-full h-2 rounded-full overflow-hidden bg-slate-500/15">
-                  <div
-                    className="h-full rounded-full transition-all duration-300"
-                    style={{
-                      width: `${progressPercent}%`,
-                      backgroundColor: accentHex,
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Question Statement */}
-              <h2
-                className={`text-base sm:text-lg md:text-xl font-bold font-display leading-relaxed ${
-                  isBright ? 'text-slate-900' : 'text-white'
-                }`}
-              >
+            {/* Question Prompt */}
+            <div className="space-y-3">
+              <h2 className="text-base md:text-lg font-bold leading-relaxed text-slate-100">
                 {currentQ.question}
               </h2>
 
-              {/* Interactive Options */}
-              <div className="space-y-3 pt-1">
-                {currentQ.options.map((opt, idx) => {
-                  const isSelected = selectedOption === idx;
-                  const isCorrect = isAnswered && idx === currentQ.correctIndex;
-                  const isWrong = isAnswered && isSelected && idx !== currentQ.correctIndex;
-
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => handleSelect(idx)}
-                      disabled={isAnswered}
-                      className={`w-full p-4 rounded-2xl border text-sm text-left font-medium transition-all duration-200 flex items-center justify-between cursor-pointer ${
-                        isCorrect
-                          ? isBright
-                            ? 'bg-emerald-50 border-emerald-500 text-emerald-950 font-bold ring-2 ring-emerald-500/30'
-                            : 'bg-emerald-950/60 border-emerald-500 text-emerald-200 font-bold ring-2 ring-emerald-500/40'
-                          : isWrong
-                            ? isBright
-                              ? 'bg-rose-50 border-rose-500 text-rose-950 ring-2 ring-rose-500/30'
-                              : 'bg-rose-950/60 border-rose-500 text-rose-200 ring-2 ring-rose-500/40'
-                            : isSelected
-                              ? 'border-2'
-                              : isBright
-                                ? 'bg-slate-50/80 hover:bg-slate-100 border-slate-200 text-slate-800'
-                                : 'bg-slate-900/60 hover:bg-slate-800/80 border-slate-800 text-slate-200'
-                      }`}
-                      style={{
-                        borderColor: isSelected && !isAnswered ? accentHex : undefined,
-                      }}
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <span
-                          className={`w-7 h-7 rounded-xl text-xs flex items-center justify-center font-mono font-bold transition-colors ${
-                            isCorrect
-                              ? 'bg-emerald-500 text-white'
-                              : isWrong
-                                ? 'bg-rose-500 text-white'
-                                : isBright
-                                  ? 'bg-slate-200 text-slate-700'
-                                  : 'bg-slate-800 text-slate-300'
-                          }`}
-                        >
-                          {String.fromCharCode(65 + idx)}
-                        </span>
-                        <span className="leading-snug">{opt}</span>
-                      </div>
-
-                      {isCorrect && (
-                        <CheckCircle
-                          size={20}
-                          className={isBright ? 'text-emerald-600 shrink-0' : 'text-emerald-400 shrink-0'}
-                        />
-                      )}
-                      {isWrong && (
-                        <XCircle
-                          size={20}
-                          className={isBright ? 'text-rose-600 shrink-0' : 'text-rose-400 shrink-0'}
-                        />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Explanation & Next Question Drawer */}
-              {isAnswered && (
-                <div
-                  className={`rounded-2xl p-4 sm:p-5 space-y-3 mt-4 border transition-all animate-fade-in ${
-                    isBright
-                      ? 'bg-slate-50 border-slate-200 text-slate-800'
-                      : 'bg-slate-950 border-slate-800 text-slate-200'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">💡</span>
-                    <span className="text-xs font-mono font-bold uppercase tracking-wider" style={{ color: accentHex }}>
-                      Why this is correct:
-                    </span>
-                  </div>
-
-                  <p className={`text-xs sm:text-sm leading-relaxed ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
-                    {currentQ.explanation}
-                  </p>
-
-                  <div className="pt-2 flex items-center justify-between">
-                    <button
-                      onClick={handleLaunch3DStudy}
-                      className="text-xs font-semibold flex items-center gap-1.5 opacity-75 hover:opacity-100 cursor-pointer"
-                      style={{ color: accentHex }}
-                    >
-                      <Layers size={13} />
-                      <span>Visualize concept in 3D</span>
-                    </button>
-
-                    <button
-                      onClick={handleNext}
-                      className="px-6 py-2.5 rounded-xl font-bold text-xs text-white transition shadow-md cursor-pointer flex items-center gap-1.5"
-                      style={{
-                        backgroundColor: accentHex,
-                        boxShadow: `0 4px 14px ${currentAccent.glow}`,
-                      }}
-                    >
-                      <span>{currentQIndex < questions.length - 1 ? 'Next Question' : 'View Results'}</span>
-                      <ArrowRight size={14} />
-                    </button>
-                  </div>
-                </div>
+              {currentQ.codeSnippet && (
+                <pre className="p-3.5 rounded-xl bg-slate-950/90 border border-slate-800 text-xs font-mono text-cyan-300 overflow-x-auto">
+                  <code>{currentQ.codeSnippet}</code>
+                </pre>
               )}
             </div>
-          ) : null}
-        </div>
+
+            {/* 4 Options Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {currentQ.options?.map((opt, idx) => {
+                const isSelected = selectedOption === idx;
+                const isAnswered = currentVerification !== null;
+                const isCorrectOption = isAnswered && idx === currentVerification.correctIndex;
+                const isIncorrectChoice = isAnswered && isSelected && !currentVerification.isCorrect;
+
+                let btnStyles = isBright
+                  ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+                  : 'bg-slate-900/80 hover:bg-slate-800 border-slate-700/80 text-slate-200';
+
+                if (isAnswered) {
+                  if (isCorrectOption) {
+                    btnStyles = 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold shadow-lg shadow-emerald-500/10';
+                  } else if (isIncorrectChoice) {
+                    btnStyles = 'bg-rose-500/20 border-rose-500 text-rose-300';
+                  } else {
+                    btnStyles = 'opacity-40 border-slate-800 text-slate-500';
+                  }
+                } else if (isSelected) {
+                  btnStyles = 'border-cyan-500 bg-cyan-500/10 text-cyan-300 font-bold';
+                }
+
+                return (
+                  <button
+                    key={idx}
+                    disabled={isAnswered || submitting}
+                    onClick={() => handleSelectOption(idx)}
+                    className={`p-4 rounded-xl border text-left text-xs transition flex items-start gap-3 cursor-pointer ${btnStyles}`}
+                  >
+                    <span className="w-5 h-5 rounded-full border border-inherit flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                      {String.fromCharCode(65 + idx)}
+                    </span>
+                    <span className="flex-1 leading-normal">{opt}</span>
+                    {isCorrectOption && <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />}
+                    {isIncorrectChoice && <XCircle className="w-4 h-4 text-rose-400 shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Answer Explanation & Next Button */}
+            {currentVerification && (
+              <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3 animate-in fade-in">
+                <div className="flex items-center gap-2">
+                  {currentVerification.isCorrect ? (
+                    <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                      <CheckCircle className="w-4 h-4" /> Correct Answer!
+                    </span>
+                  ) : (
+                    <span className="text-xs font-bold text-rose-400 flex items-center gap-1.5">
+                      <XCircle className="w-4 h-4" /> Incorrect. Correct Option: {String.fromCharCode(65 + currentVerification.correctIndex)}
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  {currentVerification.explanation}
+                </p>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={handleNext}
+                    style={{ backgroundColor: accentHex }}
+                    className="h-9 px-5 rounded-xl font-bold text-xs text-slate-950 flex items-center gap-2 transition hover:opacity-90 active:scale-97 cursor-pointer shadow-md"
+                  >
+                    {currentIndex < questions.length - 1 ? (
+                      <>
+                        Next Question <ArrowRight className="w-3.5 h-3.5" />
+                      </>
+                    ) : (
+                      <>
+                        View Results <Award className="w-3.5 h-3.5" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Quiz Finished Summary View */}
+        {!loading && quizFinished && (
+          <div
+            className={`p-8 rounded-2xl border backdrop-blur-md flex flex-col gap-6 text-center items-center shadow-2xl ${
+              isBright ? 'bg-white border-slate-200' : 'bg-[#0e1424] border-slate-800'
+            }`}
+          >
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-xl"
+              style={{ backgroundColor: accentHex }}
+            >
+              <Award className="w-8 h-8" />
+            </div>
+
+            <div>
+              <h2 className="text-xl font-black text-slate-100">Quiz Completed!</h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Verified results for {topic.toUpperCase()} ({difficulty})
+              </p>
+            </div>
+
+            {/* Score Metrics Grid */}
+            <div className="grid grid-cols-3 gap-4 w-full max-w-md">
+              <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
+                <span className="text-[10px] text-slate-400 uppercase font-semibold">Score</span>
+                <p className="text-xl font-black text-emerald-400 mt-0.5">{score} / {questions.length}</p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
+                <span className="text-[10px] text-slate-400 uppercase font-semibold">Percentage</span>
+                <p className="text-xl font-black text-cyan-400 mt-0.5">
+                  {questions.length > 0 ? Math.round((score / questions.length) * 100) : 0}%
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
+                <span className="text-[10px] text-slate-400 uppercase font-semibold">Max Streak</span>
+                <p className="text-xl font-black text-amber-400 mt-0.5">{maxStreak}</p>
+              </div>
+            </div>
+
+            {/* Question Breakdown List */}
+            <div className="w-full text-left space-y-3 mt-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Detailed Question Review
+              </h3>
+              {answerHistory.map((item, idx) => (
+                <div
+                  key={idx}
+                  className={`p-3.5 rounded-xl border text-xs space-y-1.5 ${
+                    item.isCorrect
+                      ? 'bg-emerald-500/5 border-emerald-500/20 text-slate-200'
+                      : 'bg-rose-500/5 border-rose-500/20 text-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[11px] text-slate-300">
+                      Q{idx + 1}: {item.question}
+                    </span>
+                    {item.isCorrect ? (
+                      <span className="text-emerald-400 font-bold text-[10px] flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" /> Correct
+                      </span>
+                    ) : (
+                      <span className="text-rose-400 font-bold text-[10px] flex items-center gap-1">
+                        <XCircle className="w-3 h-3" /> Incorrect
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-400">{item.explanation}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-3 mt-4">
+              <button
+                onClick={startQuiz}
+                style={{ backgroundColor: accentHex }}
+                className="h-10 px-6 rounded-xl font-bold text-xs text-slate-950 flex items-center gap-2 transition hover:opacity-90 active:scale-97 cursor-pointer shadow-lg"
+              >
+                <RotateCcw className="w-4 h-4" /> Retake / New Quiz
+              </button>
+
+              <button
+                onClick={() => navigate('/visualizer')}
+                className="h-10 px-5 rounded-xl border border-slate-700 hover:bg-slate-800 text-xs font-bold text-slate-200 flex items-center gap-2 transition cursor-pointer"
+              >
+                Return to 3D Visualizer
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

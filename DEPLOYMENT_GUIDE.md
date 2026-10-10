@@ -13,12 +13,14 @@ This guide explains how to make your **Frontend**, **Backend**, and **Relational
         [ Live Frontend on Vercel ]
         URL: https://code3d-ai.vercel.app
                        │
-                       ▼ (HTTPS API Calls)
-        [ Live Backend on Render ]
-        URL: https://code3d-backend.onrender.com
-                       │
-                       ▼ (JDBC SQL Connection)
-  [ Live Cloud Database (Neon / Supabase / Aiven) ]
+                       ├────────────────────────┐
+                       ▼ (Java AST Engine)       ▼ (AI Tutor, Quiz, Scene & Node)
+        [ Spring Boot Backend ]          [ Node.js Execution Engine ]
+        Port: 8080 (Render Docker)       Port: 5000 (Render / Railway)
+                       │                                │
+                       └───────────────┬────────────────┘
+                                       ▼ (Cloud DB & LLM APIs)
+                   [ Neon Cloud DB + Google Gemini API ]
 ```
 
 ---

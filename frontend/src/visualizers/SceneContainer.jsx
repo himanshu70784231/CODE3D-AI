@@ -284,6 +284,11 @@ export default function SceneContainer({
       {/* Main 3D Canvas with Center Stage Focus */}
       <Canvas
         key={canvasKey}
+        gl={{
+          powerPreference: 'high-performance',
+          preserveDrawingBuffer: true,
+          antialias: true,
+        }}
         onCreated={({ gl }) => {
           gl.domElement.addEventListener('webglcontextlost', handleContextLost, false);
           gl.domElement.addEventListener('webglcontextrestored', handleContextRestored, false);

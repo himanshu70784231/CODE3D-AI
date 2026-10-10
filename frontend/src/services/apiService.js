@@ -584,14 +584,19 @@ export async function askAiFollowUp(prompt, code, language = 'java') {
     if (res.ok) {
       const data = await res.json();
       if (data && (data.answer || data.explanation)) {
-        return { answer: data.answer || data.explanation };
+        return {
+          answer: data.answer || data.explanation,
+          isVerifiedTrace: Boolean(data.isVerifiedTrace),
+          source: data.source || 'AI_MODEL',
+          complexity: data.complexity,
+        };
       }
     }
   } catch (err) {
     console.warn('Backend AI Q&A unavailable, generating intelligent tutor answer:', err);
   }
 
-  // Generate deep, tailored pedagogical answer (supports Hinglish & English)
+  // Generate deep, tailored pedagogical answer
   const answer = generateIntelligentAiTutorAnswer(prompt, code, language);
-  return { answer };
+  return { answer, isVerifiedTrace: false, source: 'LOCAL_ENGINE' };
 }

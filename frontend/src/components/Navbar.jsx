@@ -26,6 +26,8 @@ export default function Navbar({ activeTab, setActiveTab }) {
     { id: 'dsa', path: '/dsa', label: 'DSA Hub', icon: '📚' },
     { id: 'ai', path: '/ai', label: 'AI Tutor', icon: '🤖' },
     { id: 'quiz', path: '/quiz', label: 'Quiz', icon: '🎯' },
+    { id: 'playground', path: '/playground', label: 'Playground', icon: '🛠️' },
+    { id: 'nl-to-3d', path: '/nl-to-3d', label: 'NL-to-3D', icon: '✨' },
   ];
 
   const isNavActive = (item) => {
