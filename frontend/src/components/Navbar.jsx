@@ -26,6 +26,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
     { id: 'dsa', path: '/dsa', label: 'DSA Hub', icon: '📚' },
     { id: 'ai', path: '/ai', label: 'AI Tutor', icon: '🤖' },
     { id: 'quiz', path: '/quiz', label: 'Quiz', icon: '🎯' },
+    { id: 'challenges', path: '/challenges', label: 'Challenges', icon: '⚔️' },
     { id: 'playground', path: '/playground', label: 'Playground', icon: '🛠️' },
     { id: 'nl-to-3d', path: '/nl-to-3d', label: 'NL-to-3D', icon: '✨' },
   ];
@@ -98,7 +99,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
 
       {/* Navigation Links: Home | Code Editor | 3D Studio | DSA Hub | AI Tutor | Quiz */}
       <nav
-        className={`hidden md:flex items-center gap-1 p-1 rounded-xl border transition-colors ${
+        className={`hidden md:flex items-center gap-1 p-1 rounded-xl border overflow-x-auto max-w-[58vw] lg:max-w-none transition-colors ${
           isBright ? 'bg-slate-100/80 border-slate-200' : 'bg-slate-900/60 border-slate-800'
         }`}
       >

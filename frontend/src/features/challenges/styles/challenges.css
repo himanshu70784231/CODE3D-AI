@@ -1,0 +1,117 @@
+/* ==========================================================================
+   CODE3D-AI: Predict & Repair Challenge Design System Styles
+   Scoped CSS under .c3d-challenges-* to guarantee isolation and zero conflicts
+   ========================================================================== */
+
+.c3d-challenges-root {
+  --c3d-ch-primary: #f59e0b;
+  --c3d-ch-primary-hover: #d97706;
+  --c3d-ch-success: #10b981;
+  --c3d-ch-danger: #ef4444;
+  --c3d-ch-info: #06b6d4;
+  --c3d-ch-card-bg-dark: #11141b;
+  --c3d-ch-card-border-dark: rgba(255, 255, 255, 0.08);
+  --c3d-ch-card-bg-bright: #ffffff;
+  --c3d-ch-card-border-bright: #e2e8f0;
+}
+
+/* Animations */
+@keyframes c3d-pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(245, 158, 11, 0.45);
+  }
+}
+
+@keyframes c3d-success-glow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.5);
+  }
+}
+
+@keyframes c3d-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.c3d-animate-fade-in {
+  animation: c3d-fade-in-up 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.c3d-card-glow-amber {
+  animation: c3d-pulse-glow 3s infinite ease-in-out;
+}
+
+.c3d-card-glow-success {
+  animation: c3d-success-glow 3s infinite ease-in-out;
+}
+
+/* Custom Scrollbars */
+.c3d-challenges-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.c3d-challenges-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.c3d-challenges-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
+}
+
+.c3d-challenges-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+/* Monaco Editor Container Override */
+.c3d-challenge-editor-wrap .monaco-editor {
+  border-radius: 0.5rem;
+}
+
+.c3d-challenge-editor-wrap .monaco-editor .overflow-guard {
+  border-radius: 0.5rem;
+}
+
+/* Interactive Option Card Hover Effects */
+.c3d-option-card {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.c3d-option-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Terminal Console View */
+.c3d-terminal-window {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  letter-spacing: -0.01em;
+}
+
+/* Diff Viewer */
+.c3d-diff-match {
+  background-color: rgba(16, 185, 129, 0.12);
+  border-left: 3px solid #10b981;
+}
+
+.c3d-diff-mismatch {
+  background-color: rgba(239, 68, 68, 0.12);
+  border-left: 3px solid #ef4444;
+}
+
+.c3d-diff-neutral {
+  background-color: transparent;
+  border-left: 3px solid transparent;
+}

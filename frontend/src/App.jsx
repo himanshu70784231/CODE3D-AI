@@ -19,6 +19,7 @@ import PlaygroundPage from './pages/PlaygroundPage';
 import NlTo3dPage from './pages/NlTo3dPage';
 import LoginModal from './components/LoginModal';
 import CodeDoctorModal from './components/CodeDoctorModal';
+import ChallengeDashboard from './features/challenges/pages/ChallengeDashboard';
 import { AppErrorBoundary } from './components/ErrorBoundaries';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
@@ -216,6 +217,20 @@ function MainAppContent() {
 
           {/* Quiz Arena */}
           <Route path="/quiz" element={<QuizArena />} />
+
+          {/* Predict & Repair Challenge Arena */}
+          <Route
+            path="/challenges"
+            element={<ChallengeDashboard onLaunchConcept={handleLaunchConcept} />}
+          />
+          <Route
+            path="/challenges/:mode"
+            element={<ChallengeDashboard onLaunchConcept={handleLaunchConcept} />}
+          />
+          <Route
+            path="/challenges/:mode/:id"
+            element={<ChallengeDashboard onLaunchConcept={handleLaunchConcept} />}
+          />
 
           {/* Sandboxed 3D Code Playground */}
           <Route path="/playground" element={<PlaygroundPage />} />
