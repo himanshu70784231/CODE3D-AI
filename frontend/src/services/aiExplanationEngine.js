@@ -52,30 +52,50 @@ function buildLineSteps(code, rawExplanation = '', activeLine = null) {
   lines.forEach((lineText, idx) => {
     const lineNum = idx + 1;
     const trimmed = lineText.trim();
-    if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*')) {
+    if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed === '{' || trimmed === '}') {
       return;
     }
 
     let explanation = `Line ${lineNum}: executes '${trimmed}'.`;
 
     if (/import\s+|#include\b/.test(trimmed)) {
-      explanation = `Line ${lineNum} imports necessary libraries and headers into the program namespace.`;
+      explanation = `Line ${lineNum} imports required packages and libraries into the compilation scope.`;
     } else if (/\b(?:class|struct)\s+(\w+)/.test(trimmed)) {
       const className = trimmed.match(/\b(?:class|struct)\s+(\w+)/)?.[1] || 'Type';
-      explanation = `Line ${lineNum} defines the structure or class '${className}', providing the blueprint for program objects.`;
+      explanation = `Line ${lineNum} defines class '${className}', providing the structure for algorithm execution.`;
     } else if (/static\s+void\s+main|def\s+main|function\s+main|int\s+main/.test(trimmed)) {
-      explanation = `Line ${lineNum} is the main entry point where program execution begins.`;
+      explanation = `Line ${lineNum} is the main entry point where runtime program execution starts.`;
+    } else if (/\bint\s+temp\s*=\s*(\w+)\[(\w+)\]/.test(trimmed)) {
+      const match = trimmed.match(/\bint\s+temp\s*=\s*(\w+)\[(\w+)\]/);
+      const arr = match?.[1] || 'arr';
+      const idxVar = match?.[2] || 'j';
+      explanation = `Line ${lineNum} stores ${arr}[${idxVar}] into temporary variable 'temp' to preserve its value before swapping.`;
+    } else if (/(\w+)\[(\w+)\]\s*=\s*(\w+)\[(\w+)\s*\+\s*1\]/.test(trimmed)) {
+      explanation = `Line ${lineNum} copies the smaller adjacent element into the lower index position.`;
+    } else if (/(\w+)\[(\w+)\s*\+\s*1\]\s*=\s*temp/.test(trimmed)) {
+      explanation = `Line ${lineNum} copies the saved larger element into the higher index, completing the adjacent swap.`;
+    } else if (/(\w+)\[(\w+)\]\s*>\s*(\w+)\[(\w+)\s*\+\s*1\]/.test(trimmed)) {
+      explanation = `Line ${lineNum} compares adjacent elements: if the left item exceeds the right item, they are out of order and must swap.`;
+    } else if (/\bfor\s*\([^;]*;\s*(\w+)\s*<\s*(\w+)\s*-\s*(\w+)\s*-\s*1\s*;/.test(trimmed)) {
+      explanation = `Line ${lineNum} runs the inner comparison pass, stopping before index n - i - 1 because the tail elements are already sorted.`;
+    } else if (/\bfor\s*\([^;]*;\s*(\w+)\s*<\s*(\w+)\s*-\s*1\s*;/.test(trimmed)) {
+      explanation = `Line ${lineNum} runs the outer pass counter; each pass bubbles the largest remaining unsorted value to the end.`;
     } else if (/\bfor\s*\(|\bwhile\s*\(/.test(trimmed)) {
-      explanation = `Line ${lineNum} sets up a loop control structure, evaluating loop bounds and iteration conditions.`;
-    } else if (/\bif\s*\(|\belse\s*if\s*\(|\belse\b/.test(trimmed)) {
-      explanation = `Line ${lineNum} evaluates a conditional branch to determine the control flow direction.`;
+      explanation = `Line ${lineNum} evaluates the loop condition to control iterative execution.`;
+    } else if (/\bif\s*\(/.test(trimmed)) {
+      explanation = `Line ${lineNum} checks the conditional expression to determine whether to execute the branch.`;
     } else if (/\breturn\b/.test(trimmed)) {
-      explanation = `Line ${lineNum} produces the return value and terminates the current function execution scope.`;
+      explanation = `Line ${lineNum} returns the computed result and exits the method.`;
     } else if (/System\.out\.print|console\.log|printf|cout\s*<</.test(trimmed)) {
-      explanation = `Line ${lineNum} outputs computed data or text to standard output for the user.`;
+      explanation = `Line ${lineNum} outputs the computed array or string data to the console.`;
+    } else if (/\b(?:int|double|float|String|boolean)\[\]\s*(\w+)\s*=\s*\{([^}]+)\}/.test(trimmed)) {
+      const match = trimmed.match(/\b(?:int|double|float|String|boolean)\[\]\s*(\w+)\s*=\s*\{([^}]+)\}/);
+      const varName = match?.[1] || 'array';
+      const items = match?.[2] ? match[2].split(',').length : 0;
+      explanation = `Line ${lineNum} declares and initializes array '${varName}' with ${items} initial values in memory.`;
     } else if (/(\w+)\s*=\s*(.+);?/.test(trimmed)) {
       const varName = trimmed.match(/(\w+)\s*=\s*/)?.[1] || 'variable';
-      explanation = `Line ${lineNum} computes the right-hand expression and assigns the result to '${varName}'.`;
+      explanation = `Line ${lineNum} evaluates the expression and assigns the updated value to '${varName}'.`;
     }
 
     steps.push({
@@ -145,6 +165,13 @@ export async function requestUniversalAiExplanation({
       rawRes?.message ||
       rawRes?.content ||
       '';
+
+    if (!explanationText && (rawRes?.error || rawRes?.success === false)) {
+      const errMsg = rawRes?.error?.message || rawRes?.error || rawRes?.message || 'Empty explanation received from AI backend';
+      const err = new Error(errMsg);
+      err.isAiError = true;
+      throw err;
+    }
 
     const hint = rawRes?.hint || rawRes?.data?.hint || '';
     const keyTakeaway = rawRes?.keyTakeaway || rawRes?.data?.keyTakeaway || '';

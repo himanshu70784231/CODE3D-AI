@@ -39,6 +39,8 @@ export default function VoiceTutorPanel({
     rate,
     voices,
     voiceName,
+    speechError,
+    clearSpeechError,
     setVoiceLanguage,
     setRate,
     setVoiceName,
@@ -52,6 +54,7 @@ export default function VoiceTutorPanel({
 
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const [silentMode, setSilentMode] = useState(false);
+  const autoPlayOnExplainRef = React.useRef(false);
 
   const steps = explanationData?.lineSteps || [];
   const activeStep = steps[currentStepIdx] || steps[0] || null;
@@ -63,12 +66,24 @@ export default function VoiceTutorPanel({
     }
   }, [activeStep, onHighlightLine]);
 
-  // When new explanationData arrives, reset step index to 0
+  // When new explanationData arrives, reset step index to 0 and autoplay if requested
   useEffect(() => {
     if (explanationData?.lineSteps?.length) {
       setCurrentStepIdx(0);
+      if (autoPlayOnExplainRef.current) {
+        autoPlayOnExplainRef.current = false;
+        speakSequence(explanationData.lineSteps, {
+          startIndex: 0,
+          onStepChange: (idx, item) => {
+            setCurrentStepIdx(idx);
+            if (item.lineNumber && typeof onHighlightLine === 'function') {
+              onHighlightLine(item.lineNumber);
+            }
+          },
+        });
+      }
     }
-  }, [explanationData]);
+  }, [explanationData, onHighlightLine, speakSequence]);
 
   // Handle Play All sequence
   const handlePlayAll = () => {
@@ -76,6 +91,7 @@ export default function VoiceTutorPanel({
       if (explanationData?.overview) {
         speak(explanationData.overview, { force: true });
       } else if (onExplainCode) {
+        autoPlayOnExplainRef.current = true;
         onExplainCode();
       }
       return;
@@ -220,6 +236,40 @@ export default function VoiceTutorPanel({
           )}
         </div>
       </div>
+
+      {/* Speech / Audio Error Banner */}
+      {speechError && (
+        <div className="px-4 py-2 bg-rose-500/10 border-b border-rose-500/30 flex items-center justify-between text-xs text-rose-300 gap-2">
+          <div className="flex items-center gap-1.5">
+            <AlertTriangle size={14} className="text-rose-400 shrink-0" />
+            <span>{speechError}</span>
+          </div>
+          <button
+            onClick={clearSpeechError}
+            className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 transition cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Unsupported Browser Banner */}
+      {!supported && (
+        <div className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/30 flex items-center gap-2 text-xs text-amber-300">
+          <AlertTriangle size={14} className="text-amber-400 shrink-0" />
+          <span>Browser Speech Synthesis is not supported in this browser. Please use Chrome, Edge, or Safari.</span>
+        </div>
+      )}
+
+      {/* Backend Fallback Note */}
+      {explanationData?.errorMessage && (
+        <div className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/30 flex items-center justify-between text-xs text-amber-300 gap-2">
+          <div className="flex items-center gap-1.5">
+            <AlertTriangle size={14} className="text-amber-400 shrink-0" />
+            <span>Note: {explanationData.errorMessage}. Using code-aware analysis.</span>
+          </div>
+        </div>
+      )}
 
       {/* Main Body */}
       <div className="p-4 space-y-3.5">

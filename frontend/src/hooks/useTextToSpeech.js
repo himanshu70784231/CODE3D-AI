@@ -18,9 +18,12 @@ export function useTextToSpeech() {
   const [currentBoundaryIndex, setCurrentBoundaryIndex] = useState(0);
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const [activeLineNumber, setActiveLineNumber] = useState(null);
+  const [speechError, setSpeechError] = useState(null);
 
   const generation = useRef(0);
   const lastSpokenRef = useRef({ text: '', options: {} });
+  const activeUtterancesRef = useRef(new Set());
+  const cancelTimerRef = useRef(null);
   const sequenceRef = useRef({
     items: [],
     index: 0,
@@ -71,7 +74,10 @@ export function useTextToSpeech() {
       'speechSynthesis' in window &&
       typeof window.SpeechSynthesisUtterance === 'function';
     setSupported(available);
-    if (!available) return undefined;
+    if (!available) {
+      setSpeechError('Web Speech API is not supported in this browser.');
+      return undefined;
+    }
 
     const synth = window.speechSynthesis;
     const refreshVoices = () => {
@@ -93,13 +99,17 @@ export function useTextToSpeech() {
     // Cancel speech on page unload or component unmount
     const handleBeforeUnload = () => {
       generation.current += 1;
+      if (cancelTimerRef.current) clearTimeout(cancelTimerRef.current);
       synth.cancel();
+      activeUtterancesRef.current.clear();
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
       generation.current += 1;
+      if (cancelTimerRef.current) clearTimeout(cancelTimerRef.current);
       synth.cancel();
+      activeUtterancesRef.current.clear();
       synth.removeEventListener?.('voiceschanged', refreshVoices);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
@@ -121,9 +131,16 @@ export function useTextToSpeech() {
     generation.current += 1;
     sequenceRef.current.active = false;
     sequenceRef.current.items = [];
+    if (cancelTimerRef.current) clearTimeout(cancelTimerRef.current);
+
     if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
+      try {
+        window.speechSynthesis.cancel();
+      } catch {
+        // silent
+      }
     }
+    activeUtterancesRef.current.clear();
     setSpeaking(false);
     setPaused(false);
     setCurrentBoundaryIndex(0);
@@ -152,7 +169,6 @@ export function useTextToSpeech() {
 
       const synth = window.speechSynthesis;
       const requestId = ++generation.current;
-      synth.cancel();
 
       lastSpokenRef.current = { text: message, options };
 
@@ -169,6 +185,9 @@ export function useTextToSpeech() {
         utterance.voice = selectedVoice;
       }
 
+      // Retain utterance reference to prevent V8 garbage collection mid-speech
+      activeUtterancesRef.current.add(utterance);
+
       utterance.onboundary = (event) => {
         if (generation.current === requestId && typeof event.charIndex === 'number') {
           setCurrentBoundaryIndex(event.charIndex);
@@ -179,6 +198,7 @@ export function useTextToSpeech() {
         if (generation.current === requestId) {
           setSpeaking(true);
           setPaused(false);
+          setSpeechError(null);
           if (options.lineNumber !== undefined) {
             setActiveLineNumber(options.lineNumber);
           }
@@ -186,6 +206,7 @@ export function useTextToSpeech() {
       };
 
       utterance.onend = () => {
+        activeUtterancesRef.current.delete(utterance);
         if (generation.current === requestId) {
           setSpeaking(false);
           setPaused(false);
@@ -196,6 +217,21 @@ export function useTextToSpeech() {
       };
 
       utterance.onerror = (err) => {
+        activeUtterancesRef.current.delete(utterance);
+        // 'canceled' and 'interrupted' are expected when user clicks Stop, Next, or Pause
+        if (err?.error === 'canceled' || err?.error === 'interrupted') {
+          return;
+        }
+
+        const errorMsg =
+          err?.error === 'not-allowed'
+            ? 'Browser speech permission denied. Please interact with the page first.'
+            : err?.error === 'audio-busy'
+            ? 'System audio device is currently busy.'
+            : `Speech error: ${err?.error || 'Playback failed'}`;
+
+        setSpeechError(errorMsg);
+
         if (generation.current === requestId) {
           setSpeaking(false);
           setPaused(false);
@@ -205,7 +241,33 @@ export function useTextToSpeech() {
         }
       };
 
-      synth.speak(utterance);
+      const dispatchSpeech = () => {
+        if (generation.current !== requestId) return;
+        try {
+          // Unstick synth if browser left it paused
+          if (synth.paused) {
+            synth.resume();
+          }
+          synth.speak(utterance);
+        } catch (e) {
+          activeUtterancesRef.current.delete(utterance);
+          setSpeechError(e.message || 'Speech dispatch failed');
+          if (typeof options.onError === 'function') {
+            options.onError(e);
+          }
+        }
+      };
+
+      if (cancelTimerRef.current) clearTimeout(cancelTimerRef.current);
+
+      if (synth.speaking || synth.pending) {
+        synth.cancel();
+        // Give browser speech thread 30ms to clear canceled audio before pushing new utterance
+        cancelTimerRef.current = setTimeout(dispatchSpeech, 30);
+      } else {
+        dispatchSpeech();
+      }
+
       return true;
     },
     [enabled, rate, resolveVoice, stop, voiceLanguage, voiceName, voices]
@@ -219,7 +281,12 @@ export function useTextToSpeech() {
         return false;
       }
 
-      stop();
+      if (cancelTimerRef.current) clearTimeout(cancelTimerRef.current);
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      activeUtterancesRef.current.clear();
+
       sequenceRef.current = {
         items,
         index: options.startIndex || 0,
@@ -258,6 +325,13 @@ export function useTextToSpeech() {
             if (sequenceRef.current.active) {
               sequenceRef.current.index += 1;
               setTimeout(playCurrentSequenceStep, 350);
+            }
+          },
+          onError: (err) => {
+            if (sequenceRef.current.active) {
+              // On non-fatal step error, proceed to next step after brief pause
+              sequenceRef.current.index += 1;
+              setTimeout(playCurrentSequenceStep, 500);
             }
           },
         });
@@ -307,14 +381,14 @@ export function useTextToSpeech() {
   }, [speak]);
 
   const pause = useCallback(() => {
-    if (typeof window !== 'undefined' && window.speechSynthesis?.speaking) {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.pause();
       setPaused(true);
     }
   }, []);
 
   const resume = useCallback(() => {
-    if (typeof window !== 'undefined' && window.speechSynthesis?.paused) {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.resume();
       setPaused(false);
     }
@@ -326,12 +400,17 @@ export function useTextToSpeech() {
         generation.current += 1;
         sequenceRef.current.active = false;
         window.speechSynthesis.cancel();
+        activeUtterancesRef.current.clear();
         setSpeaking(false);
         setPaused(false);
         setActiveLineNumber(null);
       }
       return !previous;
     });
+  }, []);
+
+  const clearSpeechError = useCallback(() => {
+    setSpeechError(null);
   }, []);
 
   return {
@@ -346,6 +425,8 @@ export function useTextToSpeech() {
     currentBoundaryIndex,
     activeStepIndex,
     activeLineNumber,
+    speechError,
+    clearSpeechError,
     setVoiceLanguage: handleSetVoiceLanguage,
     setRate,
     setVoiceName,
