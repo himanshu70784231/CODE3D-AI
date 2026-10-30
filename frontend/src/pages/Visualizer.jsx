@@ -1,102 +1,280 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-
-// Design System & Common
-import { VisualizerErrorBoundary, EditorErrorBoundary } from '../components/ErrorBoundaries';
-
-// Feature Layers
-import ThreePanelWorkspace from '../features/workspace/ThreePanelWorkspace';
-import WorkspaceToolbar from '../features/workspace/WorkspaceToolbar';
-import CodeEditorPanel from '../features/editor/CodeEditorPanel';
-import VisualizationViewport from '../features/visualization/VisualizationViewport';
-import ExplanationPanel from '../features/explanation/ExplanationPanel';
-import ExecutionTimelineBar from '../features/timeline/ExecutionTimelineBar';
-import ExecutionNarration from '../components/ExecutionNarration';
-import OutputConsoleDrawer from '../features/console/OutputConsoleDrawer';
-import { normalizeTrace } from '../features/execution/normalizeTrace';
-
-// Modals & Drawers
-import StriverSheetDrawer from '../components/StriverSheetDrawer';
+import React, { useState, useEffect, useRef } from 'react';
+import CodeEditor from '../components/CodeEditor';
+import StatePanel from '../components/StatePanel';
+import OutputConsole from '../components/OutputConsole';
+import Timeline from '../components/Timeline';
+import SceneContainer from '../visualizers/SceneContainer';
+import DsaSceneDispatcher from '../visualizers/DsaSceneDispatcher';
+import AiAssistantModal from '../components/AiAssistantModal';
+import QuizModal from '../components/QuizModal';
 import CustomCodeModal from '../components/CustomCodeModal';
 import CodeDoctorModal from '../components/CodeDoctorModal';
-import QuizModal from '../components/QuizModal';
+import StriverSheetDrawer from '../components/StriverSheetDrawer';
 import CompareModeModal from '../components/CompareModeModal';
-import AiAssistantModal from '../components/AiAssistantModal';
-
-// Catalogs & Services
-import { getCanonicalConcept, CANONICAL_CONCEPTS } from '../data/canonicalCatalog';
+import InputGenerator from '../components/InputGenerator';
+import { ALGORITHM_CATALOG, generateAlgorithmSteps } from '../algorithms/index';
 import { useExecutionTimeline } from '../hooks/useExecutionTimeline';
-import { executionManager } from '../execution';
-import { getExecutionTrace } from '../services/executionSimulator';
-import { historyApi } from '../services/api';
-import { safeIncludes } from '../utils/safeRender';
-import { getAlgorithmCode } from '../utils/multiLanguageTemplates';
+import ExecutionNarration from '../components/ExecutionNarration';
+import { getExecutionTrace, extractNumbersFromCode, alignTraceLinesWithSource } from '../services/executionSimulator';
+import { validateSourceCode } from '../services/codeValidator';
+import { DEFAULT_JAVA_CODE, SAMPLE_PROGRAMS, LANGUAGE_DEFAULTS, CURRICULUM_CATEGORIES } from '../utils/sampleCodes';
+import { STRIVER_PROBLEMS } from '../utils/striverCatalog';
+import { executeProgram, analyzeCode, checkBackendHealth, recordExecutionHistory } from '../services/apiService';
+import { normalizeUniversalExecutionResult } from '../services/universalEditorExecution';
+import { buildGraphPatternTrace, buildLinearStructurePatternTrace, buildLinkedListPatternTrace, buildTreePatternTrace } from '../services/structurePatternTraces';
+import { executionManager } from '../execution/index.js';
+import { VisualizerErrorBoundary, EditorErrorBoundary } from '../components/ErrorBoundaries';
+import { useTheme } from '../context/ThemeContext';
+import {
+  Code2,
+  Sparkles,
+  HelpCircle,
+  Layers,
+  Cpu,
+  Server,
+  Check,
+  Lightbulb,
+  Stethoscope,
+  Maximize2,
+  Minimize2,
+  SkipBack,
+  SkipForward,
+  Pause,
+  RotateCcw,
+  SlidersHorizontal,
+  Eye,
+  EyeOff,
+  Play,
+  Trophy,
+  BookOpen,
+  Scale,
+} from 'lucide-react';
 
 /**
- * Visualizer Component - Main Composition & Orchestration Root
- * 
- * Compliant with Sections 2, 4, 5, 6, 7, 8, 9, 10, 12, 13, 22 & 34:
- * Refactored from a 1,340-line monolith into a high-performance composition model.
+ * Build a pedagogical BST trace for common user-written tree programs.
+ * These are inferred visual-model steps, not runtime instrumentation.
  */
-export default function Visualizer({ initialConcept, initialOpenStriver = false }) {
-  const location = useLocation();
-  const navigate = useNavigate();
+function buildBstPatternTrace(source, runtimeOutput = []) {
+  const code = String(source || '');
+  const hasNodeLinks = /(?:Node|node|TreeNode)\s*\*?\s+\w+|class\s+Node|struct\s+Node/i.test(code)
+    && /\.left|->left/i.test(code) && /\.right|->right/i.test(code);
+  const hasTreeOps = /inorder|preorder|postorder|insert\s*\(|search\s*\(/i.test(code);
+  if (!hasNodeLinks || !hasTreeOps) return null;
 
-  // Determine starting concept from props, router state, or default canonical concept
-  const startingConcept = useMemo(() => {
-    const raw = initialConcept || location?.state?.concept;
-    if (raw) return raw;
-    return getCanonicalConcept('bubble-sort');
-  }, [initialConcept, location?.state]);
+  const arrayMatch = code.match(/(?:int|long|Integer|var)\s*(?:\[\s*\]\s*)?\w*values\w*\s*(?:\[\s*\])?\s*=\s*[\{\[]([^}\]]+)[}\]]/i)
+    || code.match(/values\s*=\s*[\{\[]([^}\]]+)[}\]]/i)
+    // Python: for value in [50, 30, ...]
+    || code.match(/\bfor\s+\w+\s+in\s+\[([^\]]+)\]/i)
+    // JavaScript: for (const value of [50, 30, ...])
+    || code.match(/\bfor\s*\([^)]*\bof\s+\[([^\]]+)\]\s*\)/i);
+  const values = arrayMatch
+    ? (arrayMatch[1].match(/-?\d+/g) || []).map(Number).slice(0, 40)
+    : [];
+  if (!values.length) return null;
 
-  // Core Program State
-  const [currentConcept, setCurrentConcept] = useState(startingConcept);
-  const [code, setCode] = useState(startingConcept?.code || startingConcept?.starterCode || '');
-  const [lastExecutedCode, setLastExecutedCode] = useState(startingConcept?.code || startingConcept?.starterCode || '');
-  const [language, setLanguage] = useState(startingConcept?.language || 'java');
-  const [customInput, setCustomInput] = useState('');
+  const lineFor = (pattern, fallback = 1) => {
+    const match = code.match(pattern);
+    return match ? code.slice(0, match.index).split('\n').length : fallback;
+  };
+  const insertLine = lineFor(/(?:root\s*=\s*)?insert\s*\(/i, lineFor(/for\s*\(/i, 1));
+  const inorderLine = lineFor(/inorder\s*\(/i, insertLine);
+  const preorderLine = lineFor(/preorder\s*\(/i, inorderLine);
+  const postorderLine = lineFor(/postorder\s*\(/i, preorderLine);
+  const searchLine = lineFor(/search\s*\(/i, postorderLine);
+  const nodes = [];
+  const steps = [];
+  let sequence = 1;
+  const snapshot = (activeId, lineNumber, label, explanation, operation, variables = {}) => {
+    const nodeCopies = nodes.map((n) => ({ ...n }));
+    steps.push({
+      stepNumber: sequence++, lineNumber, algorithm: 'bst', eventType: operation,
+      operation, explanation, message: label, variables,
+      dataStructureState: {
+        type: 'tree', structureType: 'bst', algorithm: 'bst', nodes: nodeCopies,
+        values: values.slice(), activeIndex: activeId, label, focusInfo: explanation,
+        operation, outputStream: runtimeOutput,
+      },
+      traceKind: 'pattern-model',
+    });
+  };
+  const insertNode = (value, index) => {
+    if (!nodes.length) {
+      nodes.push({ id: 0, val: value, left: null, right: null, parent: null, depth: 0 });
+      snapshot(0, insertLine, `Create root ${value}`, `The first value ${value} becomes the root of the BST.`, 'BST_INSERT', { value, parent: null });
+      return;
+    }
+    let current = 0;
+    while (true) {
+      const node = nodes[current];
+      snapshot(node.id, insertLine, `Compare ${value} with ${node.val}`, `${value} is ${value < node.val ? 'smaller' : value > node.val ? 'greater' : 'equal to'} ${node.val}; follow the corresponding BST branch.`, 'BST_COMPARE', { value, current: node.val, insertIndex: index });
+      const side = value < node.val ? 'left' : 'right';
+      if (value === node.val) {
+        snapshot(node.id, insertLine, `Skip duplicate ${value}`, 'This visual model ignores duplicate keys, matching a common BST insertion rule.', 'BST_DUPLICATE', { value });
+        return;
+      }
+      if (node[side] == null) {
+        const id = nodes.length;
+        node[side] = id;
+        nodes.push({ id, val: value, left: null, right: null, parent: node.id, depth: node.depth + 1 });
+        snapshot(id, insertLine, `Insert ${value} to the ${side}`, `Create node ${value} as the ${side} child of ${node.val}.`, 'BST_INSERT', { value, parent: node.val, side });
+        return;
+      }
+      current = node[side];
+    }
+  };
+  values.forEach(insertNode);
+  const traverse = (order, line) => {
+    const visit = (id) => {
+      if (id == null) return;
+      const node = nodes[id];
+      if (order === 'Preorder') snapshot(id, line, `Preorder visits ${node.val}`, 'Preorder visits the current node before its left and right subtrees.', 'BST_TRAVERSE', { order, value: node.val });
+      visit(node.left);
+      if (order === 'Inorder') snapshot(id, line, `Inorder visits ${node.val}`, 'Inorder visits left subtree, current node, then right subtree. For a BST, values appear sorted.', 'BST_TRAVERSE', { order, value: node.val });
+      visit(node.right);
+      if (order === 'Postorder') snapshot(id, line, `Postorder visits ${node.val}`, 'Postorder visits both children before the current node.', 'BST_TRAVERSE', { order, value: node.val });
+    };
+    visit(0);
+  };
+  if (/inorder\s*\(/i.test(code)) traverse('Inorder', inorderLine);
+  if (/preorder\s*\(/i.test(code)) traverse('Preorder', preorderLine);
+  if (/postorder\s*\(/i.test(code)) traverse('Postorder', postorderLine);
+  const searchMatch = code.match(/search\s*\(\s*root\s*,\s*(-?\d+)/i);
+  if (searchMatch) {
+    const target = Number(searchMatch[1]);
+    let current = 0;
+    while (current != null && nodes[current]) {
+      const node = nodes[current];
+      snapshot(node.id, searchLine, `Search compares ${target} with ${node.val}`, target === node.val ? `Target ${target} found at this node.` : `${target} is ${target < node.val ? 'smaller' : 'greater'} than ${node.val}; move to the ${target < node.val ? 'left' : 'right'} child.`, 'BST_SEARCH', { target, current: node.val, found: target === node.val });
+      if (target === node.val) break;
+      current = target < node.val ? node.left : node.right;
+    }
+  }
+  snapshot(null, searchLine, 'BST operations complete', 'The tree structure is complete. Step through the timeline to inspect insertions and traversals.', 'BST_COMPLETE');
+  return steps;
+}
 
-  // Complexity State
-  const [timeComplexity, setTimeComplexity] = useState(startingConcept?.timeComplexity || 'O(n)');
-  const [spaceComplexity, setSpaceComplexity] = useState(startingConcept?.spaceComplexity || 'O(1)');
+export default function Visualizer({ initialConcept, initialOpenStriver = false, universalOnly = false }) {
+  const { isBright } = useTheme();
 
-  // Execution Lifecycle State
+  // Build a semantic visualization hint without changing the code sent to the
+  // compiler. This lets the deterministic simulator select the correct
+  // algorithm trace for all 49 curriculum programs and 182 Striver problems.
+  const buildVisualizationCode = (source, problem = null) => {
+    const hintParts = [
+      problem?.title,
+      problem?.shortTitle,
+      problem?.id,
+      problem?.striverId,
+      problem?.archetype,
+      selectedSample?.title,
+      selectedSample?.id,
+    ].filter(Boolean);
+
+    if (hintParts.length === 0) return source || '';
+    return `${source || ''}\n// CODE3D_VISUAL_HINT: ${hintParts.join(' | ')}`;
+  };
+
+  const buildSemanticTrace = (source, lang, input = null, problem = null) => {
+    const problemId = problem?.striverId ?? problem?.id ?? '';
+    const archetype = String(problem?.archetype || problemId || problem?.category || '')
+      .trim()
+      .replace(/\|/g, '/');
+    const title = String(problem?.title || problem?.shortTitle || '')
+      .trim()
+      .replace(/\|/g, '/');
+
+    // executionSimulator has an explicit problem-aware path. Use it instead
+    // of only appending a comment to the source (comments are invisible to
+    // the simulator's algorithm selector).
+    const isStriverProblem =
+      problem?.striverId != null ||
+      String(problem?.id || '').startsWith('striver-') ||
+      String(problem?.id || '').match(/^\d+$/);
+
+    const selector = isStriverProblem
+      ? `striver|${problemId}|${title}|${archetype}`
+      : problem?.id
+        ? `topic|${problemId}|${title}|${problem?.category || archetype}`
+        : archetype;
+
+    return getExecutionTrace(
+      source || '',
+      lang,
+      input,
+      selector || null
+    );
+  };
+
+  const normalizeAlgorithmTrace = (steps, algorithm) => {
+    const visualizerType = String(algorithm?.visualizerType || 'array').toLowerCase();
+    return (Array.isArray(steps) ? steps : []).map((step, index) => ({
+      ...step,
+      stepNumber: step.stepNumber || index + 1,
+      algorithm: step.algorithm || algorithm?.id || algorithm?.name || 'algorithm',
+      dataStructureState: {
+        ...(step.dataStructureState || {}),
+        type: visualizerType,
+      },
+    }));
+  };
+
+  // The backend is authoritative for execution/output. The frontend trace is
+  // authoritative only for the pedagogical 3D state machine. Never display
+  // simulated stdout as if it came from the real program.
+  const attachRuntimeOutput = (steps, backendResult) => {
+    if (!Array.isArray(steps) || steps.length === 0) return [];
+    const runtimeOutput = Array.isArray(backendResult?.output)
+      ? backendResult.output
+      : String(backendResult?.output || '').split(/\r?\n/).filter(Boolean);
+
+    return steps.map((step, index) => ({
+      ...step,
+      output: index === steps.length - 1 ? runtimeOutput : [],
+      runtimeStatus: backendResult?.status || null,
+      runtimeOutput,
+    }));
+  };
+  const universalStarter = { id: 'universal-editor', title: 'Universal Code Editor', category: 'Universal Engine', description: 'Write and execute your own code; supported patterns can be shown as a modeled 3D visualization.', difficulty: 'Custom', timeComplexity: '—', spaceComplexity: '—', code: LANGUAGE_DEFAULTS.java || DEFAULT_JAVA_CODE, language: 'java' };
+  const [selectedSample, setSelectedSample] = useState(initialConcept || (universalOnly ? universalStarter : SAMPLE_PROGRAMS[0]));
+  const [code, setCode] = useState(initialConcept?.code || (universalOnly ? universalStarter.code : DEFAULT_JAVA_CODE));
+  const [lastExecutedCode, setLastExecutedCode] = useState(universalOnly ? '' : (initialConcept?.code || DEFAULT_JAVA_CODE));
+  const isCodeDirty = code !== lastExecutedCode;
+  const [language, setLanguage] = useState(initialConcept?.language || 'java');
+  const [trace, setTrace] = useState(() => {
+    if (universalOnly) return [];
+    if (initialConcept?.trace && initialConcept.trace.length > 0) {
+      return initialConcept.trace;
+    }
+    return getExecutionTrace(initialConcept?.code || (universalOnly ? universalStarter.code : DEFAULT_JAVA_CODE), initialConcept?.language || 'java');
+  });
+  const [backendOnline, setBackendOnline] = useState(false);
+  const [timeComplexity, setTimeComplexity] = useState(initialConcept?.timeComplexity || SAMPLE_PROGRAMS[0].timeComplexity);
+  const [spaceComplexity, setSpaceComplexity] = useState(initialConcept?.spaceComplexity || SAMPLE_PROGRAMS[0].spaceComplexity);
+  // View Layout Toggles requested by user:
+  // 1. Program State panel visibility toggle
+  // 2. 100% Fullscreen 3D Theater Mode
+  const [showStatePanel, setShowStatePanel] = useState(true);
+  const [isFull3DView, setIsFull3DView] = useState(false);
+  // Direct Form User Input
+  const [formInputValues, setFormInputValues] = useState(universalOnly ? '' : '10, 20, 30, 40');
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionError, setExecutionError] = useState(null);
-  const [selectedVariable, setSelectedVariable] = useState(null);
-  const [saveStatus, setSaveStatus] = useState(null);
-
-  // Layout View Modes
-  const [viewMode, setViewMode] = useState('default'); // 'default' | 'fullscreen3d' | 'focusCode' | 'focusExplanation'
-  const [showConsole, setShowConsole] = useState(false);
-
-  // Modals State
-  const [isStriverOpen, setIsStriverOpen] = useState(initialOpenStriver);
+  const [runtimeOutput, setRuntimeOutput] = useState([]);
+  const [runtimeStatus, setRuntimeStatus] = useState('IDLE');
+  const [runtimeTimeMs, setRuntimeTimeMs] = useState(null);
+  const [runtimeComplexity, setRuntimeComplexity] = useState(null);
+  const [traceNotice, setTraceNotice] = useState('');
+  const executionAbortRef = useRef(null);
+  const [syntaxErrorLine, setSyntaxErrorLine] = useState(null);
+  // Modals & responsive view state
+  const [isAiOpen, setIsAiOpen] = useState(false);
+  const [isQuizOpen, setIsQuizOpen] = useState(false);
   const [isCustomCodeOpen, setIsCustomCodeOpen] = useState(false);
   const [isCodeDoctorOpen, setIsCodeDoctorOpen] = useState(false);
-  const [isQuizOpen, setIsQuizOpen] = useState(false);
+  const [isStriverSheetOpen, setIsStriverSheetOpen] = useState(initialOpenStriver);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
-  const [isAiOpen, setIsAiOpen] = useState(false);
-
-  // Initialize normalized trace
-  const [trace, setTrace] = useState(() => {
-    if (startingConcept?.trace && startingConcept.trace.length > 0) {
-      return normalizeTrace(startingConcept.trace, {
-        time: startingConcept.timeComplexity || 'O(n)',
-        space: startingConcept.spaceComplexity || 'O(1)',
-      });
-    }
-    const rawTrace = getExecutionTrace(
-      startingConcept?.code || startingConcept?.starterCode || '',
-      startingConcept?.language || 'java'
-    );
-    return normalizeTrace(rawTrace, {
-      time: startingConcept.timeComplexity || 'O(n)',
-      space: startingConcept.spaceComplexity || 'O(1)',
-    });
-  });
-
-  // Timeline Hook
+  const [activeStriverProblem, setActiveStriverProblem] = useState(null);
+  const [mobileTab, setMobileTab] = useState('3d'); // '3d' | 'code' | 'state'
   const {
     currentStepIndex,
     currentStep,
@@ -114,367 +292,1260 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
     reset,
     breakpoints,
     toggleBreakpoint,
+    executionState,
     cumulativeOutput,
+    finalCorrectOutput,
   } = useExecutionTimeline(trace);
-
-  const isCodeDirty = code !== lastExecutedCode;
-
-  // Sync when concept changes from navigation
+  // Dynamic Box Resizing State (Editor width % and Console height px)
+  const [editorWidthPercent, setEditorWidthPercent] = useState(35);
+  const [consoleHeightPx, setConsoleHeightPx] = useState(165);
+  const [isResizingEditor, setIsResizingEditor] = useState(false);
+  const [isResizingConsole, setIsResizingConsole] = useState(false);
+  // Handle dragging horizontal splitter between Code Editor and 3D Viewport
+  const startEditorResize = (e) => {
+    e.preventDefault();
+    setIsResizingEditor(true);
+    const onMouseMove = (moveEvent) => {
+      const containerWidth = window.innerWidth;
+      const newPercent = Math.min(65, Math.max(20, (moveEvent.clientX / containerWidth) * 100));
+      setEditorWidthPercent(Math.round(newPercent));
+    };
+    const onMouseUp = () => {
+      setIsResizingEditor(false);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+  // Handle dragging vertical splitter between 3D Canvas and Output Console
+  const startConsoleResize = (e) => {
+    e.preventDefault();
+    setIsResizingConsole(true);
+    const startY = moveEvent => moveEvent.clientY;
+    const initialHeight = consoleHeightPx;
+    const initialY = e.clientY;
+    const onMouseMove = (moveEvent) => {
+      const deltaY = initialY - moveEvent.clientY;
+      const newHeight = Math.min(380, Math.max(70, initialHeight + deltaY));
+      setConsoleHeightPx(Math.round(newHeight));
+    };
+    const onMouseUp = () => {
+      setIsResizingConsole(false);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+  // Check backend health on mount
   useEffect(() => {
-    const incoming = initialConcept || location?.state?.concept;
-    if (incoming) {
-      setCurrentConcept(incoming);
-      const incomingCode = incoming.code || incoming.starterCode || '';
-      setCode(incomingCode);
-      setLastExecutedCode(incomingCode);
-      if (incoming.language) setLanguage(incoming.language);
-      if (incoming.timeComplexity) setTimeComplexity(incoming.timeComplexity);
-      if (incoming.spaceComplexity) setSpaceComplexity(incoming.spaceComplexity);
-
-      const raw = incoming.trace && incoming.trace.length > 0
-        ? incoming.trace
-        : getExecutionTrace(incomingCode, incoming.language || 'java');
-
-      const normalized = normalizeTrace(raw, {
-        time: incoming.timeComplexity || 'O(n)',
-        space: incoming.spaceComplexity || 'O(1)',
-      });
-      setTrace(normalized);
-      reset();
-      setTimeout(() => play(), 100);
+    checkBackendHealth({ allowFallback: !universalOnly }).then((isUp) => {
+      setBackendOnline(isUp);
+    });
+  }, []);
+  useEffect(() => () => executionAbortRef.current?.abort(), []);
+  // Synchronize formInputValues whenever code or selected sample changes
+  useEffect(() => {
+    if (universalOnly) return;
+    const nums = extractNumbersFromCode(code);
+    if (nums && nums.length > 0) {
+      setFormInputValues(nums.join(', '));
     }
-  }, [initialConcept, location?.state]);
+  }, [selectedSample]);
+  // Update visualizer state whenever initialConcept changes
+  useEffect(() => {
+    // Every navigation into this studio gets a clean context. In particular, a
+    // Striver archetype must never leak into the Universal Editor.
+    setActiveStriverProblem(initialConcept?.striverId ? initialConcept : null);
+    setIsStriverSheetOpen(false);
+    setExecutionError(null);
+    setSyntaxErrorLine(null);
+    setIsFull3DView(false);
+    setMobileTab('3d');
 
-  // Master Run Pipeline
-  const handleRunCode = useCallback(async () => {
-    if (!code || !code.trim() || isExecuting) return;
+    if (initialConcept) {
+      setSelectedSample(initialConcept);
+      setCode(initialConcept.code || '');
+      setLastExecutedCode(initialConcept.code || '');
+      if (initialConcept.language) {
+        setLanguage(initialConcept.language);
+      }
+      setTimeComplexity(initialConcept.timeComplexity || 'O(n)');
+      setSpaceComplexity(initialConcept.spaceComplexity || 'O(1)');
+      if (initialConcept.defaultInput != null) {
+        setFormInputValues(String(initialConcept.defaultInput));
+      } else {
+        const nums = extractNumbersFromCode(initialConcept.code || '');
+        setFormInputValues(nums.length ? nums.join(', ') : '10, 20, 30, 40');
+      }
+      if (initialConcept.trace && initialConcept.trace.length > 0) {
+        setTrace(initialConcept.trace);
+        reset();
+        setTimeout(() => play(), 100);
+      } else if (backendOnline && initialConcept.id && initialConcept.id !== 'custom') {
+        executeProgram(initialConcept.code, initialConcept.id, initialConcept.language || 'java')
+          .then(() => {
+            setTrace(buildSemanticTrace(initialConcept.code, initialConcept.language || 'java', initialConcept.defaultInput, initialConcept));
+            reset();
+            setTimeout(() => play(), 100);
+          })
+          .catch(() => {
+            setTrace(buildSemanticTrace(initialConcept.code, initialConcept.language || 'java', initialConcept.defaultInput, initialConcept));
+            reset();
+            setTimeout(() => play(), 100);
+          });
+      } else {
+        setTrace(buildSemanticTrace(initialConcept.code, initialConcept.language || 'java', initialConcept.defaultInput, initialConcept));
+        reset();
+        setTimeout(() => play(), 100);
+      }
+    }
+  }, [initialConcept, backendOnline]);
+  // Handle preset selection
+  const handleSelectProgram = async (prog) => {
+    setActiveStriverProblem(null);
+    setSelectedSample(prog);
+    setCode(prog.code);
+    setLastExecutedCode(prog.code);
+    setLanguage('java');
+    setTimeComplexity(prog.timeComplexity);
+    setSpaceComplexity(prog.spaceComplexity);
+    // Update form input field with preset numbers
+    const nums = extractNumbersFromCode(prog.code);
+    if (nums && nums.length > 0) {
+      setFormInputValues(nums.join(', '));
+    }
+    const finalSteps = buildSemanticTrace(prog.code, 'java', null, prog);
+    setTrace(finalSteps);
+    reset();
+    setTimeout(() => play(), 100);
+    recordExecutionHistory({
+      programTitle: prog.title,
+      conceptId: prog.id,
+      language: 'java',
+      totalSteps: finalSteps.length,
+      status: 'COMPLETED',
+      code: prog.code,
+    });
+  };
+  // Handle selecting an algorithm from the 3D algorithm engine
+  const handleSelectAlgorithm = (algo) => {
+    setActiveStriverProblem(null);
+    const input = Array.isArray(algo.defaultInput) ? algo.defaultInput : [45, 12, 89, 23, 7, 64, 31];
+    const target = algo.defaultTarget !== undefined ? algo.defaultTarget : 23;
+    const res = algo.generator(input, target);
+    const normalizedSteps = alignTraceLinesWithSource(
+      algo.code?.java || '',
+      normalizeAlgorithmTrace(res?.steps, algo),
+      'java'
+    );
+    setSelectedSample({
+      id: algo.id,
+      title: algo.name,
+      category: algo.category,
+      description: algo.description,
+      difficulty: 'Standard',
+      timeComplexity: algo.complexity?.time?.average || 'O(n)',
+      spaceComplexity: algo.complexity?.space || 'O(1)',
+      code: algo.code?.java || '',
+      language: 'java',
+      complexity: algo.complexity,
+    });
+    setCode(algo.code?.java || '');
+    setLastExecutedCode(algo.code?.java || '');
+    setLanguage('java');
+    setTimeComplexity(algo.complexity?.time?.average || 'O(n)');
+    setSpaceComplexity(algo.complexity?.space || 'O(1)');
+    setFormInputValues(Array.isArray(input) ? input.join(', ') : String(input));
+    setTrace(normalizedSteps);
+    reset();
+    setTimeout(() => play(), 100);
+    recordExecutionHistory({
+      programTitle: algo.name,
+      conceptId: algo.id,
+      language: 'java',
+      totalSteps: normalizedSteps.length,
+      status: 'COMPLETED',
+      code: algo.code?.java || '',
+    });
+  };
+  // Handle language change from editor
+  const handleLanguageChange = async (newLang) => {
+    setActiveStriverProblem(null);
+    setLanguage(newLang);
+    const template = LANGUAGE_DEFAULTS[newLang] || DEFAULT_JAVA_CODE;
+    setCode(template);
+    setLastExecutedCode(template);
+    setSelectedSample({
+      id: 'custom',
+      title: `${newLang.toUpperCase()} Traversal`,
+      category: 'Multi-Language',
+      description: `Dynamic ${newLang.toUpperCase()} execution trace in 3D space.`,
+      difficulty: 'Beginner',
+      timeComplexity: 'O(n)',
+      spaceComplexity: 'O(1)',
+      code: template,
+    });
+    if (universalOnly) {
+      setLastExecutedCode('');
+      setTrace([]);
+      setRuntimeOutput([]);
+      setRuntimeStatus('IDLE');
+      setRuntimeTimeMs(null);
+      setRuntimeComplexity(null);
+      setFormInputValues('');
+      setTrace([]);
+      setRuntimeOutput([]);
+      setRuntimeStatus('IDLE');
+      setTraceNotice('Run the program to see runtime output. A 3D trace appears only for recognized supported patterns.');
+      return;
+    }
+    const nums = extractNumbersFromCode(template);
+    if (nums && nums.length > 0) {
+      setFormInputValues(nums.join(', '));
+    }
+    if (backendOnline) {
+      const [execRes, astRes] = await Promise.all([
+        executeProgram(template, 'custom', newLang),
+        analyzeCode(template, newLang),
+      ]);
+      setTrace(getExecutionTrace(template, newLang));
+      reset();
+      if (astRes) {
+        if (astRes.timeComplexity) setTimeComplexity(astRes.timeComplexity);
+        if (astRes.spaceComplexity) setSpaceComplexity(astRes.spaceComplexity);
+      }
+    } else {
+      setTrace(getExecutionTrace(template, newLang));
+      reset();
+    }
+  };
+  // Directly apply User Form Input into code and 3D visualizer
+  const applyNewValuesToCode = async (vals) => {
+    if (!vals || vals.length === 0) return;
+    const inputStr = vals.join(', ');
+    setFormInputValues(inputStr);
+    if (universalOnly) {
+      setTrace([]);
+      setRuntimeOutput([]);
+      setRuntimeStatus('IDLE');
+      setTraceNotice('Input changed. Run the program to refresh its actual output.');
+      return;
+    }
+    let updatedCode = code;
+    const hasBracketNumbers = /\[[0-9,\s\-]+\]/.test(updatedCode);
+    const hasBraceNumbers = /\{[0-9,\s\-]+\}/.test(updatedCode);
+    if (language === 'python' || language === 'javascript') {
+      if (hasBracketNumbers) {
+        updatedCode = updatedCode.replace(/\[[0-9,\s\-]+\]/, `[${inputStr}]`);
+        setCode(updatedCode);
+        setLastExecutedCode(updatedCode);
+      }
+    } else {
+      if (hasBraceNumbers) {
+        updatedCode = updatedCode.replace(/\{[0-9,\s\-]+\}/, `{${inputStr}}`);
+        setCode(updatedCode);
+        setLastExecutedCode(updatedCode);
+      }
+    }
+    // Run dynamic trace with new input values preserving the algorithm
+    let newSteps = buildSemanticTrace(
+      updatedCode,
+      language,
+      inputStr,
+      activeStriverProblem || selectedSample
+    );
+    if (newSteps && newSteps.length > 0) {
+      setTrace(newSteps);
+      reset();
+      setTimeout(() => play(), 60);
+    }
+  };
+  const handleApplyFormInput = () => {
+    const vals = extractNumbersFromCode(formInputValues);
+    applyNewValuesToCode(vals);
+  };
+  const handleApplyPresetValues = (vals) => {
+    setFormInputValues(vals.join(', '));
+    applyNewValuesToCode(vals);
+  };
+  // Handle user applying custom code from modal
+  const handleCustomCodeApply = async ({ code: customCode, language: customLang }) => {
+    setActiveStriverProblem(null);
+    setLanguage(customLang);
+    setCode(customCode);
+    setLastExecutedCode(customCode);
+    setSelectedSample({
+      id: 'custom',
+      title: `⚡ Custom ${customLang.toUpperCase()} Code`,
+      category: 'Custom Algorithms',
+      description: 'User-submitted code dynamically analyzed and rendered in 3D.',
+      difficulty: 'Custom',
+      timeComplexity: 'O(n)',
+      spaceComplexity: 'O(1)',
+      code: customCode,
+    });
+    if (universalOnly) {
+      setFormInputValues('');
+      setTrace([]);
+      setRuntimeOutput([]);
+      setRuntimeStatus('IDLE');
+      setTraceNotice('Run the program to see its actual output. A 3D trace appears only for recognized supported patterns.');
+      return;
+    }
+    const nums = extractNumbersFromCode(customCode);
+    if (nums && nums.length > 0) {
+      setFormInputValues(nums.join(', '));
+    }
+    let newSteps = null;
+    if (backendOnline) {
+      try {
+        const [execRes, astRes] = await Promise.all([
+          executeProgram(customCode, 'custom', customLang),
+          analyzeCode(customCode, customLang),
+        ]);
+        newSteps = getExecutionTrace(customCode, customLang);
+        if (astRes) {
+          if (astRes.timeComplexity) setTimeComplexity(astRes.timeComplexity);
+          if (astRes.spaceComplexity) setSpaceComplexity(astRes.spaceComplexity);
+        }
+      } catch (err) {
+        console.warn('Backend custom execution failed, using simulator:', err);
+      }
+    }
+    if (!newSteps || newSteps.length === 0) {
+      newSteps = getExecutionTrace(customCode, customLang);
+    }
+    if (newSteps && newSteps.length > 0) {
+      setTrace(newSteps);
+      reset();
+      setTimeout(() => play(), 50);
+      recordExecutionHistory({
+        programTitle: `Custom ${customLang.toUpperCase()} Code`,
+        conceptId: 'custom',
+        language: customLang,
+        totalSteps: newSteps.length,
+        status: 'COMPLETED',
+        code: customCode,
+      });
+    }
+  };
+  // Execute User Code Pipeline:
+  // The backend universal executor is authoritative for compilation, runtime
+  // status and stdout/stderr. Any supported visualization remains a model.
+  const handleRunCode = async () => {
+    if (isExecuting) return false;
+    if (!universalOnly && isPlaying) { pause(); return false; }
 
+    const abortController = new AbortController();
+    if (universalOnly) executionAbortRef.current = abortController;
     setIsExecuting(true);
     setExecutionError(null);
+    setRuntimeOutput([]);
+    setRuntimeStatus('RUNNING');
+    setRuntimeTimeMs(null);
+    setRuntimeComplexity(null);
+    setTrace([]);
+    setTraceNotice('Program is running in the isolated backend.');
 
     try {
-      const runRes = await executionManager.run({
+      const backendResult = await executeProgram(
         code,
+        activeStriverProblem?.id || selectedSample?.id || 'custom',
         language,
-        input: customInput,
-        archetype: currentConcept?.visualizationType || currentConcept?.id,
-      });
+        formInputValues,
+        true,
+        universalOnly ? abortController.signal : undefined,
+        { allowFallback: !universalOnly }
+      );
 
-      if (!runRes.success) {
-        setExecutionError(runRes.error?.message || 'Execution error detected.');
-        setIsExecuting(false);
-        return;
+      const execution = normalizeUniversalExecutionResult(backendResult || {});
+      if (execution.status !== 'COMPLETED' || backendResult?.success === false) {
+        setExecutionError(execution.error || 'Execution failed on the backend.');
+        setRuntimeOutput(execution.output);
+        setRuntimeStatus(backendResult?.errorCode || execution.status || 'ERROR');
+        setRuntimeTimeMs(execution.executionTimeMs);
+        setTrace([]);
+        setTraceNotice('No execution trace is shown for a failed run.');
+        return false;
       }
 
-      const normalized = normalizeTrace(runRes.steps, {
-        time: currentConcept?.timeComplexity || 'O(n)',
-        space: currentConcept?.spaceComplexity || 'O(1)',
-      });
+      const actualOutput = execution.output;
+      setRuntimeOutput(actualOutput);
+      setRuntimeStatus(execution.status);
+      setRuntimeTimeMs(execution.executionTimeMs);
+      setRuntimeComplexity(execution.complexity);
 
-      setTrace(normalized);
+      let visualTrace;
+      if (universalOnly) {
+        // Only expose a modeled DSA trace when the backend reports an explicit
+        // supported pattern. Generic source-derived steps are not runtime traces.
+        const bstPatternTrace = buildBstPatternTrace(code, actualOutput);
+        const graphPatternTrace = bstPatternTrace ? null : buildGraphPatternTrace(code, actualOutput);
+        const treePatternTrace = (bstPatternTrace || graphPatternTrace) ? null : buildTreePatternTrace(code, actualOutput);
+        const linkedListPatternTrace = (bstPatternTrace || graphPatternTrace || treePatternTrace) ? null : buildLinkedListPatternTrace(code, actualOutput);
+        const linearStructureTrace = (bstPatternTrace || graphPatternTrace || treePatternTrace || linkedListPatternTrace) ? null : buildLinearStructurePatternTrace(code, actualOutput);
+        if (bstPatternTrace) {
+          visualTrace = bstPatternTrace;
+          setTraceNotice('BST pattern model • Tree insertions, traversal visits and search are inferred from source; program output/status are real.');
+        } else if (graphPatternTrace) {
+          visualTrace = graphPatternTrace;
+          setTraceNotice('Graph pattern model • Vertices, edges and traversal are inferred from source; program output/status are real.');
+        } else if (treePatternTrace) {
+          visualTrace = treePatternTrace;
+          setTraceNotice('Binary-tree pattern model • Explicit node allocations and left/right links are inferred from source; program output/status are real.');
+        } else if (linkedListPatternTrace) {
+          visualTrace = linkedListPatternTrace;
+          setTraceNotice('Linked-list pattern model • Node allocation and next-pointer links are inferred from source; program output/status are real.');
+        } else if (linearStructureTrace) {
+          visualTrace = linearStructureTrace;
+          setTraceNotice('Stack/queue pattern model • Explicit operations are modeled from source; program output/status are real.');
+        } else {
+        visualTrace = execution.steps.map((step, index) => {
+          const lineNumber = step.lineNumber || step.line || null;
+          const variables = step.variables || step.dataStructureState?.variables || {};
+          const arrays = step.arrays || step.dataStructureState?.arrays || (
+            Array.isArray(step.array)
+              ? { [step.arrayName || step.structureName || 'array']: step.array }
+              : Array.isArray(step.dataStructureState?.array)
+                ? { [step.dataStructureState?.arrayName || 'array']: step.dataStructureState.array }
+                : {}
+          );
+          const isGenericModel = !execution.traceSupported;
+          const sourceState = step.dataStructureState || {};
+          const variableArrayEntry = Object.entries(variables).find(([, value]) => Array.isArray(value) && value.length > 0);
+          const sourceArrayMatch = !variableArrayEntry && !Object.values(arrays).some(Array.isArray)
+            ? code.match(/(?:\b(?:int|long|double|float|char|String|auto|var)\s*\[\s*\]\s*\w+|\b(?:int|long|double|float|char|auto)\s+\w+\s*\[\s*\])\s*=\s*[\[{]([^}\]]+)[}\]]|\b(?:let|const|var)\s+\w+\s*=\s*\[([^\]]+)\]/)
+            : null;
+          const sourceArrayValues = sourceArrayMatch
+            ? ((sourceArrayMatch[1] || sourceArrayMatch[2] || '').match(/-?\d+(?:\.\d+)?/g) || []).map(Number).slice(0, 40)
+            : [];
+          const arrayEntry = Object.entries(arrays).find(([, value]) => Array.isArray(value)) || variableArrayEntry || (sourceArrayValues.length ? ['source-array', sourceArrayValues] : null);
+          const rawStructureType = String(sourceState.structureType || sourceState.type || step.dataStructure || step.structureType || execution.universalContext?.analysis?.dataStructure || 'array').toLowerCase().replace(/_/g, '-');
+          const inferredArrayType = arrayEntry
+            ? (/\b(sort|qsort)\s*\(|\.sort\s*\(|Arrays\.sort/i.test(code) ? 'sorting' : 'array')
+            : '';
+          const knownStructureTypes = new Set([
+            'array', 'vector', 'matrix', 'graph', 'tree', 'bst', 'heap', 'stack', 'queue',
+            'linked-list', 'linkedlist', 'doubly-linked-list', 'hash-table', 'sorting', 'searching',
+            'dp', 'recursion', 'trie', 'deque',
+          ]);
+          const structureType = !knownStructureTypes.has(rawStructureType) && inferredArrayType
+            ? inferredArrayType
+            : rawStructureType;
+          const semanticStructureTypes = new Set([
+            'array', 'vector', 'matrix', 'graph', 'tree', 'bst', 'heap', 'stack', 'queue',
+            'linked-list', 'linkedlist', 'doubly-linked-list', 'hash-table', 'hash-table',
+            'sorting', 'searching', 'dp', 'recursion', 'trie', 'deque',
+          ]);
+          const sourceType = String(sourceState.type || '').toLowerCase().replace(/_/g, '-');
+          const resolvedSceneType = semanticStructureTypes.has(structureType)
+            ? structureType
+            : (semanticStructureTypes.has(sourceType) ? sourceType : (sourceType || structureType || 'array'));
+          const stepEventType = String(step.eventType || step.type || step.event || step.operation || '').toLowerCase();
+          const stepIndices = Array.isArray(step.indices) ? step.indices.filter(Number.isInteger) : [];
+          const inferredActiveIndex = step.index
+            ?? (Array.isArray(step.indices) ? step.indices[0] : null)
+            ?? step.innerIndex
+            ?? step.outerIndex
+            ?? sourceState.activeIndex
+            ?? (Number.isInteger(variables.i) ? variables.i
+              : Number.isInteger(variables.index) ? variables.index
+                : Number.isInteger(variables.idx) ? variables.idx
+                  : Number.isInteger(variables.j) ? variables.j
+                    : null);
+          const reportedMessage = step.message || step.explanation || step.operation || step.event || 'Source-level step';
+          const stepMessage = /array initialized/i.test(String(reportedMessage))
+            && stepEventType === 'visit'
+            && Number.isInteger(inferredActiveIndex)
+            && Array.isArray(arrayEntry?.[1])
+            ? `Visit index ${inferredActiveIndex} containing ${arrayEntry[1][inferredActiveIndex]}.`
+            : reportedMessage;
+          const sourcePointers = sourceState.pointers && typeof sourceState.pointers === 'object' ? sourceState.pointers : {};
+          const dataStructureState = {
+            ...sourceState,
+            // The generic trace envelope must not override a concrete DSA type.
+            // Otherwise the dispatcher renders only the universal halo instead of the array/tree/graph scene.
+            // Preserve a concrete array/sorting scene even when the backend's trace is generic.
+            // Runtime-instrumented variables can still contain the actual array state.
+            type: isGenericModel && !semanticStructureTypes.has(structureType)
+              ? 'universal-execution'
+              : (sourceType === 'universal-execution' && semanticStructureTypes.has(structureType)
+                ? resolvedSceneType
+                : (semanticStructureTypes.has(structureType) ? structureType : (sourceState.type || resolvedSceneType || 'array'))),
+            structureType,
+            variables,
+            arrays,
+            nodes: step.nodes || sourceState.nodes || [],
+            edges: step.edges || sourceState.edges || [],
+            stack: step.stack || sourceState.stack || (structureType === 'stack' ? sourceState.values : undefined),
+            queue: step.queue || sourceState.queue || (structureType === 'queue' ? sourceState.values : undefined),
+            outputStream: actualOutput,
+            values: arrayEntry?.[1] || step.values || step.array || sourceState.values || sourceState.array || (structureType === 'stack' ? step.stack : undefined) || (structureType === 'queue' ? step.queue : undefined) || [],
+            arrayName: arrayEntry?.[0] || sourceState.arrayName || null,
+            activeIndex: inferredActiveIndex,
+            // The 3D sorting/searching scenes consume explicit comparison and swap indices.
+            // Preserve these semantic signals from trace events instead of only changing the
+            // array values, which made a comparison appear to jump directly to the swap.
+            comparedIndices: Array.isArray(step.comparedIndices)
+              ? step.comparedIndices
+              : (stepEventType.includes('compare') ? stepIndices : (sourceState.comparedIndices || [])),
+            swappedIndices: Array.isArray(step.swappedIndices)
+              ? step.swappedIndices
+              : (stepEventType.includes('swap') ? stepIndices : (sourceState.swappedIndices || [])),
+            sortedIndices: Array.isArray(step.sortedIndices) ? step.sortedIndices : (sourceState.sortedIndices || []),
+            parentIndex: Number.isInteger(step.parentIndex) ? step.parentIndex : (sourceState.parentIndex ?? null),
+            heapType: step.heapType || sourceState.heapType || 'Min-Heap',
+            pointers: {
+              ...sourcePointers,
+              ...(Number.isInteger(step.low ?? variables.low) ? { low: step.low ?? variables.low } : {}),
+              ...(Number.isInteger(step.mid ?? variables.mid) ? { mid: step.mid ?? variables.mid } : {}),
+              ...(Number.isInteger(step.high ?? variables.high) ? { high: step.high ?? variables.high } : {}),
+              ...(Number.isInteger(step.pivot) ? { pivot: step.pivot } : {}),
+              ...(Number.isInteger(variables.i) ? { i: variables.i } : {}),
+              ...(Number.isInteger(variables.j) ? { j: variables.j } : {}),
+              ...(Number.isInteger(variables.k) ? { k: variables.k } : {}),
+            },
+            visualStates: {
+              ...(sourceState.visualStates || {}),
+              ...(stepEventType.includes('compare') ? Object.fromEntries(stepIndices.map((index) => [index, 'COMPARE'])) : {}),
+              ...(stepEventType.includes('swap') ? Object.fromEntries(stepIndices.map((index) => [index, 'SWAPPING'])) : {}),
+              ...(stepEventType.includes('found') && Number.isInteger(step.index) ? { [step.index]: 'FOUND' } : {}),
+            },
+            activeVariable: step.resultName || step.changedVariable || sourceState.activeVariable || sourceState.calculationInfo?.targetVar || null,
+            label: stepMessage,
+            focusInfo: step.code || stepMessage || 'Modeled from source structure; not runtime instrumentation.',
+          };
+          return {
+            ...step,
+            stepNumber: step.stepNumber || step.step || index + 1,
+            lineNumber,
+            variables,
+            explanation: stepMessage || step.code || 'Source-level execution event.',
+            dataStructureState,
+            eventType: step.eventType || step.type || step.event || step.operation || 'CODE_STEP',
+            traceKind: isGenericModel ? 'source-model' : 'pattern-model',
+          };
+        });
+        setTraceNotice(execution.traceMode === 'runtime-instrumented'
+          ? 'Runtime-instrumented trace • Captured program state and stdout come from the actual execution.'
+          : execution.traceSupported
+            ? 'Pattern-based 3D model • Program output/status are real; intermediate visualization is a supported pattern model.'
+            : visualTrace.length
+              ? 'Source-model 3D view • Program output/status are real; intermediate states are inferred from source and are not exact runtime snapshots.'
+              : `Program ran successfully. ${execution.traceReason || 'No source-level events were available to visualize.'}`);
+        }
+      } else {
+        const visualProblem = activeStriverProblem || selectedSample;
+        visualTrace = attachRuntimeOutput(
+          buildSemanticTrace(code, language, formInputValues, visualProblem),
+          backendResult
+        );
+        if (visualTrace.length === 0) {
+          throw new Error('Execution completed but no semantic 3D trace was generated.');
+        }
+      }
+
+      setTrace(visualTrace);
       setLastExecutedCode(code);
       reset();
-      setTimeout(() => play(), 80);
+      setTimeout(() => play(), 60);
 
-      // Record to history
-      historyApi.recordExecution({
-        title: currentConcept?.title || 'Custom Algorithm',
-        code,
+      recordExecutionHistory({
+        programTitle:
+          activeStriverProblem?.title ||
+          selectedSample?.title ||
+          'Custom Execution',
+        conceptId: activeStriverProblem
+          ? `striver-${activeStriverProblem.striverId || activeStriverProblem.id}`
+          : selectedSample?.id || 'custom',
         language,
-        status: 'SUCCESS',
-        stepCount: normalized.length,
+        totalSteps: visualTrace.length,
+        status: backendResult.status,
+        code,
+        input: formInputValues,
+        output: actualOutput,
       });
+
+      return true;
     } catch (err) {
-      setExecutionError(err.message || 'Execution failed. Please verify syntax.');
+      if (universalOnly && (abortController.signal.aborted || err?.name === 'AbortError')) {
+        setRuntimeStatus('CANCELLED');
+        setExecutionError('Execution request cancelled. A remote Judge0 submission may continue until its provider limits apply if cancellation is unavailable.');
+        setTrace([]);
+        setTraceNotice('Execution trace unavailable for a cancelled run.');
+        return false;
+      }
+      setExecutionError(
+        err?.message || 'Execution failed on the backend.'
+      );
+      setRuntimeStatus('ERROR');
+      setTrace([]);
+      return false;
     } finally {
+      if (executionAbortRef.current === abortController) executionAbortRef.current = null;
       setIsExecuting(false);
     }
-  }, [code, language, customInput, currentConcept, isExecuting, reset, play]);
+  };
 
-  // Reset to original starter code
-  const handleResetCode = useCallback(() => {
-    const origCode = getAlgorithmCode(
-      currentConcept?.id || 'array-loop',
-      language,
-      currentConcept?.code || currentConcept?.starterCode || ''
-    );
-    setCode(origCode);
-    setLastExecutedCode(origCode);
+  const handleCancelExecution = () => executionAbortRef.current?.abort();
+
+  // Bidirectional interaction: 3D Element Click -> Seek Timeline & Code Line (Section 40)
+  const handleSelectElementFrom3D = (index, value) => {
+    if (!timelineSteps || timelineSteps.length === 0) return;
+    const forwardStep = timelineSteps.findIndex((step, idx) => {
+      if (idx < currentStepIndex) return false;
+      const ds = step.dataStructureState;
+      return ds?.activeIndex === index || (ds?.pointers && Object.values(ds.pointers).includes(index));
+    });
+    if (forwardStep !== -1) {
+      jumpToStep(forwardStep);
+      return;
+    }
+    const anyStep = timelineSteps.findIndex((step) => {
+      const ds = step.dataStructureState;
+      return ds?.activeIndex === index || (ds?.pointers && Object.values(ds.pointers).includes(index));
+    });
+    if (anyStep !== -1) {
+      jumpToStep(anyStep);
+    }
+  };
+  // Bidirectional interaction: Code Editor Line Click -> Seek Timeline & 3D Scene (Section 40)
+  const handleSelectLineFromEditor = (lineNumber) => {
+    if (!timelineSteps || timelineSteps.length === 0 || !lineNumber) return;
+    const matchedStep = timelineSteps.findIndex((step) => step.lineNumber === lineNumber);
+    if (matchedStep !== -1) {
+      jumpToStep(matchedStep);
+    }
+  };
+  // Handle Personal Problem applied solution & 3D visualization
+  const handleApplyCorrectedCode = async ({
+    code: correctedCode,
+    language: correctedLang,
+    trace: correctedTrace,
+    problemTitle,
+    timeComplexity: tc,
+    spaceComplexity: sc,
+    launch3D = true,
+  }) => {
+    setActiveStriverProblem(null);
+    setLanguage(correctedLang);
+    setCode(correctedCode);
+    setLastExecutedCode(correctedCode);
+    if (tc) setTimeComplexity(tc);
+    if (sc) setSpaceComplexity(sc);
+    setSelectedSample({
+      id: 'personal-problem',
+      title: problemTitle ? `💡 ${problemTitle}` : `💡 Personal Problem (${correctedLang.toUpperCase()})`,
+      category: 'Personal Problem',
+      description: 'Custom personal problem solved and fully simulated in 3D WebGL.',
+      difficulty: 'Custom',
+      timeComplexity: tc || 'O(n)',
+      spaceComplexity: sc || 'O(1)',
+      code: correctedCode,
+    });
+    const nums = extractNumbersFromCode(correctedCode);
+    if (nums && nums.length > 0) {
+      setFormInputValues(nums.join(', '));
+    }
+    if (correctedTrace && correctedTrace.length > 0) {
+      setTrace(correctedTrace);
+      reset();
+      if (launch3D) {
+        setTimeout(() => play(), 50);
+      }
+    } else {
+      let newSteps = null;
+      if (backendOnline) {
+        try {
+          const [execRes, astRes] = await Promise.all([
+            executeProgram(correctedCode, 'custom', correctedLang),
+            analyzeCode(correctedCode, correctedLang),
+          ]);
+          newSteps = getExecutionTrace(correctedCode, correctedLang);
+          if (astRes?.timeComplexity) setTimeComplexity(astRes.timeComplexity);
+          if (astRes?.spaceComplexity) setSpaceComplexity(astRes.spaceComplexity);
+        } catch (err) {
+          console.warn('Backend repaired execution failed, using simulator:', err);
+        }
+      }
+      if (!newSteps || newSteps.length === 0) {
+        newSteps = getExecutionTrace(correctedCode, correctedLang);
+      }
+      if (newSteps && newSteps.length > 0) {
+        setTrace(newSteps);
+        reset();
+        if (launch3D) {
+          setTimeout(() => play(), 50);
+        }
+      }
+    }
+    recordExecutionHistory({
+      programTitle: problemTitle ? `💡 ${problemTitle}` : `💡 Personal Problem (${correctedLang.toUpperCase()})`,
+      conceptId: 'personal-problem',
+      language: correctedLang,
+      totalSteps: (correctedTrace?.length || 1),
+      status: 'COMPLETED',
+      code: correctedCode,
+    });
+  };
+  const handleResetCode = () => {
+    const templateCode = activeStriverProblem?.starterCode || selectedSample?.code || DEFAULT_JAVA_CODE;
+    setCode(templateCode);
+    setLastExecutedCode(templateCode);
     setExecutionError(null);
-
-    const raw = currentConcept?.trace && currentConcept.trace.length > 0
-      ? currentConcept.trace
-      : getExecutionTrace(origCode, language);
-
-    setTrace(normalizeTrace(raw, { time: timeComplexity, space: spaceComplexity }));
+        const traceSteps = buildSemanticTrace(templateCode, language, formInputValues, activeStriverProblem || selectedSample);
+    setTrace(traceSteps);
     reset();
-  }, [currentConcept, language, timeComplexity, spaceComplexity, reset]);
-
-  // Clear code
-  const handleClearCode = useCallback(() => {
-    setCode('');
-    setExecutionError(null);
-  }, []);
-
-  // Language Change: update language and load corresponding language template
-  const handleLanguageChange = useCallback((newLang) => {
-    setLanguage(newLang);
-    setExecutionError(null);
-
-    const newCode = getAlgorithmCode(
-      currentConcept?.id || 'array-loop',
-      newLang,
-      currentConcept?.code || currentConcept?.starterCode || ''
+  };
+  // Handle user selecting a Striver SDE Sheet question from drawer
+  const handleSelectStriverProblem = async (problem) => {
+    setIsStriverSheetOpen(false); // Automatically dismiss drawer so 3D scene is immediately visible
+    setActiveStriverProblem(problem);
+        const sampleObj = {
+      id: `striver-${problem.striverId || problem.id}`,
+      striverId: problem.striverId || problem.id,
+      title: problem.title,
+      category: problem.category,
+      description: `${problem.day}: ${problem.title}`,
+      difficulty: problem.difficulty,
+      timeComplexity: problem.timeComplexity,
+      spaceComplexity: problem.spaceComplexity,
+      code: problem.starterCode || problem.code,
+    };
+    setSelectedSample(sampleObj);
+    const starterCode = problem.starterCode || problem.code || '';
+    setCode(starterCode);
+    setLastExecutedCode(starterCode);
+    if (problem.language) setLanguage(problem.language);
+    setTimeComplexity(problem.timeComplexity);
+    setSpaceComplexity(problem.spaceComplexity);
+    if (problem.defaultInput) {
+      setFormInputValues(problem.defaultInput);
+    }
+    // Synthesize verified 3D execution trace with matched archetype and accurate inputs/outputs
+    const newSteps = buildSemanticTrace(
+      starterCode,
+      problem.language || language,
+      problem.defaultInput,
+      problem
     );
-    if (newCode) {
-      setCode(newCode);
-      setLastExecutedCode(newCode);
+    // Enrich complexity metrics in background if backend is online
+    if (backendOnline) {
+      analyzeCode(problem.code, problem.language || language)
+        .then((astRes) => {
+          if (astRes?.timeComplexity) setTimeComplexity(astRes.timeComplexity);
+          if (astRes?.spaceComplexity) setSpaceComplexity(astRes.spaceComplexity);
+        })
+        .catch(() => {});
     }
-  }, [currentConcept]);
-
-  // Bidirectional: Variable click -> seek timeline or highlight 3D
-  const handleSelectVariable = useCallback((name) => {
-    setSelectedVariable(name);
-    if (!trace || trace.length === 0) return;
-
-    // Find next step where this variable mutates
-    const forwardStep = trace.findIndex(
-      (step, idx) => idx >= currentStepIndex && step.changedVariable === name
-    );
-    if (forwardStep !== -1) {
-      goToStep(forwardStep);
-      return;
+    if (newSteps && newSteps.length > 0) {
+      setTrace(newSteps);
+      reset();
+      setTimeout(() => play(), 60);
     }
-
-    // Otherwise find any step where variable was declared/mutated
-    const anyStep = trace.findIndex((step) => step.changedVariable === name);
-    if (anyStep !== -1) {
-      goToStep(anyStep);
+  };
+  // Synchronized Timeline Play handler
+  const handleTimelinePlay = () => {
+    if (isCodeDirty) {
+      handleRunCode();
+    } else {
+      if (isAtEnd) {
+        goToStep(0);
+      }
+      play();
     }
-  }, [trace, currentStepIndex, goToStep]);
-
-  // Bidirectional: 3D Element click -> seek timeline step
-  const handleSelectElementFrom3D = useCallback((index) => {
-    if (!trace || trace.length === 0 || typeof index !== 'number') return;
-
-    const forwardStep = trace.findIndex((step, idx) => {
-      if (idx <= currentStepIndex) return false;
-      const ds = step.dataStructureState || step.dataStructure;
-      return ds?.activeIndex === index || (ds?.pointers && safeIncludes(Object.values(ds.pointers), index));
-    });
-
-    if (forwardStep !== -1) {
-      goToStep(forwardStep);
-      return;
-    }
-
-    const anyStep = trace.findIndex((step) => {
-      const ds = step.dataStructureState || step.dataStructure;
-      return ds?.activeIndex === index || (ds?.pointers && safeIncludes(Object.values(ds.pointers), index));
-    });
-
-    if (anyStep !== -1) {
-      goToStep(anyStep);
-    }
-  }, [trace, currentStepIndex, goToStep]);
-
-  // Save Program Trace
-  const handleSaveProgram = useCallback(async () => {
-    setSaveStatus('SAVING');
-    try {
-      await historyApi.saveProgram({
-        title: currentConcept?.title || 'Custom Algorithm',
-        code,
-        language,
-        trace,
-        timeComplexity,
-        spaceComplexity,
-      });
-      setSaveStatus('SAVED');
-      setTimeout(() => setSaveStatus(null), 3000);
-    } catch {
-      setSaveStatus(null);
-    }
-  }, [currentConcept, code, language, trace, timeComplexity, spaceComplexity]);
-
+  };
+  // Window-level Ctrl+Enter / Cmd+Enter listener to trigger instant 3D execution
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        handleRunCode();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [code, language, backendOnline, isCodeDirty]);
   return (
-    <div className="flex-1 flex flex-col h-full w-full overflow-hidden select-none">
-      {/* Top Workspace Toolbar */}
-      <WorkspaceToolbar
-        language={language}
-        onLanguageChange={handleLanguageChange}
-        isCodeDirty={isCodeDirty}
-        isExecuting={isExecuting}
-        executionError={executionError}
-        onRunCode={handleRunCode}
-        onResetCode={handleResetCode}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        showConsole={showConsole}
-        onToggleConsole={() => setShowConsole((prev) => !prev)}
-        onSaveProgram={handleSaveProgram}
-        saveStatus={saveStatus}
-        algorithmTitle={currentConcept?.title || 'Algorithm Studio'}
-      />
-
-      {/* Central 3-Panel Resizable Workspace */}
-      <ThreePanelWorkspace
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        showConsole={showConsole}
-        codePanel={
-          <EditorErrorBoundary code={code} onChangeCode={setCode}>
-            <CodeEditorPanel
-              code={code}
-              onChangeCode={setCode}
-              currentLineNumber={currentStep?.lineNumber || 1}
-              language={language}
-              isCodeDirty={isCodeDirty}
-              isExecuting={isExecuting}
-              executionError={executionError}
-              onRunCode={handleRunCode}
-              onResetCode={handleResetCode}
-              onClearCode={handleClearCode}
-              customInput={customInput}
-              onChangeCustomInput={setCustomInput}
-              breakpoints={breakpoints}
-              onToggleBreakpoint={toggleBreakpoint}
-            />
-          </EditorErrorBoundary>
-        }
-        scenePanel={
-          <VisualizationViewport
-            currentStep={currentStep}
-            currentStepIndex={currentStepIndex}
-            totalSteps={totalSteps}
-            onSelectElement={handleSelectElementFrom3D}
-            isFull3DView={viewMode === 'fullscreen3d'}
-            onToggleFull3D={() => setViewMode((m) => (m === 'fullscreen3d' ? 'default' : 'fullscreen3d'))}
-          />
-        }
-        explanationPanel={
-          <ExplanationPanel
-            currentStep={currentStep}
-            currentStepIndex={currentStepIndex}
-            totalSteps={totalSteps}
-            timeComplexity={timeComplexity}
-            spaceComplexity={spaceComplexity}
-            onSelectVariable={handleSelectVariable}
-            selectedVariable={selectedVariable}
-          />
-        }
-        consoleDrawer={
-          <OutputConsoleDrawer
-            output={cumulativeOutput || currentStep?.output || []}
-            executionError={executionError}
-            isExecuting={isExecuting}
-            onClear={() => {}}
-            onClose={() => setShowConsole(false)}
-          />
-        }
-      />
-
-      {/* Line-by-line Voice Narration (Browser TTS) */}
-      <ExecutionNarration
-        step={currentStep}
-        stepIndex={currentStepIndex}
+    <div className={`flex-1 flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden select-none transition-colors duration-200 ${
+      isBright ? 'bg-slate-100 text-slate-900' : 'bg-[#070b14] text-slate-100'
+    }`}>
+      {/* Simple Studio Header */}
+      <div className={`h-11 shrink-0 border-b px-3 flex items-center justify-between gap-2 ${
+        isBright
+          ? 'bg-white border-slate-200'
+          : 'bg-[#0b0f19] border-slate-800/80'
+      }`}>
+        <div className="flex items-center gap-2 min-w-0">
+          <Layers size={15} className={isBright ? 'text-cyan-600' : 'text-cyan-400'} />
+          {universalOnly ? (
+            <div className={`h-8 px-3 rounded-lg border flex items-center gap-2 text-xs font-semibold ${
+              isBright ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-700 text-cyan-300'
+            }`}>
+              <Code2 size={13} /> Universal Code Editor
+            </div>
+          ) : (
+          <select
+            value={selectedSample.id}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val.startsWith('algo-')) {
+                const id = val.replace('algo-', '');
+                const algo = ALGORITHM_CATALOG.find((a) => a.id === id);
+                if (algo) handleSelectAlgorithm(algo);
+              } else if (val.startsWith('striver-')) {
+                const id = parseInt(val.replace('striver-', ''), 10);
+                const p = STRIVER_PROBLEMS.find((prob) => prob.id === id);
+                if (p) {
+                  handleSelectStriverProblem({
+                    id: `striver-${p.id}`,
+                    striverId: p.id,
+                    title: p.title,
+                    shortTitle: p.shortTitle,
+                    day: p.day,
+                    dayNumber: p.dayNumber,
+                    category: p.category,
+                    difficulty: p.difficulty,
+                    archetype: p.archetype,
+                    timeComplexity: p.timeComplexity,
+                    spaceComplexity: p.spaceComplexity,
+                    description: p.description,
+                    defaultInput: p.defaultInput,
+                    code: p.javaCode,
+                    language: 'java',
+                  });
+                }
+              } else {
+                const found = SAMPLE_PROGRAMS.find((p) => p.id === val);
+                if (found) handleSelectProgram(found);
+              }
+            }}
+            className={`h-8 max-w-[360px] border rounded-lg px-2.5 text-xs font-semibold focus:outline-none focus:border-cyan-500 cursor-pointer ${
+              isBright
+                ? 'bg-white border-slate-300 text-slate-900'
+                : 'bg-slate-950 border-slate-700 text-cyan-300'
+            }`}
+            title="Choose a problem or algorithm"
+          >
+            {(selectedSample.id === 'custom' || selectedSample.id === 'personal-problem') && (
+              <option value={selectedSample.id}>
+                {selectedSample.title || 'Custom Execution'}
+              </option>
+            )}
+            <optgroup label="3D Algorithm Engine">
+              {ALGORITHM_CATALOG.map((algo) => (
+                <option key={`algo-${algo.id}`} value={`algo-${algo.id}`}>
+                  {algo.name} ({algo.category})
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Striver SDE Sheet">
+              {STRIVER_PROBLEMS.map((p) => (
+                <option key={`striver-${p.id}`} value={`striver-${p.id}`}>
+                  {p.title} ({p.difficulty})
+                </option>
+              ))}
+            </optgroup>
+            {CURRICULUM_CATEGORIES.map((category) => {
+              const items = SAMPLE_PROGRAMS.filter((p) => p.category === category);
+              if (items.length === 0) return null;
+              return (
+                <optgroup key={category} label={category}>
+                  {items.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.title} ({p.difficulty})
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            })}
+          </select>
+          )}
+          <span className={`hidden lg:block truncate max-w-[260px] text-[11px] ${
+            isBright ? 'text-slate-500' : 'text-slate-400'
+          }`}>
+            {selectedSample?.title || '3D Code Studio'}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {!universalOnly && <button
+            type="button"
+            onClick={() => setIsCodeDoctorOpen(true)}
+            title="Personal Problem"
+            aria-label="Personal Problem"
+            className={`w-8 h-8 flex items-center justify-center rounded-lg border transition cursor-pointer ${
+              isBright
+                ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                : 'bg-amber-500/10 text-amber-300 border-amber-500/25 hover:bg-amber-500/20'
+            }`}
+          >
+            <Lightbulb size={14} />
+          </button>}
+          {!universalOnly && <button
+            type="button"
+            onClick={() => setIsStriverSheetOpen((prev) => !prev)}
+            title="Striver SDE Sheet"
+            aria-label="Striver SDE Sheet"
+            className={`w-8 h-8 flex items-center justify-center rounded-lg border transition cursor-pointer ${
+              isStriverSheetOpen
+                ? 'bg-amber-500 text-slate-950 border-amber-400'
+                : isBright
+                  ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                  : 'bg-amber-500/10 text-amber-300 border-amber-500/25 hover:bg-amber-500/20'
+            }`}
+          >
+            <BookOpen size={14} />
+          </button>}
+          {!universalOnly && <button
+            type="button"
+            onClick={() => setIsCompareOpen(true)}
+            title="Compare Algorithms"
+            aria-label="Compare Algorithms"
+            className={`w-8 h-8 flex items-center justify-center rounded-lg border transition cursor-pointer ${
+              isBright
+                ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                : 'bg-blue-500/10 text-blue-300 border-blue-500/25 hover:bg-blue-500/20'
+            }`}
+          >
+            <Scale size={14} />
+          </button>}
+          <button
+            type="button"
+            onClick={() => setIsFull3DView((prev) => !prev)}
+            title={isFull3DView ? 'Exit 3D focus' : 'Focus 3D view'}
+            aria-label={isFull3DView ? 'Exit 3D focus' : 'Focus 3D view'}
+            className={`w-8 h-8 flex items-center justify-center rounded-lg border transition cursor-pointer ${
+              isFull3DView
+                ? 'bg-purple-600 border-purple-400 text-white'
+                : isBright
+                  ? 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+                  : 'bg-purple-500/10 text-purple-300 border-purple-500/25 hover:bg-purple-500/20'
+            }`}
+          >
+            {isFull3DView ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+          </button>
+        </div>
+      </div>
+      {/* Mobile View Switcher */}
+      <div className={`md:hidden flex items-center border-b p-1 shrink-0 ${
+        isBright ? 'bg-white border-slate-200' : 'bg-slate-950 border-slate-800/80'
+      }`}>
+        {[
+          ['3d', '3D Scene'],
+          ['code', 'Code'],
+          ['state', 'State'],
+        ].map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setMobileTab(id)}
+            className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition ${
+              mobileTab === id
+                ? isBright
+                  ? 'bg-cyan-100 text-cyan-800'
+                  : 'bg-cyan-500/20 text-cyan-300'
+                : isBright ? 'text-slate-600' : 'text-slate-400'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {/* Error */}
+      {executionError && (
+        <div className={`shrink-0 px-3 py-2 text-xs flex items-center justify-between gap-3 border-b ${
+          isBright
+            ? 'bg-rose-50 text-rose-900 border-rose-200'
+            : 'bg-rose-950/40 text-rose-200 border-rose-800/60'
+        }`}>
+          <span className="truncate">
+            <strong>Execution error:</strong> {executionError}
+          </span>
+          <button
+            type="button"
+            onClick={() => setExecutionError(null)}
+            className="shrink-0 px-2 py-1 rounded border border-current/20 hover:bg-black/10"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+      {/* Main Studio: only Code + 3D */}
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
+        {/* Code */}
+        {!isFull3DView && (
+          <div
+            className={`${mobileTab === 'code' ? 'block' : 'hidden'} md:block h-full overflow-hidden shrink-0`}
+            style={{ width: `${editorWidthPercent}%` }}
+          >
+            <EditorErrorBoundary>
+              <CodeEditor
+                key={`universal-editor-${language}`}
+                code={code}
+                onChangeCode={(val) => {
+                  setCode(val);
+                  if (syntaxErrorLine) setSyntaxErrorLine(null);
+                  if (executionError) setExecutionError(null);
+                  if (universalOnly) {
+                    setTrace([]);
+                    setRuntimeOutput([]);
+                    setRuntimeStatus('IDLE');
+                    setRuntimeTimeMs(null);
+                    setRuntimeComplexity(null);
+                    setTraceNotice('Code changed. Press Run & Visualize to execute and update the 3D scene.');
+                  }
+                }}
+                language={language}
+                onChangeLanguage={handleLanguageChange}
+                onOpenCodeDoctor={() => setIsCodeDoctorOpen(true)}
+                onOpenPersonalProblem={() => setIsCodeDoctorOpen(true)}
+                currentLineNumber={currentStep?.lineNumber || null}
+                syntaxErrorLine={syntaxErrorLine}
+                isPlaying={isPlaying}
+                onPlay={handleRunCode}
+                onRunCode={handleRunCode}
+                onCancelExecution={universalOnly ? handleCancelExecution : undefined}
+                onResetCode={handleResetCode}
+                isExecuting={isExecuting}
+                isCodeDirty={isCodeDirty}
+                onPause={pause}
+                onNext={nextStep}
+                onPrev={prevStep}
+                onReset={reset}
+                isAtStart={isAtStart}
+                isAtEnd={isAtEnd}
+                breakpoints={breakpoints}
+                onToggleBreakpoint={toggleBreakpoint}
+                onSelectLine={handleSelectLineFromEditor}
+                readOnly={!universalOnly}
+              />
+            </EditorErrorBoundary>
+          </div>
+        )}
+        {/* Divider */}
+        {!isFull3DView && (
+          <div
+            onMouseDown={startEditorResize}
+            className={`hidden md:flex w-1 shrink-0 cursor-col-resize items-center justify-center ${
+              isResizingEditor
+                ? 'bg-cyan-500'
+                : isBright ? 'bg-slate-200 hover:bg-cyan-400' : 'bg-slate-800 hover:bg-cyan-500'
+            }`}
+            title="Drag to resize editor and 3D view"
+          >
+            <div className="w-0.5 h-10 rounded-full bg-slate-400/50" />
+          </div>
+        )}
+        {/* 3D */}
+        <div className={`${mobileTab === '3d' ? 'flex' : 'hidden'} md:flex flex-1 min-w-0 min-h-0 flex-col overflow-hidden`}>
+          {/* 3D canvas + controls live together */}
+          <div className="flex-1 min-h-0 relative flex flex-col overflow-hidden">
+            {universalOnly && traceNotice && (
+              <div className={`shrink-0 px-3 py-1.5 text-[11px] border-b ${isBright ? 'bg-amber-50 text-amber-900 border-amber-200' : 'bg-amber-950/30 text-amber-200 border-amber-900/50'}`}>
+                {traceNotice}
+              </div>
+            )}
+            <div className="flex-1 min-h-0 relative">
+              <VisualizerErrorBoundary onReset={reset}>
+                <SceneContainer
+                  currentStep={currentStep}
+                  code={code}
+                  statusLabel={currentStep?.dataStructureState?.label || null}
+                  activeDetails={currentStep?.dataStructureState?.focusInfo || null}
+                  correctOutput={null}
+                  isAtEnd={isAtEnd}
+                  cumulativeOutput={universalOnly ? runtimeOutput : cumulativeOutput}
+                  isFull3DView={isFull3DView}
+                  onToggleFull3D={() => setIsFull3DView((prev) => !prev)}
+                  onSelectElement={handleSelectElementFrom3D}
+                  sceneKey={selectedSample?.id || activeStriverProblem?.id || 'custom'}
+                >
+                  <DsaSceneDispatcher
+                    dataStructureState={currentStep?.dataStructureState}
+                    showFallback={!universalOnly}
+                  />
+                </SceneContainer>
+              </VisualizerErrorBoundary>
+            </div>
+            <ExecutionNarration step={currentStep} stepIndex={currentStepIndex} isBright={isBright} code={code} language={language === "hi" ? "hi-IN" : "en-US"} />
+            {/* Playback controls belong to the 3D block */}
+            <div className={`shrink-0 min-w-0 h-11 border-t px-2 flex items-center gap-1.5 overflow-hidden ${
+              isBright ? 'bg-white border-slate-200' : 'bg-[#0b0f19] border-slate-800/80'
+            }`}>
+              <button
+                type="button"
+                onClick={prevStep}
+                disabled={isAtStart}
+                title="Previous step"
+                className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center border disabled:opacity-40 ${
+                  isBright
+                    ? 'border-slate-300 hover:bg-slate-100'
+                    : 'border-slate-700 hover:bg-slate-800'
+                }`}
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                onClick={isPlaying ? pause : handleTimelinePlay}
+                title={isPlaying ? 'Pause' : 'Play'}
+                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-bold ${
+                  isPlaying
+                    ? 'bg-amber-500 text-slate-950'
+                    : 'bg-cyan-500 text-slate-950'
+                }`}
+              >
+                <Play size={13} className={isPlaying ? '' : 'fill-current'} />
+                {isPlaying ? 'Pause' : 'Play'}
+              </button>
+              <button
+                type="button"
+                onClick={nextStep}
+                disabled={isAtEnd}
+                title="Next step"
+                className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center border disabled:opacity-40 ${
+                  isBright
+                    ? 'border-slate-300 hover:bg-slate-100'
+                    : 'border-slate-700 hover:bg-slate-800'
+                }`}
+              >
+                ›
+              </button>
+              <div className={`h-7 px-2 rounded-md flex items-center gap-1 text-[11px] font-mono ${
+                isBright ? 'bg-slate-100 text-slate-700' : 'bg-slate-900 text-slate-300'
+              }`}>
+                Step <strong>{currentStepIndex + 1}</strong> / {totalSteps}
+              </div>
+              <div className="flex-1 min-w-0">
+                <input
+                  type="range"
+                  min="0"
+                  max={Math.max(0, totalSteps - 1)}
+                  value={currentStepIndex}
+                  onChange={(e) => goToStep(Number(e.target.value))}
+                  className="w-full accent-cyan-500 cursor-pointer"
+                  aria-label="Execution step"
+                />
+              </div>
+              <select
+                value={playbackSpeed}
+                onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
+                title="Playback speed"
+                className={`h-8 rounded-lg border px-2 text-[11px] font-mono ${
+                  isBright
+                    ? 'bg-white border-slate-300 text-slate-700'
+                    : 'bg-slate-950 border-slate-700 text-slate-300'
+                }`}
+              >
+                <option value={0.25}>0.25×</option>
+                <option value={0.5}>0.5×</option>
+                <option value={1}>1×</option>
+                <option value={1.5}>1.5×</option>
+                <option value={2}>2×</option>
+                <option value={4}>4×</option>
+              </select>
+              <button
+                type="button"
+                onClick={reset}
+                title="Reset execution"
+                aria-label="Reset execution"
+                className={`w-8 h-8 rounded-lg flex items-center justify-center border ${
+                  isBright
+                    ? 'border-slate-300 hover:bg-slate-100'
+                    : 'border-slate-700 hover:bg-slate-800'
+                }`}
+              >
+                ↻
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* Program State + Output: fixed workspace with independent scrolling */}
+      {!isFull3DView && (
+        <div className={`shrink-0 h-[220px] min-h-[190px] max-h-[32vh] border-t overflow-hidden ${
+          isBright ? 'bg-slate-50 border-slate-200' : 'bg-[#090d16] border-slate-800/80'
+        }`}>
+          <div className="h-full grid grid-cols-1 lg:grid-cols-2 gap-2 p-2 overflow-hidden">
+            <div className={`min-h-0 h-full overflow-y-auto overscroll-contain rounded-xl border custom-scrollbar ${
+              isBright ? 'border-slate-200 bg-white' : 'border-slate-800/70 bg-[#0b0f19]'
+            }`}>
+              <StatePanel
+                currentStep={currentStep}
+                totalSteps={totalSteps}
+                correctOutput={null}
+                isAtEnd={isAtEnd}
+                complexity={universalOnly ? runtimeComplexity : selectedSample?.complexity}
+                algorithmName={universalOnly ? (runtimeComplexity?.algorithm || 'Your program') : (selectedSample?.title || 'Algorithm')}
+                executionStatus={runtimeStatus}
+                isUniversal={universalOnly}
+              />
+            </div>
+            <div className={`min-h-0 h-full overflow-y-auto overscroll-contain rounded-xl border custom-scrollbar ${
+              isBright ? 'border-slate-200 bg-white' : 'border-slate-800/70 bg-[#0b0f19]'
+            }`}>
+              <OutputConsole
+                output={universalOnly ? runtimeOutput : cumulativeOutput}
+                correctOutput={null}
+                isAtEnd={isAtEnd}
+                input={formInputValues}
+                inputLabel={universalOnly ? 'Stdin provided' : 'Input'}
+                inputHint={universalOnly ? 'Sent with each run; the program uses it only if its code reads stdin.' : null}
+                hideInput={universalOnly}
+                currentStep={currentStep}
+                executionStatus={universalOnly ? runtimeStatus : executionState}
+                error={executionError}
+                language={language}
+                executionTimeMs={universalOnly ? runtimeTimeMs : null}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modals */}
+      <AiAssistantModal
+        isOpen={isAiOpen}
+        onClose={() => setIsAiOpen(false)}
         code={code}
-        language={language === 'hi' ? 'hi-IN' : 'en-US'}
-      />
-
-      {/* Docked Execution Timeline Scrubber */}
-      <ExecutionTimelineBar
-        currentStepIndex={currentStepIndex}
-        totalSteps={totalSteps}
+        language={language}
+        currentLineNumber={currentStep?.lineNumber || null}
+        currentStepNumber={currentStepIndex + 1}
         currentStep={currentStep}
-        isPlaying={isPlaying}
-        playbackSpeed={playbackSpeed}
-        onChangePlaybackSpeed={setPlaybackSpeed}
-        onFirstStep={() => goToStep(0)}
-        onPrevStep={prevStep}
-        onPlay={play}
-        onPause={pause}
-        onNextStep={nextStep}
-        onLastStep={() => goToStep(totalSteps - 1)}
-        onReset={reset}
-        onGoToStep={goToStep}
-        isAtStart={isAtStart}
-        isAtEnd={isAtEnd}
+        output={cumulativeOutput}
+        error={executionError}
+        detectedDsa={currentStep?.dataStructureState?.type || null}
+        detectedAlgorithm={currentStep?.algorithm || selectedSample?.id || null}
       />
-
-      {/* Modular Drawers & Modals */}
-      {isStriverOpen && (
-        <StriverSheetDrawer
-          isOpen={isStriverOpen}
-          onClose={() => setIsStriverOpen(false)}
-          onSelectProblem={(prob) => {
-            setIsStriverOpen(false);
-            if (prob) {
-              setCurrentConcept(prob);
-              setCode(prob.code || prob.starterCode || '');
-              setLastExecutedCode(prob.code || prob.starterCode || '');
-              handleRunCode();
-            }
-          }}
-        />
-      )}
-
-      {isCustomCodeOpen && (
-        <CustomCodeModal
-          isOpen={isCustomCodeOpen}
-          onClose={() => setIsCustomCodeOpen(false)}
-          onLoadCustomCode={({ code: newCode, language: newLang }) => {
-            setIsCustomCodeOpen(false);
-            if (newCode) {
-              setCode(newCode);
-              setLastExecutedCode('');
-              if (newLang) setLanguage(newLang);
-              handleRunCode();
-            }
-          }}
-        />
-      )}
-
-      {isCodeDoctorOpen && (
-        <CodeDoctorModal
-          isOpen={isCodeDoctorOpen}
-          onClose={() => setIsCodeDoctorOpen(false)}
-          code={code}
-          language={language}
-          error={executionError}
-          onApplyFix={(fixedCode) => {
-            setIsCodeDoctorOpen(false);
-            if (fixedCode) {
-              setCode(fixedCode);
-              handleRunCode();
-            }
-          }}
-        />
-      )}
-
-      {isQuizOpen && (
-        <QuizModal
-          isOpen={isQuizOpen}
-          onClose={() => setIsQuizOpen(false)}
-          concept={currentConcept}
-        />
-      )}
-
-      {isCompareOpen && (
-        <CompareModeModal
-          isOpen={isCompareOpen}
-          onClose={() => setIsCompareOpen(false)}
-        />
-      )}
-
-      {isAiOpen && (
-        <AiAssistantModal
-          isOpen={isAiOpen}
-          onClose={() => setIsAiOpen(false)}
-          currentConcept={currentConcept}
-          code={code}
-        />
-      )}
+      <QuizModal
+        isOpen={isQuizOpen}
+        onClose={() => setIsQuizOpen(false)}
+        conceptId={selectedSample.id}
+      />
+      <CustomCodeModal
+        isOpen={isCustomCodeOpen}
+        onClose={() => setIsCustomCodeOpen(false)}
+        onApplyCustomCode={handleCustomCodeApply}
+        currentLanguage={language}
+      />
+      <CodeDoctorModal
+        isOpen={isCodeDoctorOpen}
+        onClose={() => setIsCodeDoctorOpen(false)}
+        onApplyCorrectedCode={handleApplyCorrectedCode}
+        currentLanguage={language}
+        currentCode={code}
+      />
+      <StriverSheetDrawer
+        isOpen={isStriverSheetOpen}
+        onToggle={() => setIsStriverSheetOpen((prev) => !prev)}
+        onSelectProblem={handleSelectStriverProblem}
+        currentLanguage={language}
+      />
+      <CompareModeModal
+        isOpen={isCompareOpen}
+        onClose={() => setIsCompareOpen(false)}
+      />
     </div>
   );
 }

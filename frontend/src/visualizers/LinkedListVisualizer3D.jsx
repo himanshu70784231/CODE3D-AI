@@ -11,10 +11,8 @@ export default function LinkedListVisualizer3D({ dataStructureState }) {
     type = '',
   } = dataStructureState || {};
 
-  const safeType = typeof type === 'string' ? type.toLowerCase() : '';
-  const safeLabel = typeof dataStructureState?.label === 'string' ? dataStructureState.label.toLowerCase() : '';
-  const isDoubly = safeType.includes('doubly') || pointers?.PREV !== undefined;
-  const isCircular = safeType.includes('circular') || safeLabel.includes('circular');
+  const isDoubly = type.includes('doubly') || pointers?.PREV !== undefined;
+  const isCircular = type.includes('circular') || dataStructureState?.label?.toLowerCase().includes('circular');
 
   const sourceList = (rawNodes && rawNodes.length > 0)
     ? rawNodes
@@ -104,7 +102,7 @@ export default function LinkedListVisualizer3D({ dataStructureState }) {
             <Text
               position={[0.55, 0, 0.65]}
               fontSize={0.22}
-              color="#f59e0b"
+              color="#38bdf8"
               fontWeight="bold"
             >
               next
@@ -115,11 +113,11 @@ export default function LinkedListVisualizer3D({ dataStructureState }) {
               <group position={[0.95, 0, 0]}>
                 <mesh position={[0.75, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
                   <cylinderGeometry args={[0.05, 0.05, 1.5]} />
-                  <meshStandardMaterial color="#f59e0b" emissive="#0284c7" emissiveIntensity={0.8} />
+                  <meshStandardMaterial color="#38bdf8" emissive="#0284c7" emissiveIntensity={0.8} />
                 </mesh>
                 <mesh position={[1.5, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
                   <coneGeometry args={[0.16, 0.38, 16]} />
-                  <meshStandardMaterial color="#f59e0b" emissive="#0284c7" emissiveIntensity={0.9} />
+                  <meshStandardMaterial color="#38bdf8" emissive="#0284c7" emissiveIntensity={0.9} />
                 </mesh>
               </group>
             )}
@@ -147,25 +145,11 @@ export default function LinkedListVisualizer3D({ dataStructureState }) {
               </group>
             )}
 
-            {/* Head Pointer Label & Arrow above node 0 (Section 9) */}
-            {idx === 0 && !isActive && (
-              <group position={[0, 1.35, 0]}>
-                <Text position={[0, 0.4, 0]} fontSize={0.28} color="#00f2fe" fontWeight="bold">
-                  HEAD
-                </Text>
-                <mesh position={[0, 0.08, 0]} rotation={[Math.PI, 0, 0]}>
-                  <coneGeometry args={[0.15, 0.3, 16]} />
-                  <meshStandardMaterial color="#00f2fe" emissive="#00f2fe" emissiveIntensity={0.8} />
-                </mesh>
-              </group>
-            )}
-
             {/* Floating Pointer Badges */}
             {isActive && (
               <Float speed={5} rotationIntensity={0.1} floatIntensity={0.25}>
-                <group position={[0, 1.35, 0]}>
-                  <Text position={[0, 0.4, 0]} fontSize={0.26} color="#f59e0b" fontWeight="bold">
-                    {idx === 0 ? 'HEAD • ' : ''}
+                <group position={[0, 1.25, 0]}>
+                  <Text fontSize={0.26} color="#38bdf8" fontWeight="bold">
                     {isSlow && isFast
                       ? 'COLLISION (Cycle!)'
                       : isSlow
@@ -174,7 +158,7 @@ export default function LinkedListVisualizer3D({ dataStructureState }) {
                       ? '🐇 FAST'
                       : 'CURR'}
                   </Text>
-                  <mesh position={[0, 0.08, 0]} rotation={[Math.PI, 0, 0]}>
+                  <mesh position={[0, -0.32, 0]} rotation={[Math.PI, 0, 0]}>
                     <coneGeometry args={[0.16, 0.32, 12]} />
                     <meshStandardMaterial color="#22d3ee" emissive="#06b6d4" />
                   </mesh>
@@ -192,7 +176,7 @@ export default function LinkedListVisualizer3D({ dataStructureState }) {
             <boxGeometry args={[resolvedNodes.length * spacing - 1.2, 0.06, 0.06]} />
             <meshStandardMaterial color="#22d3ee" emissive="#06b6d4" emissiveIntensity={0.9} />
           </mesh>
-          <Text position={[0, -0.3, 0]} fontSize={0.24} color="#f59e0b" fontWeight="bold">
+          <Text position={[0, -0.3, 0]} fontSize={0.24} color="#38bdf8" fontWeight="bold">
             ↺ Circular Link: Tail.next → HEAD
           </Text>
         </group>

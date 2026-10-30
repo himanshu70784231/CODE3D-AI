@@ -1,51 +1,77 @@
 /**
- * API Client connecting the CODE3D AI frontend to the Spring Boot REST backend.
+ * API Client connecting the CODE3D AI frontend to the active Node.js/Express backend.
  */
 
-import { solvePersonalProblem, correctPersonalCode } from './personalProblemSolver';
-import { analyzeAlgorithmCode, generateIntelligentAiTutorAnswer } from './algorithmicTutorEngine';
+import { solvePersonalProblem, correctPersonalCode } from './personalProblemSolver.js';
 
-const LIVE_RENDER_URL = 'https://code3d-ai.onrender.com/api';
-const LOCAL_URL_8080 = 'http://localhost:8080/api';
-const LOCAL_URL_5000 = 'http://localhost:5000/api';
+const LIVE_RENDER_URL = 'https://code3d-ai-oscc.onrender.com/api';
+const LOCAL_URL = 'http://localhost:5000/api';
+const CONFIGURED_FALLBACK_URL = import.meta.env?.VITE_FALLBACK_BACKEND_URL || '';
 
 // When accessed from phone, GitHub Pages, or Vercel, always use the live Render backend!
-const isLocalhost = typeof window !== 'undefined' && 
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const isLocalhost =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1');
 
-const rawBackendUrl = import.meta.env.VITE_API_URL ||
-  import.meta.env.VITE_NODE_API_URL ||
-  import.meta.env.VITE_API_BASE_URL ||
-  import.meta.env.VITE_BACKEND_URL || 
-  (isLocalhost ? LOCAL_URL_8080 : LIVE_RENDER_URL);
+const BACKEND_BASE_URL =
+  import.meta.env?.VITE_BACKEND_URL ||
+  (isLocalhost ? LOCAL_URL : LIVE_RENDER_URL);
 
-let BACKEND_BASE_URL = rawBackendUrl.endsWith('/') ? rawBackendUrl.slice(0, -1) : rawBackendUrl;
+function isSafeFallbackUrl(value) {
+  try {
+    const fallback = new URL(value);
+    const localHttp = fallback.protocol === 'http:' &&
+      ['localhost', '127.0.0.1', '[::1]'].includes(fallback.hostname);
+    return !fallback.username && !fallback.password && (fallback.protocol === 'https:' || localHttp);
+  } catch {
+    return false;
+  }
+}
 
-async function smartFetch(endpoint, options = {}) {
+async function smartFetch(endpoint, options = {}, { allowFallback = true } = {}) {
   const fetchOpts = {
     ...options,
     credentials: 'include',
   };
+
   try {
-    const res = await fetch(`${BACKEND_BASE_URL}${endpoint}`, fetchOpts);
+    const res = await fetch(
+      `${BACKEND_BASE_URL}${endpoint}`,
+      fetchOpts
+    );
+
     return res;
   } catch (err) {
-    // If local fetch failed, fallback to live Render cloud backend
-    if (BACKEND_BASE_URL !== LIVE_RENDER_URL) {
+    // Only use a fallback endpoint when the deployment configured one explicitly.
+    if (allowFallback && isSafeFallbackUrl(CONFIGURED_FALLBACK_URL) && CONFIGURED_FALLBACK_URL !== BACKEND_BASE_URL) {
       try {
-        console.warn(`Local backend unreachable at ${BACKEND_BASE_URL}. Falling back to live cloud backend...`);
-        return await fetch(`${LIVE_RENDER_URL}${endpoint}`, fetchOpts);
+        console.warn(
+          `Backend unreachable at ${BACKEND_BASE_URL}. Trying the explicitly configured fallback...`
+        );
+
+        return await fetch(
+          `${CONFIGURED_FALLBACK_URL.replace(/\/+$/, '')}${endpoint}`,
+          fetchOpts
+        );
       } catch (fallbackErr) {
-        console.warn('Live backend also unreachable:', fallbackErr);
+        console.warn(
+          'Configured fallback backend also unreachable:',
+          fallbackErr
+        );
       }
     }
+
     throw err;
   }
 }
 
-export async function checkBackendHealth() {
+export async function checkBackendHealth({ allowFallback = true } = {}) {
   try {
-    const res = await smartFetch('/health', { method: 'GET' });
+    const res = await smartFetch('/health', {
+      method: 'GET'
+    }, { allowFallback });
+
     return res.ok;
   } catch (err) {
     return false;
@@ -55,37 +81,91 @@ export async function checkBackendHealth() {
 export async function fetchDsaConcepts() {
   try {
     const res = await smartFetch('/dsa/topics');
-    if (!res.ok) throw new Error('Failed to fetch DSA concepts');
+
+    if (!res.ok) {
+      throw new Error('Failed to fetch DSA concepts');
+    }
+
     return await res.json();
   } catch (err) {
-    console.warn('Backend unavailable, using local DSA concept catalog');
+    console.warn(
+      'Backend unavailable, using local DSA concept catalog'
+    );
+
     return null;
   }
 }
 
-export async function executeProgram(code, conceptId = null, language = 'java', input = null) {
+export async function executeProgram(
+  code,
+  conceptId = null,
+  language = 'java',
+  input = null,
+  universal = true,
+  signal,
+  { allowFallback = true } = {}
+) {
   try {
     const res = await smartFetch('/execute', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, conceptId, language, input, title: conceptId || 'Custom Execution' }),
-    });
-    if (!res.ok) throw new Error('Execution failed on backend');
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      signal,
+      body: JSON.stringify({
+        code,
+        conceptId,
+        language,
+        input,
+        title: conceptId || 'Custom Execution',
+        universal,
+      }),
+    }, { allowFallback });
+
+    if (!res.ok) {
+      let message = 'Execution failed on backend';
+
+      try {
+        const data = await res.json();
+
+        message =
+          data?.message ||
+          data?.error?.message ||
+          message;
+      } catch (_) {}
+
+      throw new Error(message);
+    }
+
     return await res.json();
   } catch (err) {
-    console.warn('Backend execution unavailable:', err);
-    return null;
+    console.warn(
+      'Backend execution unavailable:',
+      err
+    );
+
+    // Do not convert execution failures into null. The AI Tutor needs the
+    // real runtime/compile error so it can explain what actually happened.
+    throw err;
   }
 }
 
 // Projects API (Section 13)
+
 export async function fetchProjects() {
   try {
     const res = await smartFetch('/projects');
-    if (!res.ok) throw new Error('Failed to fetch projects');
+
+    if (!res.ok) {
+      throw new Error('Failed to fetch projects');
+    }
+
     return await res.json();
   } catch (err) {
-    return { success: false, projects: [] };
+    return {
+      success: false,
+      projects: []
+    };
   }
 }
 
@@ -93,171 +173,223 @@ export async function saveProject(projectData) {
   try {
     const res = await smartFetch('/projects', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify(projectData),
     });
+
     return await res.json();
   } catch (err) {
-    return { success: false, message: 'Failed to save project.' };
+    return {
+      success: false,
+      message: 'Failed to save project.'
+    };
   }
 }
 
 export async function deleteProject(id) {
   try {
-    const res = await smartFetch(`/projects/${id}`, { method: 'DELETE' });
+    const res = await smartFetch(
+      `/projects/${id}`,
+      {
+        method: 'DELETE'
+      }
+    );
+
     return await res.json();
   } catch (err) {
-    return { success: false, message: 'Failed to delete project.' };
-  }
-}
-
-// Saved Programs API (Section 29 & Section 39)
-export async function saveProgram(programData) {
-  try {
-    const res = await smartFetch('/programs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(programData),
-    });
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch (err) {}
-
-  // Fallback to local storage persistence
-  try {
-    const existing = JSON.parse(localStorage.getItem('code3d_saved_programs') || '[]');
-    const newEntry = {
-      id: Date.now(),
-      title: programData.title || 'Untitled Program',
-      description: programData.description || '',
-      code: programData.code,
-      language: programData.language || 'java',
-      timeComplexity: programData.timeComplexity || 'O(n)',
-      spaceComplexity: programData.spaceComplexity || 'O(1)',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    return {
+      success: false,
+      message: 'Failed to delete project.'
     };
-    existing.unshift(newEntry);
-    localStorage.setItem('code3d_saved_programs', JSON.stringify(existing));
-    return { success: true, data: newEntry };
-  } catch (e) {
-    return { success: false, message: 'Failed to save program' };
   }
-}
-
-export async function fetchSavedPrograms() {
-  try {
-    const res = await smartFetch('/programs');
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.data && Array.isArray(data.data) && data.data.length > 0) {
-        return data;
-      }
-    }
-  } catch (err) {}
-
-  const localSaved = JSON.parse(localStorage.getItem('code3d_saved_programs') || '[]');
-  return { success: true, data: localSaved, saved: localSaved };
-}
-
-export async function deleteSavedProgram(id) {
-  try {
-    await smartFetch(`/programs/${id}`, { method: 'DELETE' });
-  } catch (err) {}
-
-  try {
-    const localSaved = JSON.parse(localStorage.getItem('code3d_saved_programs') || '[]');
-    const filtered = localSaved.filter((p) => p.id !== id);
-    localStorage.setItem('code3d_saved_programs', JSON.stringify(filtered));
-  } catch (e) {}
-
-  return { success: true };
 }
 
 // Quiz Attempts API (Section 48)
+
 export async function saveQuizAttempt(attemptData) {
   try {
     const res = await smartFetch('/quiz/attempts', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify(attemptData),
     });
+
     return await res.json();
   } catch (err) {
-    return { success: false, message: 'Failed to save quiz attempt.' };
+    return {
+      success: false,
+      message: 'Failed to save quiz attempt.'
+    };
   }
 }
 
 export async function fetchQuizAttempts() {
   try {
     const res = await smartFetch('/quiz/attempts');
-    if (!res.ok) throw new Error('Failed to fetch quiz attempts');
+
+    if (!res.ok) {
+      throw new Error(
+        'Failed to fetch quiz attempts'
+      );
+    }
+
     return await res.json();
   } catch (err) {
-    return { success: false, attempts: [] };
+    return {
+      success: false,
+      attempts: []
+    };
   }
 }
 
 // Backward compatible alias
+
 export const executeJavaProgram = executeProgram;
 
-export async function analyzeCode(code, language = 'java') {
+export async function analyzeCode(
+  code,
+  language = 'java'
+) {
   try {
     const res = await smartFetch('/analyze', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, language }),
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        code,
+        language
+      }),
     });
-    if (!res.ok) throw new Error('Analysis failed on backend');
+
+    if (!res.ok) {
+      throw new Error(
+        'Analysis failed on backend'
+      );
+    }
+
     return await res.json();
   } catch (err) {
-    console.warn('Backend analysis unavailable:', err);
+    console.warn(
+      'Backend analysis unavailable:',
+      err
+    );
+
     return null;
   }
 }
 
 // Backward compatible alias
+
 export const analyzeJavaCode = analyzeCode;
 
-export async function requestAiExplanation(code, lineNumber, stepNumber, queryType, level, language = 'java', question = null) {
+export async function requestAiExplanation(
+  code,
+  lineNumber,
+  stepNumber,
+  queryType,
+  level,
+  language = 'java',
+  context = {}
+) {
   try {
-    const res = await smartFetch('/explain', {
+    const res = await smartFetch('/ai/explain', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, lineNumber, stepNumber, queryType, level, language, question }),
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        code,
+        lineNumber,
+        stepNumber,
+        action: queryType,
+        level,
+        language,
+        currentStep:
+          context.currentStep || null,
+        output:
+          context.output || [],
+        error:
+          context.error || null,
+        detectedDsa:
+          context.detectedDsa || null,
+        detectedAlgorithm:
+          context.detectedAlgorithm || null,
+        question:
+          context.question || null,
+      }),
     });
-    if (!res.ok) throw new Error('AI explanation request failed');
+
+    if (!res.ok) {
+      throw new Error(
+        'AI explanation request failed'
+      );
+    }
+
     return await res.json();
   } catch (err) {
-    console.warn('AI explanation unavailable:', err);
+    console.warn(
+      'AI explanation unavailable:',
+      err
+    );
+
     return null;
   }
 }
 
-export async function fetchQuizQuestions(conceptId) {
+export async function fetchQuizQuestions(
+  conceptId
+) {
   try {
-    const res = await smartFetch(`/quiz?conceptId=${encodeURIComponent(conceptId)}`);
-    if (!res.ok) throw new Error('Quiz fetch failed');
+    const res = await smartFetch(
+      `/quiz?conceptId=${encodeURIComponent(
+        conceptId
+      )}`
+    );
+
+    if (!res.ok) {
+      throw new Error('Quiz fetch failed');
+    }
+
     return await res.json();
   } catch (err) {
-    console.warn('Quiz service unavailable:', err);
+    console.warn(
+      'Quiz service unavailable:',
+      err
+    );
+
     return null;
   }
 }
 
 // User Authentication API
+
 export async function loginUser(credentials) {
   try {
     const res = await smartFetch('/auth/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify(credentials),
     });
+
     return await res.json();
   } catch (err) {
-    console.warn('Login request failed:', err);
-    return { success: false, message: 'Backend unreachable. Please check connection.' };
+    console.warn(
+      'Login request failed:',
+      err
+    );
+
+    return {
+      success: false,
+      message:
+        'Backend unreachable. Please check connection.'
+    };
   }
 }
 
@@ -265,76 +397,153 @@ export async function registerUser(userData) {
   try {
     const res = await smartFetch('/auth/register', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify(userData),
     });
+
     return await res.json();
   } catch (err) {
-    console.warn('Registration request failed:', err);
-    return { success: false, message: 'Backend unreachable. Please check connection.' };
+    console.warn(
+      'Registration request failed:',
+      err
+    );
+
+    return {
+      success: false,
+      message:
+        'Backend unreachable. Please check connection.'
+    };
   }
 }
 
-const STORAGE_KEY_EXECUTIONS = 'code3d_db_executions_v2';
-const STORAGE_KEY_QUIZZES = 'code3d_db_quizzes_v2';
+const STORAGE_KEY_EXECUTIONS =
+  'code3d_db_executions_v2';
+
+const STORAGE_KEY_QUIZZES =
+  'code3d_db_quizzes_v2';
 
 function isStorageAvailable() {
   try {
-    return typeof window !== 'undefined' && !!window.localStorage;
+    return (
+      typeof window !== 'undefined' &&
+      !!window.localStorage
+    );
   } catch (e) {
     return false;
   }
 }
 
 function getLocalExecutions() {
-  if (!isStorageAvailable()) return [];
+  if (!isStorageAvailable()) {
+    return [];
+  }
+
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_EXECUTIONS);
-    if (!raw) return [];
+    const raw =
+      localStorage.getItem(
+        STORAGE_KEY_EXECUTIONS
+      );
+
+    if (!raw) {
+      return [];
+    }
+
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+
+    return Array.isArray(parsed)
+      ? parsed
+      : [];
   } catch (e) {
-    console.warn('Recovered from corrupted execution history in localStorage:', e);
+    console.warn(
+      'Recovered from corrupted execution history in localStorage:',
+      e
+    );
+
     return [];
   }
 }
 
 function saveLocalExecutions(list) {
-  if (!isStorageAvailable()) return;
+  if (!isStorageAvailable()) {
+    return;
+  }
+
   try {
-    const safeList = Array.isArray(list) ? list.slice(0, 100) : [];
-    localStorage.setItem(STORAGE_KEY_EXECUTIONS, JSON.stringify(safeList));
+    const safeList = Array.isArray(list)
+      ? list.slice(0, 100)
+      : [];
+
+    localStorage.setItem(
+      STORAGE_KEY_EXECUTIONS,
+      JSON.stringify(safeList)
+    );
   } catch (e) {
-    console.warn('Storage quota exceeded or error writing executions to localStorage:', e);
+    console.warn(
+      'Storage quota exceeded or error writing executions to localStorage:',
+      e
+    );
   }
 }
 
 function getLocalQuizzes() {
-  if (!isStorageAvailable()) return [];
+  if (!isStorageAvailable()) {
+    return [];
+  }
+
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_QUIZZES);
-    if (!raw) return [];
+    const raw =
+      localStorage.getItem(
+        STORAGE_KEY_QUIZZES
+      );
+
+    if (!raw) {
+      return [];
+    }
+
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+
+    return Array.isArray(parsed)
+      ? parsed
+      : [];
   } catch (e) {
-    console.warn('Recovered from corrupted quiz history in localStorage:', e);
+    console.warn(
+      'Recovered from corrupted quiz history in localStorage:',
+      e
+    );
+
     return [];
   }
 }
 
 function saveLocalQuizzes(list) {
-  if (!isStorageAvailable()) return;
+  if (!isStorageAvailable()) {
+    return;
+  }
+
   try {
-    const safeList = Array.isArray(list) ? list.slice(0, 50) : [];
-    localStorage.setItem(STORAGE_KEY_QUIZZES, JSON.stringify(safeList));
+    const safeList = Array.isArray(list)
+      ? list.slice(0, 50)
+      : [];
+
+    localStorage.setItem(
+      STORAGE_KEY_QUIZZES,
+      JSON.stringify(safeList)
+    );
   } catch (e) {
-    console.warn('Storage quota exceeded or error writing quizzes to localStorage:', e);
+    console.warn(
+      'Storage quota exceeded or error writing quizzes to localStorage:',
+      e
+    );
   }
 }
 
 /**
- * Record a code execution event in the database (local + backend)
+ * Record a code execution event using the current backend.
+ * The backend owns persistence and derives the user from the session.
  */
+
 export async function recordExecutionHistory({
   programTitle,
   conceptId,
@@ -342,261 +551,779 @@ export async function recordExecutionHistory({
   totalSteps = 1,
   status = 'COMPLETED',
   code = '',
-  output = ''
+  output = '',
+  input = ''
 }) {
-  const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' (' + new Date().toLocaleDateString() + ')';
-  const newRecord = {
-    id: Date.now(),
-    programTitle: programTitle || 'Java Program',
-    conceptId: conceptId || 'custom',
-    language: language || 'java',
-    totalSteps: totalSteps || 1,
-    status: status || 'COMPLETED',
-    code: code || '',
-    output: typeof output === 'string' ? output : (Array.isArray(output) ? output.join('\n') : ''),
-    executedAt: timestamp,
+  const payload = {
+    title:
+      programTitle ||
+      'Custom Execution',
+    language,
+    code,
+    input,
+    status,
+    totalSteps,
+    output:
+      Array.isArray(output)
+        ? output.join('\n')
+        : String(output || ''),
+    conceptId:
+      conceptId || 'custom'
   };
 
-  // 1. Save immediately to persistent client-side database
-  const localList = getLocalExecutions();
-  localList.unshift(newRecord);
-  saveLocalExecutions(localList);
-
-  // 2. Asynchronously sync with Spring Boot backend
   try {
-    smartFetch('/history/execution', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        programTitle: newRecord.programTitle,
-        conceptId: newRecord.conceptId,
-        totalSteps: newRecord.totalSteps,
-        status: newRecord.status,
-      }),
-    }).catch(() => {});
-  } catch (err) {}
+    const res = await smartFetch(
+      '/history/execution',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type':
+            'application/json'
+        },
+        body:
+          JSON.stringify(payload)
+      }
+    );
 
-  return newRecord;
+    if (res.ok) {
+      const data =
+        await res.json();
+
+      return (
+        data?.record ||
+        data
+      );
+    }
+  } catch (err) {
+    console.warn(
+      'Execution history sync unavailable:',
+      err
+    );
+  }
+
+  const local = {
+    id: `local-${Date.now()}`,
+    programTitle:
+      payload.title,
+    conceptId:
+      payload.conceptId,
+    language:
+      payload.language,
+    totalSteps:
+      payload.totalSteps,
+    status:
+      payload.status,
+    code:
+      payload.code,
+    output:
+      payload.output,
+    input:
+      payload.input,
+    executedAt:
+      new Date().toISOString()
+  };
+
+  const list =
+    getLocalExecutions();
+
+  list.unshift(local);
+
+  saveLocalExecutions(list);
+
+  return local;
 }
 
 /**
- * Record a quiz assessment in the database (local + backend)
+ * Record a quiz attempt in the current Prisma backend.
  */
+
 export async function recordQuizHistory({
   conceptId,
   score = 0,
   totalQuestions = 1,
-  accuracy
+  accuracy,
+  answers = null,
+  quizMode = 'AI'
 }) {
-  const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' (' + new Date().toLocaleDateString() + ')';
-  const computedAccuracy = accuracy !== undefined ? accuracy : Math.round((score / Math.max(1, totalQuestions)) * 100);
+  const percentage =
+    accuracy !== undefined
+      ? accuracy
+      : Math.round(
+          (score /
+            Math.max(
+              1,
+              totalQuestions
+            )) *
+            100
+        );
 
-  const newRecord = {
-    id: Date.now(),
-    conceptId: conceptId || 'general',
-    score: score || 0,
-    totalQuestions: totalQuestions || 1,
-    accuracy: computedAccuracy,
-    completedAt: timestamp,
+  const quizRecord = {
+    id: `quiz-${Date.now()}`,
+    conceptId:
+      conceptId || 'general',
+    score,
+    totalQuestions,
+    accuracy:
+      percentage,
+    completedAt:
+      new Date().toISOString()
   };
 
-  // 1. Save to persistent client-side database
-  const localList = getLocalQuizzes();
-  localList.unshift(newRecord);
-  saveLocalQuizzes(localList);
-
-  // 2. Asynchronously sync with Spring Boot backend
   try {
-    smartFetch('/history/quiz', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        conceptId: newRecord.conceptId,
-        score: newRecord.score,
-        totalQuestions: newRecord.totalQuestions,
-      }),
-    }).catch(() => {});
-  } catch (err) {}
+    const res =
+      await smartFetch(
+        '/quiz/attempts',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+          body: JSON.stringify({
+            quizMode,
+            category:
+              conceptId ||
+              'general',
+            score,
+            totalQuestions,
+            percentage,
+            answers
+          })
+        }
+      );
 
-  return newRecord;
+    if (res.ok) {
+      const data =
+        await res.json();
+
+      const record =
+        data?.attempt ||
+        data?.record ||
+        data;
+
+      return {
+        id:
+          record?.id ||
+          quizRecord.id,
+
+        conceptId:
+          record?.category ||
+          record?.conceptId ||
+          quizRecord.conceptId,
+
+        score:
+          record?.score ??
+          score,
+
+        totalQuestions:
+          record?.totalQuestions ??
+          totalQuestions,
+
+        accuracy:
+          record?.percentage ??
+          record?.accuracy ??
+          percentage,
+
+        completedAt:
+          record?.createdAt ||
+          record?.completedAt ||
+          quizRecord.completedAt
+      };
+    }
+  } catch (err) {
+    console.warn(
+      'Quiz history persistence unavailable, using local fallback:',
+      err
+    );
+  }
+
+  // Backend unavailable -> save quiz locally
+  const localQuizzes =
+    getLocalQuizzes();
+
+  localQuizzes.unshift({
+    ...quizRecord,
+    quizMode
+  });
+
+  saveLocalQuizzes(
+    localQuizzes
+  );
+
+  return quizRecord;
 }
 
 /**
- * Retrieve full execution and quiz history, merging cloud backend and local storage.
+ * Retrieve current authenticated execution + quiz history.
  */
-export async function getExecutionHistory() {
-  const localExecutions = getLocalExecutions();
-  const localQuizzes = getLocalQuizzes();
 
-  let backendData = null;
+export async function getExecutionHistory() {
+  let executionData = null;
+  let quizData = null;
+
   try {
-    const res = await smartFetch('/history');
+    const res =
+      await smartFetch(
+        '/history'
+      );
+
     if (res.ok) {
-      backendData = await res.json();
+      executionData =
+        await res.json();
     }
   } catch (err) {
-    console.warn('Backend history service unreachable, using local database:', err);
+    console.warn(
+      'Execution history unavailable:',
+      err
+    );
   }
 
-  const backendExecs = backendData?.recentExecutions || [];
-  const backendQuizzes = backendData?.recentQuizzes || [];
+  try {
+    const res =
+      await smartFetch(
+        '/quiz/attempts'
+      );
 
-  // Merge unique records with local records on top
-  const combinedExecutions = [...localExecutions];
-  for (const b of backendExecs) {
-    if (!combinedExecutions.some((e) => e.programTitle === b.programTitle && e.executedAt === b.executedAt)) {
-      combinedExecutions.push(b);
+    if (res.ok) {
+      quizData =
+        await res.json();
     }
+  } catch (err) {
+    console.warn(
+      'Quiz history unavailable:',
+      err
+    );
   }
 
-  const combinedQuizzes = [...localQuizzes];
-  for (const b of backendQuizzes) {
-    if (!combinedQuizzes.some((q) => q.conceptId === b.conceptId && q.completedAt === b.completedAt)) {
-      combinedQuizzes.push(b);
-    }
-  }
+  const rawExecutions =
+    (
+      executionData?.history ||
+      executionData?.recentExecutions ||
+      []
+    ).concat(
+      executionData
+        ? []
+        : getLocalExecutions()
+    );
 
-  // Return real historical records (empty if no simulations have been run yet)
+  const rawQuizzes =
+    (
+      quizData?.attempts ||
+      quizData?.history ||
+      quizData?.recentQuizzes ||
+      []
+    ).concat(
+      quizData
+        ? []
+        : getLocalQuizzes()
+    );
+
+  const recentExecutions =
+    rawExecutions.map(
+      (rec) => ({
+        id: rec.id,
+
+        programTitle:
+          rec.programTitle ||
+          rec.title ||
+          rec.programName ||
+          'Custom Execution',
+
+        conceptId:
+          rec.conceptId ||
+          'custom',
+
+        language:
+          rec.language ||
+          'java',
+
+        totalSteps:
+          rec.totalSteps ??
+          rec.stepCount ??
+          0,
+
+        status:
+          rec.status ||
+          rec.executionStatus ||
+          'COMPLETED',
+
+        code:
+          rec.code ||
+          rec.codeSnapshot ||
+          '',
+
+        input:
+          rec.input ||
+          '',
+
+        output:
+          rec.output ||
+          '',
+
+        executionTimeMs:
+          rec.executionTimeMs ??
+          0,
+
+        executedAt:
+          rec.executedAt ||
+          rec.createdAt ||
+          new Date().toISOString(),
+
+        traceJson:
+          rec.traceJson ||
+          null
+      })
+    );
+
+  const recentQuizzes =
+    rawQuizzes.map(
+      (q) => ({
+        id: q.id,
+
+        conceptId:
+          q.conceptId ||
+          q.category ||
+          'general',
+
+        score:
+          q.score ?? 0,
+
+        totalQuestions:
+          q.totalQuestions ?? 0,
+
+        accuracy:
+          q.accuracy ??
+          q.percentage ??
+          0,
+
+        completedAt:
+          q.completedAt ||
+          q.createdAt ||
+          new Date().toISOString()
+      })
+    );
 
   return {
-    totalExecutionsCount: (backendData?.totalExecutionsCount || 0) + localExecutions.length,
-    totalQuizzesTaken: (backendData?.totalQuizzesTaken || 0) + localQuizzes.length,
-    recentExecutions: combinedExecutions,
-    recentQuizzes: combinedQuizzes,
-    isBackendConnected: Boolean(backendData),
+    totalExecutionsCount:
+      executionData?.totalExecutionsCount ??
+      recentExecutions.length,
+
+    totalQuizzesTaken:
+      quizData?.totalQuizzesTaken ??
+      quizData?.total ??
+      recentQuizzes.length,
+
+    recentExecutions,
+
+    recentQuizzes,
+
+    isBackendConnected:
+      Boolean(
+        executionData ||
+        quizData
+      )
   };
 }
 
-export function clearExecutionHistory() {
+export async function clearExecutionHistory() {
   try {
-    localStorage.removeItem(STORAGE_KEY_EXECUTIONS);
-    localStorage.removeItem(STORAGE_KEY_QUIZZES);
-    smartFetch('/history', { method: 'DELETE' }).catch(() => {});
-  } catch (e) {}
-}
-
-export async function deleteHistoryItem(id) {
-  try {
-    // Remove from local storage if present
-    const local = getLocalExecutions();
-    const updated = local.filter((item) => String(item.id) !== String(id));
-    saveLocalExecutions(updated);
-
-    // Call backend DELETE endpoint
-    if (id) {
-      await smartFetch(`/history/${id}`, { method: 'DELETE' }).catch(() => {});
-    }
-    return true;
-  } catch (e) {
-    console.warn('Failed to delete history item:', e);
-    return false;
+    await smartFetch(
+      '/history',
+      {
+        method: 'DELETE'
+      }
+    );
+  } catch (err) {
+    console.warn(
+      'Could not clear server history:',
+      err
+    );
   }
-}
 
+  try {
+    localStorage.removeItem(
+      STORAGE_KEY_EXECUTIONS
+    );
+
+    localStorage.removeItem(
+      STORAGE_KEY_QUIZZES
+    );
+  } catch {}
+
+  return true;
+}
 // Personal Problem Solver & Auto-Correction API
-export async function correctAndVisualizeCode(code, language = 'java') {
+
+export async function correctAndVisualizeCode(
+  code,
+  language = 'java'
+) {
   try {
-    const res = await smartFetch('/code/correct-and-visualize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, language }),
-    });
+    const res = await smartFetch(
+      '/code/correct-and-visualize',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          code,
+          language
+        }),
+      }
+    );
+
     if (res.ok) {
-      const data = await res.json();
-      if (data && data.correctedCode) {
+      const data =
+        await res.json();
+
+      if (
+        data &&
+        data.correctedCode
+      ) {
         return data;
       }
     }
   } catch (err) {
-    console.warn('Backend Personal Problem Solver API unavailable, activating client solver:', err);
+    console.warn(
+      'Backend Personal Problem Solver API unavailable, activating client solver:',
+      err
+    );
   }
+
   // Guaranteed client-side personal problem solver and 3D trace generator fallback
-  return solvePersonalProblem(code, language);
+  return solvePersonalProblem(
+    code,
+    language
+  );
 }
 
-export async function autoCorrectCode(code, language = 'java') {
+export async function autoCorrectCode(
+  code,
+  language = 'java'
+) {
   try {
-    const res = await smartFetch('/code/correct-and-visualize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, language }),
-    });
+    const res =
+      await smartFetch(
+        '/code/correct-and-visualize',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+          body: JSON.stringify({
+            code,
+            language
+          }),
+        }
+      );
+
     if (res.ok) {
-      const data = await res.json();
-      if (data && data.correctedCode) {
+      const data =
+        await res.json();
+
+      if (
+        data &&
+        data.correctedCode
+      ) {
         return data;
       }
     }
   } catch (err) {
-    console.warn('Backend auto-correct API unavailable, using client corrector:', err);
+    console.warn(
+      'Backend auto-correct API unavailable, using client corrector:',
+      err
+    );
   }
-  return correctPersonalCode(code, language);
+
+  return correctPersonalCode(
+    code,
+    language
+  );
 }
 
-export const solveAndVisualizePersonalProblem = correctAndVisualizeCode;
+export const solveAndVisualizePersonalProblem =
+  correctAndVisualizeCode;
 
-export async function getAiExplanation({ code, language = 'java', question = '' }) {
-  try {
-    const res = await smartFetch('/ai/explain', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, language, question }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.success && data.explanation) {
-        const localMeta = analyzeAlgorithmCode(code, language);
-        return {
-          success: true,
-          title: data.title || localMeta.title,
-          timeComplexity: data.timeComplexity || localMeta.timeComplexity,
-          spaceComplexity: data.spaceComplexity || localMeta.spaceComplexity,
-          explanation: data.explanation || localMeta.summary,
-          insights: data.insights || localMeta.insights,
-          edgeCases: data.edgeCases || localMeta.edgeCases,
-        };
+export async function getAiExplanation({
+  code,
+  language = 'java',
+  question = ''
+}) {
+  const res =
+    await smartFetch(
+      '/ai/explain',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type':
+            'application/json'
+        },
+        body: JSON.stringify({
+          code,
+          language,
+          action: 'ANALYZE_CODE',
+          level: 'Beginner',
+          question,
+          output: []
+        }),
       }
-    }
-  } catch (err) {
-    console.warn('Backend AI explanation unavailable, using local AST analyzer:', err);
+    );
+
+  const data =
+    await res.json();
+
+  if (
+    !res.ok ||
+    !data?.success
+  ) {
+    throw new Error(
+      data?.error?.message ||
+      'AI analysis unavailable'
+    );
   }
 
-  // Resilient Local AST / Algorithmic Intelligence
-  const localAnalysis = analyzeAlgorithmCode(code, language);
+  const local =
+    await analyzeCode(
+      code,
+      language
+    );
+
   return {
     success: true,
-    title: localAnalysis.title,
-    timeComplexity: localAnalysis.timeComplexity,
-    spaceComplexity: localAnalysis.spaceComplexity,
-    explanation: localAnalysis.summary,
-    insights: localAnalysis.insights,
-    edgeCases: localAnalysis.edgeCases,
+
+    title:
+      data.title ||
+      'AI Code Analysis',
+
+    timeComplexity:
+      data.timeComplexity ||
+      local?.timeComplexity ||
+      '—',
+
+    spaceComplexity:
+      data.spaceComplexity ||
+      local?.spaceComplexity ||
+      '—',
+
+    explanation:
+      data.explanation ||
+      'AI analysis completed.',
+
+    insights:
+      data.insights ||
+      [data.keyTakeaway]
+        .filter(Boolean),
+
+    edgeCases:
+      data.edgeCases ||
+      [data.prevention]
+        .filter(Boolean),
   };
 }
 
-export async function askAiFollowUp(prompt, code, language = 'java') {
+export async function askAiFollowUp(
+  prompt,
+  code = '',
+  language = 'java',
+  history = [],
+  output = '',
+  error = null
+) {
   try {
-    const res = await smartFetch('/ai/explain', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: prompt, prompt, code, language, queryType: 'ASK_QUESTION' }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data && (data.answer || data.explanation)) {
-        return {
-          answer: data.answer || data.explanation,
-          isVerifiedTrace: Boolean(data.isVerifiedTrace),
-          source: data.source || 'AI_MODEL',
-          complexity: data.complexity,
-        };
-      }
+    const userPrompt =
+      String(prompt || '').trim();
+
+    const lower =
+      userPrompt.toLowerCase();
+
+    /*
+     * User explicitly requested language.
+     * This has HIGHER priority than the dropdown language.
+     */
+
+    let requestedLanguage =
+      null;
+
+    if (
+      /\bc\+\+\b/.test(lower) ||
+      /\bcpp\b/.test(lower)
+    ) {
+      requestedLanguage =
+        'cpp';
+
+    } else if (
+      /\bpython\b/.test(lower)
+    ) {
+      requestedLanguage =
+        'python';
+
+    } else if (
+      /\bjavascript\b/.test(lower) ||
+      /\bjs\b/.test(lower)
+    ) {
+      requestedLanguage =
+        'javascript';
+
+    } else if (
+      /\bjava\b/.test(lower) &&
+      !/\bjavascript\b/.test(lower)
+    ) {
+      requestedLanguage =
+        'java';
+
+    } else if (
+      /\bin\s+c\b/.test(lower) ||
+      /\busing\s+c\b/.test(lower) ||
+      /\bwith\s+c\b/.test(lower) ||
+      /\bc\s+language\b/.test(lower)
+    ) {
+      requestedLanguage =
+        'c';
     }
+
+    const res =
+      await smartFetch(
+        '/ai/explain',
+        {
+          method: 'POST',
+
+          headers: {
+            'Content-Type':
+              'application/json',
+          },
+
+          body: JSON.stringify({
+            action: 'CHAT',
+
+            level: 'Beginner',
+
+            // Current dropdown language
+            language,
+
+            // Explicit language requested in THIS message
+            requestedLanguage,
+
+            code:
+              code || '',
+
+            output:
+              Array.isArray(output)
+                ? output
+                : String(output || '').split(/\r?\n/).filter(Boolean),
+
+            error:
+              error || null,
+
+            question:
+              userPrompt,
+
+            history:
+              Array.isArray(history)
+                ? history
+                : [],
+          }),
+        }
+      );
+
+    const data =
+      await res.json();
+
+    if (
+      !res.ok ||
+      !data?.success
+    ) {
+      throw new Error(
+        data?.error?.message ||
+        data?.message ||
+        'AI tutor unavailable'
+      );
+    }
+
+    return {
+      answer:
+        data?.answer ||
+        data?.explanation ||
+        'I could not generate an answer right now.',
+    };
+
   } catch (err) {
-    console.warn('Backend AI Q&A unavailable, generating intelligent tutor answer:', err);
+    console.error(
+      'AI Tutor chat request failed:',
+      err
+    );
+
+    throw new Error(
+      err?.message ||
+      'AI Tutor is temporarily unavailable.'
+    );
+  }
+}
+
+export async function judgeStriverProblem({
+  problem,
+  code,
+  language = 'java'
+}) {
+  const res =
+    await smartFetch(
+      '/ai/explain',
+      {
+        method: 'POST',
+
+        headers: {
+          'Content-Type':
+            'application/json'
+        },
+
+        body: JSON.stringify({
+          action:
+            'JUDGE_STRIVER',
+
+          level:
+            'Intermediate',
+
+          language,
+
+          code,
+
+          question:
+            JSON.stringify({
+              title:
+                problem.title,
+
+              description:
+                problem.description,
+
+              difficulty:
+                problem.difficulty,
+
+              timeComplexity:
+                problem.timeComplexity,
+
+              spaceComplexity:
+                problem.spaceComplexity,
+
+              sampleInput:
+                problem.defaultInput
+            })
+        }),
+      }
+    );
+
+  const data =
+    await res.json();
+
+  if (
+    !res.ok ||
+    !data?.success
+  ) {
+    throw new Error(
+      data?.error?.message ||
+      'Submission judge unavailable'
+    );
   }
 
-  // Generate deep, tailored pedagogical answer
-  const answer = generateIntelligentAiTutorAnswer(prompt, code, language);
-  return { answer, isVerifiedTrace: false, source: 'LOCAL_ENGINE' };
+  return data;
 }

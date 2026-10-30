@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Volume2, VolumeX, Pause, Play, Square, X } from 'lucide-react';
 import { useTextToSpeech } from '../hooks/useTextToSpeech';
-import { useTheme } from '../context/ThemeContext';
 
 function explainSourceLine(sourceLine, language, step) {
   const line = String(sourceLine || '').trim().replace(/\/\/.*/, '').trim();
@@ -59,8 +58,7 @@ function explainSourceLine(sourceLine, language, step) {
 }
 
 /** Line-by-line narration for the active execution step, using browser-native speech. */
-export default function ExecutionNarration({ step, stepIndex = 0, code = '', language = 'en-US' }) {
-  const { isBright } = useTheme();
+export default function ExecutionNarration({ step, stepIndex = 0, isBright = false, code = '', language = 'en-US' }) {
   const narration = useTextToSpeech();
   const [open, setOpen] = useState(false);
   const lastSpokenStep = useRef(null);
@@ -90,8 +88,8 @@ export default function ExecutionNarration({ step, stepIndex = 0, code = '', lan
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [open]);
 
-  const shell = isBright ? 'border-stone-200 bg-white text-stone-800' : 'border-stone-700 bg-[#0e1013] text-stone-100';
-  const button = 'inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border px-3 text-xs font-semibold transition hover:border-amber-500 disabled:cursor-not-allowed disabled:opacity-40';
+  const shell = isBright ? 'border-slate-200 bg-white text-slate-800' : 'border-slate-700 bg-slate-950 text-slate-100';
+  const button = 'inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border px-3 text-xs font-semibold transition hover:border-cyan-500 disabled:cursor-not-allowed disabled:opacity-40';
 
   const popup = open && typeof document !== 'undefined' ? createPortal(
     <div className="fixed inset-0 z-[10000] flex items-end justify-end p-4 sm:p-6"
@@ -100,15 +98,15 @@ export default function ExecutionNarration({ step, stepIndex = 0, code = '', lan
         className={`mb-16 w-full max-w-sm rounded-xl border p-4 shadow-2xl ${shell}`}>
         <div className="mb-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            {narration.enabled ? <Volume2 size={18} className="text-amber-500" /> : <VolumeX size={18} />}
+            {narration.enabled ? <Volume2 size={18} className="text-cyan-500" /> : <VolumeX size={18} />}
             <h2 id="tts-popup-title" className="text-sm font-bold">Line-by-line voice</h2>
-            <span className="rounded-full bg-stone-500/15 px-2 py-0.5 text-[10px] opacity-80">
+            <span className="rounded-full bg-slate-500/15 px-2 py-0.5 text-[10px] opacity-80">
               {narration.speaking ? (narration.paused ? 'Paused' : 'Speaking') : 'Ready'}
             </span>
           </div>
-          <button type="button" onClick={() => setOpen(false)} className="rounded-md p-1.5 opacity-70 hover:bg-stone-500/15 hover:opacity-100" aria-label="Close text-to-speech controls"><X size={17} /></button>
+          <button type="button" onClick={() => setOpen(false)} className="rounded-md p-1.5 opacity-70 hover:bg-slate-500/15 hover:opacity-100" aria-label="Close text-to-speech controls"><X size={17} /></button>
         </div>
-        <button type="button" className={`${button} w-full ${narration.enabled ? 'border-amber-500 bg-amber-500/10' : isBright ? 'border-stone-300' : 'border-stone-600'}`}
+        <button type="button" className={`${button} w-full ${narration.enabled ? 'border-cyan-500 bg-cyan-500/10' : 'border-slate-600'}`}
           aria-pressed={narration.enabled} onClick={narration.toggleEnabled}>
           {narration.enabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
           {narration.enabled ? 'Voice narration on' : 'Turn voice narration on'}
@@ -140,7 +138,7 @@ export default function ExecutionNarration({ step, stepIndex = 0, code = '', lan
           <button type="button" className={button} disabled={!narration.paused} onClick={narration.resume}><Play size={14} />Resume</button>
           <button type="button" className={button} disabled={!narration.speaking && !narration.paused} onClick={narration.stop}><Square size={13} />Stop</button>
         </div>
-        <p className="mt-3 rounded-lg bg-stone-500/10 p-2.5 text-xs leading-relaxed" aria-live="polite">
+        <p className="mt-3 rounded-lg bg-slate-500/10 p-2.5 text-xs leading-relaxed" aria-live="polite">
           <strong>{line ? `Line ${line}: ` : ''}</strong>{sourceLine || 'No matching source line'}
           <span className="mt-1 block opacity-80">{summary}</span>
         </p>
@@ -154,9 +152,9 @@ export default function ExecutionNarration({ step, stepIndex = 0, code = '', lan
     <>
       <div className="flex justify-end px-2 py-1">
         <button type="button" onClick={() => setOpen((previous) => !previous)}
-          className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold shadow-sm transition hover:border-amber-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${shell}`}
+          className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold shadow-sm transition hover:border-cyan-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${shell}`}
           aria-label="Open line-by-line text-to-speech controls" aria-haspopup="dialog" aria-expanded={open} title="Line-by-line voice settings">
-          {narration.enabled ? <Volume2 size={15} className="text-amber-500" /> : <VolumeX size={15} />}
+          {narration.enabled ? <Volume2 size={15} className="text-cyan-500" /> : <VolumeX size={15} />}
           <span>Voice</span>
         </button>
       </div>

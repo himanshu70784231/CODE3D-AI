@@ -1,54 +1,72 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import {
-  login as apiLogin,
-  register as apiRegister,
-  logout as apiLogout,
-  loginGuest,
-  getCurrentUser,
-  getStoredUser,
-} from '../services/authService.js';
-
+import { loginUser, registerUser, logoutUser, getCurrentUser } from '../services/auth.js';
 const AuthContext = createContext(null);
 
+function isLegacyDemoUser(user) {
+  const username = String(user?.username || '').trim().toLowerCase();
+  const email = String(user?.email || '').trim().toLowerCase();
+
+  return (
+    username === 'alex' ||
+    username === 'student.alex' ||
+    email.startsWith('student.alex@')
+  );
+}
+
 export function AuthProvider({ children }) {
-  // Initialize from safe local session to avoid screen flicker on refresh
-  const [user, setUser] = useState(() => getStoredUser());
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState('login'); // 'login' | 'register'
 
-  // Validate session on mount
+  // Restore the authenticated user from the HttpOnly session cookie on refresh.
   useEffect(() => {
-    let isMounted = true;
-    getCurrentUser()
-      .then((res) => {
-        if (!isMounted) return;
-        if (res && res.success && res.user) {
-          setUser(res.user);
-        } else if (!getStoredUser()) {
-          setUser(null);
+    let cancelled = false;
+
+    async function restoreSession() {
+      try {
+        const res = await getCurrentUser();
+        if (!cancelled && res?.success && res?.user) {
+          // The old Alex/demo account must never be restored in the UI.
+          if (isLegacyDemoUser(res.user)) {
+            try {
+              await logoutUser();
+            } catch {}
+            setUser(null);
+          } else {
+            setUser(res.user);
+          }
         }
-      })
-      .catch(() => {
-        if (isMounted && !getStoredUser()) {
-          setUser(null);
-        }
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
+      } catch {
+        // No valid session is expected for a signed-out user.
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    restoreSession();
 
     return () => {
-      isMounted = false;
+      cancelled = true;
     };
   }, []);
 
   const login = async (credentials) => {
     try {
-      const res = await apiLogin(credentials);
+      const res = await loginUser(credentials);
       if (res && res.success) {
+        if (isLegacyDemoUser(res.user)) {
+          try {
+            await logoutUser();
+          } catch {}
+          return {
+            success: false,
+            message: 'This legacy demo account has been removed. Please use your own account.',
+          };
+        }
+
         setUser(res.user);
-        return { success: true, user: res.user };
+        return { success: true };
       }
       return { success: false, message: res?.message || 'Login failed' };
     } catch (err) {
@@ -58,10 +76,20 @@ export function AuthProvider({ children }) {
 
   const register = async (userData) => {
     try {
-      const res = await apiRegister(userData);
+      const res = await registerUser(userData);
       if (res && res.success) {
+        if (isLegacyDemoUser(res.user)) {
+          try {
+            await logoutUser();
+          } catch {}
+          return {
+            success: false,
+            message: 'This legacy demo account has been removed. Please use your own account.',
+          };
+        }
+
         setUser(res.user);
-        return { success: true, user: res.user };
+        return { success: true };
       }
       return { success: false, message: res?.message || 'Registration failed' };
     } catch (err) {
@@ -69,35 +97,14 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const loginAsGuest = (customName) => {
-    const res = loginGuest(customName);
-    if (res && res.success) {
-      setUser(res.user);
-    }
-    return res;
-  };
-
   const logout = async () => {
     try {
-      await apiLogout();
-    } finally {
-      setUser(null);
-    }
+      await logoutUser();
+    } catch {}
+    setUser(null);
   };
 
-  const openLoginModal = (mode = 'login') => {
-    setAuthModalMode(mode);
-    setIsLoginModalOpen(true);
-  };
-
-  const openRegisterModal = () => {
-    setAuthModalMode('register');
-    setIsLoginModalOpen(true);
-  };
-
-  const closeLoginModal = () => {
-    setIsLoginModalOpen(false);
-  };
+  const [authModalMode, setAuthModalMode] = useState('login'); // 'login' | 'register'
 
   return (
     <AuthContext.Provider
@@ -107,14 +114,19 @@ export function AuthProvider({ children }) {
         isAuthenticated: !!user,
         login,
         register,
-        loginAsGuest,
         logout,
         isLoginModalOpen,
         authModalMode,
         setAuthModalMode,
-        openLoginModal,
-        openRegisterModal,
-        closeLoginModal,
+        openLoginModal: (mode = 'login') => {
+          setAuthModalMode(mode);
+          setIsLoginModalOpen(true);
+        },
+        openRegisterModal: () => {
+          setAuthModalMode('register');
+          setIsLoginModalOpen(true);
+        },
+        closeLoginModal: () => setIsLoginModalOpen(false),
       }}
     >
       {children}

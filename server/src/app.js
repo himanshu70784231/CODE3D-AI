@@ -7,6 +7,8 @@ import apiRouter from './routes/api.js';
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 // Security Headers
 app.use(
   helmet({
@@ -15,36 +17,48 @@ app.use(
   })
 );
 
-// CORS configuration supporting credentials (cookies)
-const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:5173',
+// Exact CORS allowlist. Configure FRONTEND_URL and optionally CORS_ALLOWED_ORIGINS
+// (comma-separated) in production. Local development origins are also needed
+// when the Node service runs in Docker with NODE_ENV=production.
+const allowedOrigins = new Set([
+  'https://code-3d-ai.vercel.app',
   'http://localhost:5173',
+  'http://localhost:5174',
   'http://127.0.0.1:5173',
-  'https://himanshu70784231.github.io',
-  'https://code-3-d-xyom7jxpa-himanshu70784231.vercel.app',
-];
+  'http://127.0.0.1:5174',
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+  ...(process.env.CORS_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+]);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, or server-to-server)
-      if (
-        !origin ||
-        allowedOrigins.includes(origin) ||
-        origin.endsWith('.vercel.app') ||
-        origin.endsWith('.github.io') ||
-        origin.includes('localhost')
-      ) {
-        callback(null, origin || true);
-      } else {
-        callback(null, origin || true);
-      }
+      // Requests without an Origin header are non-browser/server-to-server clients.
+      callback(null, !origin || allowedOrigins.has(origin));
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-session-token'],
   })
 );
+
+// CORS alone does not stop a browser from sending every cross-origin request.
+// Reject untrusted browser origins on state-changing API requests as a CSRF defence.
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const stateChanging = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+  if (origin && stateChanging && !allowedOrigins.has(origin)) {
+    return res.status(403).json({
+      success: false,
+      error: 'ORIGIN_NOT_ALLOWED',
+      message: 'This origin is not allowed to modify CODE3D-AI data.',
+    });
+  }
+  return next();
+});
 
 // Body parsing with safe size bounds
 app.use(express.json({ limit: '1mb' }));
@@ -62,12 +76,32 @@ const generalLimiter = rateLimit({
 
 const executionLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 30, // 30 code executions per minute
+  max: 30, // 30 code executions per minute per client IP
+  standardHeaders: true,
+  legacyHeaders: false,
   message: { success: false, error: 'EXECUTION_RATE_LIMIT', message: 'Execution rate limit exceeded. Please wait 1 minute.' },
+});
+
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10, // Protect paid AI provider quota from anonymous abuse.
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'AI_RATE_LIMIT', message: 'Too many AI requests. Please wait one minute.' },
 });
 
 app.use('/api', generalLimiter);
 app.use('/api/executions', executionLimiter);
+app.use('/api/ai/explain', aiLimiter);
+
+// Lightweight deployment health check (does not require database access).
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    service: 'code3d-ai-api',
+    status: 'ok',
+  });
+});
 
 // API Routes
 app.use('/api', apiRouter);

@@ -2,7 +2,6 @@ import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Text, Float } from '@react-three/drei';
 import * as THREE from 'three';
-import { safeIncludes, safeArray } from '../utils/safeRender';
 
 /**
  * 3D Laser Branch connecting parent and child heap nodes
@@ -67,38 +66,41 @@ function ActiveHoloRing({ position, color = '#00f2fe' }) {
  * Shows the Complete Binary Tree in 3D space with dual 1D Array memory below.
  */
 export default function HeapVisualizer3D({ dataStructureState }) {
-  const {
-    values: rawValues = [10, 15, 20, 17, 25, 30, 40],
-    activeIndex = null,
-    parentIndex = null,
-    comparedIndices: rawCompared = [],
-    swappedIndices: rawSwapped = [],
-    heapType = 'Min-Heap',
-    label,
-    focusInfo
-  } = dataStructureState || {};
+  const state = dataStructureState || {};
+  const values = Array.isArray(state.values) ? state.values : [10, 15, 20, 17, 25, 30, 40];
+  const activeIndex = Number.isInteger(state.activeIndex) ? state.activeIndex : null;
+  const parentIndex = Number.isInteger(state.parentIndex) ? state.parentIndex : null;
+  const comparedIndices = Array.isArray(state.comparedIndices) ? state.comparedIndices : [];
+  const swappedIndices = Array.isArray(state.swappedIndices) ? state.swappedIndices : [];
+  const heapType = state.heapType || 'Min-Heap';
+  const label = state.label;
+  const focusInfo = state.focusInfo;
 
-  const values = safeArray(rawValues, [10, 15, 20, 17, 25, 30, 40]);
-  const comparedIndices = safeArray(rawCompared);
-  const swappedIndices = safeArray(rawSwapped);
+  // Complete-binary-tree positions derived from the heap array index.
+  // This keeps the visualizer valid for any heap size instead of assuming 7 nodes.
+  const items = values;
+  const maxLevel = Math.max(0, Math.floor(Math.log2(Math.max(items.length, 1))));
+  const levelHeight = 1.65;
+  const horizontalSpacing = Math.max(1.15, Math.min(2.6, 13 / Math.pow(2, Math.min(maxLevel, 4))));
+  const treePositions = items.map((_, idx) => {
+    const level = Math.floor(Math.log2(idx + 1));
+    const firstIndex = Math.pow(2, level) - 1;
+    const positionInLevel = idx - firstIndex;
+    const nodesInLevel = Math.pow(2, level);
+    const x = (positionInLevel - (nodesInLevel - 1) / 2) * horizontalSpacing * Math.pow(1.35, Math.max(0, maxLevel - level));
+    return [x, 2.5 - level * levelHeight, 0];
+  });
 
-  // Standard hierarchical positions for up to 7-15 heap nodes
-  const treePositions = [
-    [0, 2.5, 0],         // Node 0 (Root)
-    [-2.6, 1.0, 0],      // Node 1 (Left)
-    [2.6, 1.0, 0],       // Node 2 (Right)
-    [-3.9, -0.6, 0],     // Node 3 (Left-Left)
-    [-1.3, -0.6, 0],     // Node 4 (Left-Right)
-    [1.3, -0.6, 0],      // Node 5 (Right-Left)
-    [3.9, -0.6, 0],      // Node 6 (Right-Right)
-  ];
-
-  const parentMap = [null, 0, 0, 1, 1, 2, 2];
-
-  const items = values.slice(0, Math.min(values.length, 7));
+  const parentMap = items.map((_, idx) => (idx === 0 ? null : Math.floor((idx - 1) / 2)));
 
   return (
-    <group position={[0, 0.2, 0]}>
+    <group
+      position={[0, 0.2, 0]}
+      scale={(() => {
+        const width = treePositions.length ? Math.max(...treePositions.map((p) => Math.abs(p[0]))) * 2 : 1;
+        return width > 11 ? 11 / width : 1;
+      })()}
+    >
       {/* Heap Level Guides */}
       <group position={[-5.2, 0, 0]}>
         <Text position={[0, 2.5, 0]} fontSize={0.22} color="#64748b" anchorX="right">
@@ -110,7 +112,7 @@ export default function HeapVisualizer3D({ dataStructureState }) {
         <Text position={[0, -0.6, 0]} fontSize={0.22} color="#64748b" anchorX="right">
           Level 2
         </Text>
-        <Text position={[0, -2.5, 0]} fontSize={0.22} color="#f59e0b" anchorX="right">
+        <Text position={[0, -2.5, 0]} fontSize={0.22} color="#38bdf8" anchorX="right">
           Array Memory
         </Text>
       </group>
@@ -124,8 +126,8 @@ export default function HeapVisualizer3D({ dataStructureState }) {
         const start = treePositions[pIdx];
         const end = treePositions[idx];
         const isActive = (activeIndex === idx && parentIndex === pIdx) ||
-                         (safeIncludes(comparedIndices, idx) && safeIncludes(comparedIndices, pIdx));
-        const isSwapping = safeIncludes(swappedIndices, idx) && safeIncludes(swappedIndices, pIdx);
+                         (comparedIndices.includes(idx) && comparedIndices.includes(pIdx));
+        const isSwapping = swappedIndices.includes(idx) && swappedIndices.includes(pIdx);
 
         return (
           <HeapBranch
@@ -143,8 +145,8 @@ export default function HeapVisualizer3D({ dataStructureState }) {
         const pos = treePositions[idx];
         const isActive = activeIndex === idx;
         const isParent = parentIndex === idx;
-        const isCompared = safeIncludes(comparedIndices, idx);
-        const isSwapped = safeIncludes(swappedIndices, idx);
+        const isCompared = comparedIndices.includes(idx);
+        const isSwapped = swappedIndices.includes(idx);
 
         let nodeColor = '#0284c7';
         let emissiveColor = '#0369a1';
@@ -206,10 +208,9 @@ export default function HeapVisualizer3D({ dataStructureState }) {
                 color="#ffffff"
                 anchorX="center"
                 anchorY="middle"
-                font="https://fonts.gstatic.com/s/firasans/v17/va9E4kDNxMZdWfMOD5Vvl4jO.woff"
                 fontWeight="bold"
               >
-                {val}
+                {String(val)}
               </Text>
 
               {/* Node Index & Role Label */}
@@ -239,7 +240,7 @@ export default function HeapVisualizer3D({ dataStructureState }) {
           const xPos = (idx - (items.length - 1) / 2) * 1.35;
           const isActive = activeIndex === idx;
           const isParent = parentIndex === idx;
-          const isSwapped = safeIncludes(swappedIndices, idx);
+          const isSwapped = swappedIndices.includes(idx);
 
           return (
             <group key={`array-slot-${idx}`} position={[xPos, 0, 0]}>
@@ -305,7 +306,7 @@ export default function HeapVisualizer3D({ dataStructureState }) {
           <Text
             position={[0, 0, 0.05]}
             fontSize={0.2}
-            color="#f59e0b"
+            color="#38bdf8"
             anchorX="center"
             anchorY="middle"
           >

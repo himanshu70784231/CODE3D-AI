@@ -1,290 +1,207 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Terminal, Copy, Check, Trash2, ArrowDown, AlertTriangle, AlertCircle, CheckCircle, Maximize2, Minimize2 } from 'lucide-react';
-import { safeString, safeDisplay, safeErrorMessage } from '../utils/safeRender';
+import React, { useState } from 'react';
+import { Terminal, Copy, Check, Trophy, Maximize2, Minimize2, X } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
-export function OutputConsole({
+export default function OutputConsole({
   output = [],
   correctOutput = null,
   isAtEnd = false,
+  input = '',
+  currentStep = null,
+  executionStatus = null,
   error = null,
-  onClearOutput = null,
-  isFullscreen = false,
-  onToggleFullscreen = null,
+  language = 'java',
+  executionTimeMs = null,
+  inputLabel = 'Input',
+  inputHint = null,
+  hideInput = false,
 }) {
   const { isBright } = useTheme();
-  const [activeTab, setActiveTab] = useState('console');
   const [copied, setCopied] = useState(false);
-  const [autoScroll, setAutoScroll] = useState(true);
-  const [clearedLength, setClearedLength] = useState(0);
-  const scrollContainerRef = useRef(null);
-
-  const activeOutput = Array.isArray(output) ? output.slice(clearedLength) : [];
-
-  useEffect(() => {
-    if (autoScroll && scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
-    }
-  }, [activeOutput, autoScroll, correctOutput, error]);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const handleCopy = () => {
-    let textToCopy = '';
-    if (activeTab === 'console') {
-      textToCopy = activeOutput.join('\n');
-    } else if (activeTab === 'output') {
-      textToCopy = safeString(correctOutput) || safeString(activeOutput[activeOutput.length - 1]) || 'No output recorded';
-    } else if (activeTab === 'errors') {
-      textToCopy = safeErrorMessage(error, 'No errors reported');
-    }
+    const textToCopy = [...output, correctOutput ? `Correct Output: ${correctOutput}` : ''].filter(Boolean).join('\n');
     navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleClear = () => {
-    setClearedLength(output.length);
-    if (onClearOutput) {
-      onClearOutput();
-    }
-  };
+  const normalizedInput = Array.isArray(input)
+    ? input.join(', ')
+    : String(input || '').trim();
+
+  const stepLabel = currentStep?.dataStructureState?.label || currentStep?.eventType || '';
+  const stepInfo = currentStep?.dataStructureState?.focusInfo || currentStep?.explanation || '';
 
   return (
-    <div
-      className={`flex flex-col h-full border-t font-mono text-xs select-none transition-colors duration-200 ${
+    <div className={isExpanded
+      ? `fixed z-[130] w-[min(860px,calc(100vw-32px))] h-[min(720px,calc(100vh-32px))] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl border shadow-2xl overflow-hidden flex flex-col min-h-0 font-mono text-xs transition-colors duration-200 ${
+          isBright
+            ? 'bg-white border-slate-200 text-slate-800 shadow-slate-900/20'
+            : 'bg-[#070b14] border-slate-700/80 text-slate-300 shadow-black/70'
+        }`
+      : `flex flex-col h-full border-t font-mono text-xs transition-colors duration-200 ${
+
+      isBright
+        ? 'bg-slate-50 border-slate-200 text-slate-800'
+        : 'bg-[#070b14] border-slate-800/80 text-slate-300'
+    }`}>
+      {/* Console Header */}
+      <div className={`h-9 border-b px-3 flex items-center justify-between transition-colors shrink-0 ${
         isBright
-          ? 'bg-[#fcfbf9] border-[#e2dfd8] text-stone-800'
-          : 'bg-[#0e1013] border-[#252932] text-stone-100'
-      } ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}
-    >
-      {/* Console Header with Tabs and Actions */}
-      <div className={`h-8 border-b px-3 flex items-center justify-between text-xs shrink-0 select-none transition-colors ${
-        isBright ? 'bg-[#f7f6f3] border-[#e2dfd8]' : 'bg-[#181c23] border-[#252932]'
+          ? 'bg-white border-slate-200 text-slate-700 shadow-2xs'
+          : 'bg-slate-900/90 border-slate-800/80 text-slate-400'
       }`}>
-        {/* Tabs: Console | Output | Errors */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setActiveTab('console')}
-            className={`h-6 px-2.5 rounded text-[11px] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              activeTab === 'console'
-                ? isBright
-                  ? 'bg-white text-stone-900 border border-stone-300 shadow-2xs font-bold'
-                  : 'bg-[#13161b] text-amber-400 border border-[#252932]'
-                : isBright
-                  ? 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
-                  : 'text-stone-400 hover:text-stone-100 hover:bg-stone-800'
-            }`}
-          >
-            <Terminal size={12} className={activeTab === 'console' ? 'text-amber-500' : 'text-stone-400'} />
-            <span>Console</span>
-            <span className="text-[10px] text-stone-500">
-              ({activeOutput.length})
+        <div className="flex items-center gap-2 min-w-0">
+          <Terminal size={13} className={isBright ? 'text-cyan-600' : 'text-cyan-400'} />
+          <span className={`text-[11px] font-semibold tracking-wide uppercase truncate ${isBright ? 'text-slate-800' : 'text-slate-300'}`}>
+            Standard Output Stream
+          </span>
+          {isAtEnd && (!executionStatus || executionStatus === 'COMPLETED') && (
+            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold">
+              ✓ Process Finished (0)
             </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('output')}
-            className={`h-6 px-2.5 rounded text-[11px] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              activeTab === 'output'
-                ? isBright
-                  ? 'bg-white text-emerald-800 border border-stone-300 shadow-2xs font-bold'
-                  : 'bg-[#13161b] text-emerald-400 border border-[#252932]'
-                : isBright
-                  ? 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
-                  : 'text-stone-400 hover:text-stone-100 hover:bg-stone-800'
-            }`}
-          >
-            <CheckCircle size={12} className={isBright ? 'text-emerald-600' : 'text-emerald-400'} />
-            <span>Output</span>
-            {isAtEnd && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('errors')}
-            className={`h-6 px-2.5 rounded text-[11px] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              activeTab === 'errors'
-                ? isBright
-                  ? 'bg-white text-rose-800 border border-stone-300 shadow-2xs font-bold'
-                  : 'bg-[#13161b] text-rose-400 border border-[#252932]'
-                : error
-                  ? 'text-rose-500 hover:bg-rose-50'
-                  : isBright
-                    ? 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
-                    : 'text-stone-400 hover:text-stone-100 hover:bg-stone-800'
-            }`}
-          >
-            <AlertCircle size={12} className={error ? 'text-rose-500' : isBright ? 'text-stone-400' : 'text-stone-500'} />
-            <span>Errors</span>
-            {error && (
-              <span className={`text-[9px] px-1 rounded font-bold ${
-                isBright ? 'bg-rose-100 text-rose-700' : 'bg-[#ef4444]/20 text-[#ef4444]'
-              }`}>
-                1
-              </span>
-            )}
-          </button>
+          )}
         </div>
-
-        {/* Toolbar Actions */}
-        <div className="flex items-center gap-1.5">
-          {/* Auto-scroll */}
+        <div className="flex items-center gap-2">
+          <span className={`text-[10px] ${isBright ? 'text-slate-500' : 'text-slate-500'}`}>
+            {output.length} line(s) printed
+          </span>
           <button
-            onClick={() => setAutoScroll(!autoScroll)}
-            className={`px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1 border transition-colors cursor-pointer ${
-              autoScroll
-                ? isBright
-                  ? 'bg-amber-50 border-amber-300 text-amber-900'
-                  : 'bg-amber-950/40 border-amber-600/40 text-amber-300'
-                : isBright
-                  ? 'bg-white border-stone-300 text-stone-500'
-                  : 'bg-[#181c22] border-stone-700 text-stone-500'
+            onClick={() => setIsExpanded((prev) => !prev)}
+            className={`p-1 rounded transition flex items-center gap-1 text-[10px] ${
+              isBright ? 'hover:bg-slate-100 text-slate-500' : 'hover:bg-slate-800 text-slate-400'
             }`}
-            title="Toggle Auto-scroll"
+            title={isExpanded ? 'Restore Output Stream' : 'Expand Output Stream'}
+            aria-label={isExpanded ? 'Restore Output Stream' : 'Expand Output Stream'}
           >
-            <ArrowDown size={10} className={autoScroll ? 'text-amber-500' : ''} />
-            <span className="hidden sm:inline">Auto-scroll</span>
+            {isExpanded ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
           </button>
-
-          {/* Clear */}
-          <button
-            onClick={handleClear}
-            className={`p-1 rounded transition-colors cursor-pointer ${
-              isBright ? 'text-stone-500 hover:text-rose-600 hover:bg-stone-200' : 'text-stone-400 hover:text-rose-400 hover:bg-[#181c23]'
-            }`}
-            title="Clear Console"
-          >
-            <Trash2 size={12} />
-          </button>
-
-          {/* Copy */}
-          <button
-            onClick={handleCopy}
-            className={`p-1 rounded transition-colors cursor-pointer flex items-center gap-1 ${
-              isBright ? 'text-stone-500 hover:text-stone-900 hover:bg-stone-200' : 'text-stone-400 hover:text-stone-100 hover:bg-[#181c23]'
-            }`}
-            title="Copy Output"
-          >
-            {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
-          </button>
-
-          {/* Expand / Fullscreen */}
-          {onToggleFullscreen && (
+          {isExpanded && (
             <button
-              onClick={onToggleFullscreen}
-              className={`p-1 rounded transition-colors cursor-pointer ${
-                isBright ? 'text-stone-500 hover:text-stone-900 hover:bg-stone-200' : 'text-stone-400 hover:text-stone-100 hover:bg-[#181c23]'
+              onClick={() => setIsExpanded(false)}
+              className={`p-1 rounded transition ${
+                isBright ? 'hover:bg-rose-50 text-slate-500 hover:text-rose-700' : 'hover:bg-rose-950/50 text-slate-400 hover:text-rose-300'
               }`}
-              title={isFullscreen ? 'Exit Fullscreen' : 'Expand Console'}
+              title="Close expanded Output Stream"
+              aria-label="Close expanded Output Stream"
             >
-              {isFullscreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+              <X size={12} />
             </button>
           )}
+          <button
+            onClick={handleCopy}
+            className={`p-1 rounded transition hover:text-cyan-400 flex items-center gap-1 text-[10px] ${
+              isBright ? 'hover:bg-slate-100 text-slate-500' : 'hover:bg-slate-800 text-slate-400'
+            }`}
+            title="Copy Output Console"
+          >
+            {copied ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
+            <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
+          </button>
         </div>
       </div>
 
-      {/* Tab Contents */}
-      <div
-        ref={scrollContainerRef}
-        className={`flex-1 p-2.5 overflow-y-auto space-y-1 font-mono text-[11px] select-text transition-colors ${
-          isBright ? 'bg-white' : 'bg-[#0e1013]'
-        }`}
-      >
-        {activeTab === 'console' && (
-          <>
-            <div className={`select-none text-[10px] pb-1 ${isBright ? 'text-stone-500 font-semibold' : 'text-stone-500'}`}>
-              $ code3d --trace-vm --sync-spatial-memory
+      {/* Output Content Stream */}
+      <div className={`flex-1 min-h-0 p-3 overflow-y-auto overscroll-contain space-y-1.5 font-mono select-text transition-colors ${
+        isBright ? 'bg-white' : 'bg-[#070b14]'
+      }`}>
+        <div className={`text-[11px] select-none ${isBright ? 'text-slate-400' : 'text-slate-600'}`}>
+          $ code3d-run --target=3D --interactive
+        </div>
+
+        {/* Runtime context: shows the exact input used even when the program
+            intentionally prints nothing (e.g. search/insert/return-only code). */}
+        <div className={`grid grid-cols-1 ${hideInput ? 'md:grid-cols-1' : isExpanded ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-2 mb-2`}>
+          {!hideInput && (<div className={`rounded-lg border p-2 ${isBright ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/70 border-slate-800'}`}>
+            <div className={`text-[9px] uppercase font-bold tracking-wider mb-1 ${isBright ? 'text-slate-500' : 'text-slate-500'}`}>{inputLabel}</div>
+            <div className={`font-mono text-[11px] break-all ${isBright ? 'text-slate-800' : 'text-slate-200'}`}>
+              {normalizedInput || 'No stdin supplied'}
             </div>
-
-            {activeOutput.length === 0 ? (
-              <div className="italic py-1 text-stone-500">
-                Process waiting for execution. Click 'Run' or press Ctrl+Enter to start.
-              </div>
-            ) : (
-              activeOutput.map((line, idx) => (
-                <div key={idx} className={`flex items-start gap-2 leading-relaxed ${
-                  isBright ? 'text-stone-800' : 'text-stone-100'
-                }`}>
-                  <span className={`px-1 py-0.2 rounded text-[9px] font-bold select-none shrink-0 border ${
-                    isBright
-                      ? 'bg-amber-100/70 border-amber-300 text-amber-900'
-                      : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                  }`}>
-                    INFO
-                  </span>
-                  <span className="break-all">{safeString(line)}</span>
-                </div>
-              ))
-            )}
-
-            {isAtEnd && (
-              <div className="flex items-center gap-2 text-emerald-500 font-semibold pt-1">
-                <span className={`px-1 py-0.2 rounded text-[9px] font-bold select-none border ${
-                  isBright
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                    : 'bg-emerald-950/60 text-emerald-400 border-emerald-500/40'
-                }`}>
-                  SUCCESS
-                </span>
-                <span>Program execution completed successfully. Exit code: 0</span>
-              </div>
-            )}
-          </>
-        )}
-
-        {activeTab === 'output' && (
-          <div className="space-y-2">
-            <div className="text-[10px] uppercase font-bold tracking-wider text-stone-500">
-              Verified Output Result
+            {inputHint && <div className={`mt-1 text-[9px] leading-relaxed ${isBright ? 'text-slate-500' : 'text-slate-500'}`}>{inputHint}</div>}
+          </div>)}
+          <div className={`rounded-lg border p-2 ${isBright ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/70 border-slate-800'}`}>
+            <div className={`text-[9px] uppercase font-bold tracking-wider mb-1 ${isBright ? 'text-slate-500' : 'text-slate-500'}`}>Execution</div>
+            <div className={`font-mono text-[11px] ${executionStatus === 'COMPLETED' ? 'text-emerald-400' : isBright ? 'text-slate-800' : 'text-slate-200'}`}>
+              {executionStatus || '3D simulation'}
+              <span className={`ml-2 ${isBright ? 'text-slate-500' : 'text-slate-500'}`}>{language.toUpperCase()}</span>
+              {Number.isFinite(executionTimeMs) && <span className={`ml-2 ${isBright ? 'text-slate-500' : 'text-slate-500'}`}>{executionTimeMs} ms</span>}
             </div>
+          </div>
+          {isExpanded && (
+            <div className={`rounded-lg border p-2 ${isBright ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/70 border-slate-800'}`}>
+              <div className={`text-[9px] uppercase font-bold tracking-wider mb-1 ${isBright ? 'text-slate-500' : 'text-slate-500'}`}>Current Step</div>
+              <div className={`font-mono text-[11px] truncate ${isBright ? 'text-slate-800' : 'text-slate-200'}`}>
+                {stepLabel || 'Execution ready'}
+              </div>
+            </div>
+          )}
+        </div>
 
-            {correctOutput ? (
-              <div className={`p-2.5 rounded border font-bold text-xs break-all ${
-                isBright
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
-                  : 'bg-[#13161b] border-emerald-500/40 text-emerald-400'
-              }`}>
-                {safeDisplay(correctOutput)}
-              </div>
-            ) : activeOutput.length > 0 ? (
-              <div className={`p-2.5 rounded border break-all ${
-                isBright
-                  ? 'bg-stone-50 border-[#e2dfd8] text-stone-800'
-                  : 'bg-[#13161b] border-[#252932] text-stone-100'
-              }`}>
-                {safeString(activeOutput[activeOutput.length - 1])}
-              </div>
-            ) : (
-              <div className="italic text-stone-500">
-                No output produced yet. Run the code to view return results.
-              </div>
-            )}
+        {stepInfo && (
+          <div className={`mb-2 rounded-lg border px-2.5 py-2 text-[10px] leading-relaxed ${isBright ? 'bg-cyan-50/60 border-cyan-100 text-slate-600' : 'bg-cyan-950/20 border-cyan-900/40 text-slate-400'}`}>
+            <span className="font-bold text-cyan-400">TRACE:</span> {stepInfo}
           </div>
         )}
 
-        {activeTab === 'errors' && (
-          <div className="space-y-2">
-            {error ? (
-              <div className={`p-2.5 rounded border space-y-1 ${
-                isBright
-                  ? 'bg-rose-50 border-rose-300 text-rose-900'
-                  : 'bg-rose-950/40 border-[#ef4444]/50 text-rose-300'
-              }`}>
-                <div className="flex items-center gap-2 font-bold text-rose-500">
-                  <AlertTriangle size={13} />
-                  <span>Execution Diagnostic:</span>
-                </div>
-                <div className="text-xs break-all">{safeErrorMessage(error)}</div>
+        {error && (
+          <div className="mb-2 rounded-lg border border-rose-500/30 bg-rose-950/20 px-2.5 py-2 text-[10px] text-rose-300">
+            <span className="font-bold">ERROR:</span> {error}
+          </div>
+        )}
+
+        <div className={`text-[9px] uppercase tracking-wider font-bold mb-1 ${isBright ? 'text-slate-500' : 'text-slate-500'}`}>
+          Standard Output
+        </div>
+
+        {output.length === 0 && !correctOutput ? (
+          <div className={`italic text-[11px] py-1 ${isBright ? 'text-slate-400' : 'text-slate-600'}`}>
+            No stdout lines produced by the program.
+          </div>
+        ) : (
+          output.map((line, idx) => (
+            <div key={idx} className={`flex items-start gap-2 text-xs leading-relaxed ${
+              isBright ? 'text-slate-800 font-medium' : 'text-slate-200'
+            }`}>
+              <span className={`select-none text-[10px] mt-0.5 ${isBright ? 'text-cyan-600' : 'text-cyan-400'}`}>&gt;</span>
+              <span>{line}</span>
+            </div>
+          ))
+        )}
+
+        {/* Highlighted Verified Correct Output Banner */}
+        {correctOutput && (
+          <div className={`mt-2 p-2.5 rounded-lg border flex items-center justify-between gap-2 transition-all animate-fadeIn ${
+            isAtEnd
+              ? isBright
+                ? 'bg-emerald-50/90 border-emerald-300 text-emerald-900 shadow-sm'
+                : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200 shadow-emerald-950/40'
+              : isBright
+                ? 'bg-cyan-50/90 border-cyan-300 text-cyan-900'
+                : 'bg-cyan-950/40 border-cyan-500/40 text-cyan-200'
+          }`}>
+            <div className="flex items-center gap-2">
+              <Trophy size={14} className={isAtEnd ? 'text-emerald-500' : 'text-cyan-400 animate-pulse'} />
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider block leading-none">
+                  {isAtEnd ? '🏆 Verified Correct Output' : '⚡ Current Result'}
+                </span>
+                <span className="text-xs font-bold font-mono mt-0.5 block">
+                  {correctOutput}
+                </span>
               </div>
-            ) : (
-              <div className="text-emerald-500 flex items-center gap-1.5 py-1 font-semibold">
-                <CheckCircle size={13} />
-                <span>Zero syntax or runtime diagnostics reported. Clean build.</span>
-              </div>
-            )}
+            </div>
+            <span className={`text-[10px] px-2 py-0.5 rounded border font-semibold ${
+              isAtEnd
+                ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/30'
+                : 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500/30'
+            }`}>
+              {isAtEnd ? 'VERIFIED ✓' : 'COMPUTING'}
+            </span>
           </div>
         )}
       </div>
     </div>
   );
 }
-
-export default OutputConsole;

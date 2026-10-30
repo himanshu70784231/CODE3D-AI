@@ -2,7 +2,6 @@ import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Text, Float } from '@react-three/drei';
 import * as THREE from 'three';
-import { safeString } from '../utils/safeRender';
 
 /**
  * OutputHologram3D
@@ -28,7 +27,7 @@ export default function OutputHologram3D({
     }
   });
 
-  const displayText = safeString(correctOutput) || safeString(recentLine) || 'Execution in progress...';
+  const displayText = correctOutput || recentLine || 'Execution in progress...';
   const cleanDisplay = displayText.length > 48 ? displayText.slice(0, 45) + '...' : displayText;
 
   return (
@@ -61,7 +60,7 @@ export default function OutputHologram3D({
             ]}
           />
           <lineBasicMaterial
-            color={isAtEnd ? '#34d399' : '#f59e0b'}
+            color={isAtEnd ? '#34d399' : '#38bdf8'}
             linewidth={2}
           />
         </lineSegments>
@@ -133,7 +132,7 @@ export default function OutputHologram3D({
       <mesh ref={beaconRef} position={[0, -1.2, 0]}>
         <cylinderGeometry args={[0.025, 0.025, 2.6, 12]} />
         <meshStandardMaterial
-          color={isAtEnd ? '#34d399' : '#f59e0b'}
+          color={isAtEnd ? '#34d399' : '#38bdf8'}
           emissive={isAtEnd ? '#10b981' : '#0284c7'}
           emissiveIntensity={2.2}
           transparent

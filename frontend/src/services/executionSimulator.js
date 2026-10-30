@@ -1,3 +1,4 @@
+import { generateStriverTrace } from './striverTraceEngine.js';
 /**
  * CODE3D AI - Execution Simulator Service
  *
@@ -2330,6 +2331,788 @@ export function generateDynamicArrayCreationTrace(code, values = [5, 2, 8, 1], l
 /**
  * Dynamic 3D Graph Generator
  */
+/**
+ * Topic-specific Two-Pointer Reverse Trace
+ */
+export function generateDynamicTwoPointerReverseTrace(values = [10, 20, 30, 40, 50], language = 'java') {
+  const arr = values.length >= 2 ? [...values] : [10, 20, 30, 40, 50];
+  const steps = [];
+  let left = 0;
+  let right = arr.length - 1;
+  let step = 1;
+
+  steps.push({
+    stepNumber: step++,
+    lineNumber: 4,
+    eventType: 'TWO_POINTER_INIT',
+    variables: { left, right, arr: `[${arr.join(', ')}]` },
+    output: [],
+    dataStructureState: {
+      type: 'array',
+      values: [...arr],
+      activeIndex: left,
+      pointers: { left, right },
+      label: `Two Pointers: left=${left}, right=${right}`,
+      focusInfo: `Compare outer elements ${arr[left]} and ${arr[right]}`,
+    },
+    explanation: 'Two pointers start at opposite ends and move toward the center.',
+    aiHint: 'Each iteration swaps arr[left] and arr[right], then left++ and right--.'
+  });
+
+  while (left < right) {
+    const leftValue = arr[left];
+    const rightValue = arr[right];
+    [arr[left], arr[right]] = [arr[right], arr[left]];
+
+    steps.push({
+      stepNumber: step++,
+      lineNumber: 6,
+      eventType: 'TWO_POINTER_SWAP',
+      variables: { left, right, leftValue, rightValue },
+      output: [],
+      dataStructureState: {
+        type: 'array',
+        values: [...arr],
+        activeIndex: left,
+        comparedIndices: [left, right],
+        swappedIndices: [left, right],
+        pointers: { left, right },
+        label: `Swap [${left}] ${leftValue} ↔ [${right}] ${rightValue}`,
+        focusInfo: `Reversed outer pair; pointers now converge inward`,
+      },
+      explanation: `Swapped the elements at indexes ${left} and ${right}.`,
+      aiHint: 'The array is reversed in-place using O(n) time and O(1) extra space.'
+    });
+
+    left++;
+    right--;
+
+    if (left <= right) {
+      steps.push({
+        stepNumber: step++,
+        lineNumber: 7,
+        eventType: 'TWO_POINTER_ADVANCE',
+        variables: { left, right },
+        output: [],
+        dataStructureState: {
+          type: 'array',
+          values: [...arr],
+          activeIndex: left,
+          pointers: { left, right },
+          label: `Pointers moved: left=${left}, right=${right}`,
+          focusInfo: left < right ? 'Continue until pointers meet/cross.' : 'Pointers have met at the center.'
+        },
+        explanation: 'Both pointers move one position toward the center after the swap.',
+        aiHint: 'The loop performs at most floor(n/2) swaps.'
+      });
+    }
+  }
+
+  steps.push({
+    stepNumber: step,
+    lineNumber: 10,
+    eventType: 'PROGRAM_END',
+    variables: { result: `[${arr.join(', ')}]` },
+    output: [`Reversed: [${arr.join(', ')}]`],
+    dataStructureState: {
+      type: 'array',
+      values: [...arr],
+      activeIndex: null,
+      pointers: { left, right },
+      label: 'Two-Pointer Reversal Complete',
+      focusInfo: `Final array: [${arr.join(', ')}]`
+    },
+    explanation: 'The two pointers met or crossed, so the in-place reversal is complete.',
+    aiHint: 'Time O(n), auxiliary space O(1).'
+  });
+
+  return steps;
+}
+
+/**
+ * Topic-specific Sliding Window Subarray Sum Trace
+ */
+export function generateDynamicSlidingWindowTrace(values = [2, 1, 5, 1, 3, 2], language = 'java') {
+  const arr = values.length >= 3 ? [...values] : [2, 1, 5, 1, 3, 2];
+  const k = Math.min(3, arr.length);
+  const steps = [];
+  let step = 1;
+  let sum = arr.slice(0, k).reduce((a, b) => a + b, 0);
+  let maxSum = sum;
+
+  steps.push({
+    stepNumber: step++,
+    lineNumber: 4,
+    eventType: 'WINDOW_INIT',
+    variables: { k, left: 0, right: k - 1, windowSum: sum, maxSum },
+    output: [`Initial window sum = ${sum}`],
+    dataStructureState: {
+      type: 'array',
+      values: [...arr],
+      activeIndex: k - 1,
+      pointers: { left: 0, right: k - 1 },
+      window: { start: 0, end: k - 1, size: k },
+      label: `Window [0..${k - 1}] Sum = ${sum}`,
+      focusInfo: `Fixed-size window k=${k}`,
+    },
+    explanation: `Computed the first window of ${k} elements with sum ${sum}.`,
+    aiHint: 'A sliding window reuses the previous sum instead of recalculating every element.'
+  });
+
+  for (let right = k; right < arr.length; right++) {
+    const left = right - k + 1;
+    const outgoing = arr[left - 1];
+    const incoming = arr[right];
+    sum += incoming - outgoing;
+    maxSum = Math.max(maxSum, sum);
+
+    steps.push({
+      stepNumber: step++,
+      lineNumber: 8,
+      eventType: 'WINDOW_SLIDE',
+      variables: { left, right, outgoing, incoming, windowSum: sum, maxSum },
+      output: [`Window [${left}..${right}] Sum = ${sum}`],
+      dataStructureState: {
+        type: 'array',
+        values: [...arr],
+        activeIndex: right,
+        comparedIndices: [left - 1, right],
+        pointers: { left, right },
+        window: { start: left, end: right, size: k },
+        label: `Slide to [${left}..${right}] → Sum ${sum}`,
+        focusInfo: `Remove ${outgoing}, add ${incoming}; maxSum=${maxSum}`,
+      },
+      explanation: `Removed outgoing value ${outgoing} and added incoming value ${incoming}, updating the window sum to ${sum}.`,
+      aiHint: 'Each slide takes O(1), so the complete algorithm is O(n).'
+    });
+  }
+
+  steps.push({
+    stepNumber: step,
+    lineNumber: 12,
+    eventType: 'PROGRAM_END',
+    variables: { k, maxSum },
+    output: [`Maximum sum for window size ${k} = ${maxSum}`],
+    dataStructureState: {
+      type: 'array',
+      values: [...arr],
+      activeIndex: null,
+      label: `Sliding Window Complete: maxSum = ${maxSum}`,
+      focusInfo: `Fixed window size ${k}`,
+    },
+    explanation: `Sliding-window scan finished. Maximum subarray sum among windows of size ${k} is ${maxSum}.`,
+    aiHint: 'Time O(n), auxiliary space O(1).'
+  });
+
+  return steps;
+}
+
+/**
+ * Topic-specific Hash Table Collision Chaining Trace
+ */
+export function generateDynamicHashTableTrace(values = [10, 18, 26, 7, 15], language = 'java') {
+  const arr = values.length >= 2 ? [...values.slice(0, 8)] : [10, 18, 26, 7, 15];
+  const bucketCount = 5;
+  const table = {};
+  const steps = [];
+  let step = 1;
+
+  const snapshot = () => Object.fromEntries(Object.entries(table).map(([k, v]) => [k, [...v]]));
+
+  steps.push({
+    stepNumber: step++,
+    lineNumber: 3,
+    eventType: 'HASH_INIT',
+    variables: { bucketCount, values: `[${arr.join(', ')}]` },
+    output: [],
+    dataStructureState: {
+      type: 'hash-table',
+      values: [...arr],
+      hashTable: {},
+      activeIndex: null,
+      target: null,
+      label: `Hash Table Initialized: ${bucketCount} buckets`,
+      focusInfo: 'Hash function: index = abs(key) % bucketCount'
+    },
+    explanation: 'Created fixed hash buckets. Each integer key is mapped to a bucket using modulo hashing.',
+    aiHint: 'Collisions are handled by chaining multiple keys inside the same bucket.'
+  });
+
+  arr.forEach((key, index) => {
+    const bucket = Math.abs(key) % bucketCount;
+    const collision = Array.isArray(table[bucket]) && table[bucket].length > 0;
+    if (!table[bucket]) table[bucket] = [];
+    table[bucket].push(key);
+
+    steps.push({
+      stepNumber: step++,
+      lineNumber: 6,
+      eventType: collision ? 'HASH_COLLISION' : 'HASH_INSERT',
+      variables: { index, key, bucket, collision },
+      output: [collision ? `Collision: key ${key} joins bucket ${bucket}` : `Insert key ${key} into bucket ${bucket}`],
+      dataStructureState: {
+        type: 'hash-table',
+        values: [...arr],
+        hashTable: Object.fromEntries(Object.entries(snapshot()).flatMap(([b, keys]) => keys.map((v) => [String(v), Number(b)]))),
+        activeIndex: index,
+        comparedIndices: [bucket],
+        target: key,
+        label: collision ? `Collision at Bucket ${bucket}: key ${key}` : `Hash ${key} → Bucket ${bucket}`,
+        focusInfo: collision ? 'Separate chaining keeps both keys in the same bucket.' : `Bucket ${bucket} was empty.`
+      },
+      explanation: `Computed abs(${key}) % ${bucketCount} = ${bucket}. ${collision ? 'A collision occurred, so chaining was used.' : 'The key was inserted into an empty bucket.'}`,
+      aiHint: 'Average insertion/search is O(1); collisions can degrade a bucket to O(n).'
+    });
+  });
+
+  const lookupKey = arr[Math.floor(arr.length / 2)];
+  const lookupBucket = Math.abs(lookupKey) % bucketCount;
+  steps.push({
+    stepNumber: step,
+    lineNumber: 10,
+    eventType: 'HASH_LOOKUP',
+    variables: { lookupKey, lookupBucket, found: true },
+    output: [`Lookup ${lookupKey}: FOUND in bucket ${lookupBucket}`],
+    dataStructureState: {
+      type: 'hash-table',
+      values: [...arr],
+      hashTable: Object.fromEntries(Object.entries(snapshot()).flatMap(([b, keys]) => keys.map((v) => [String(v), Number(b)]))),
+      activeIndex: arr.indexOf(lookupKey),
+      comparedIndices: [lookupBucket],
+      target: lookupKey,
+      label: `Lookup: ${lookupKey} → Bucket ${lookupBucket} ✓`,
+      focusInfo: 'Hash lookup resolved by computing the same bucket index.'
+    },
+    explanation: `Lookup recomputed the hash for ${lookupKey}, then found the key in bucket ${lookupBucket}.`,
+    aiHint: 'Average lookup remains O(1) with a well-distributed hash function.'
+  });
+
+  return steps;
+}
+
+/**
+ * Topic-specific AVL rotation trace (LL case)
+ */
+export function generateDynamicAvlTrace(language = 'java') {
+  const steps = [];
+  const makeNodes = (balanced = false) => balanced
+    ? [
+        { id: 0, val: 20, left: 1, right: 2, parent: null, depth: 0 },
+        { id: 1, val: 10, left: null, right: null, parent: 0, depth: 1 },
+        { id: 2, val: 30, left: null, right: null, parent: 0, depth: 1 },
+      ]
+    : [
+        { id: 0, val: 30, left: 1, right: null, parent: null, depth: 0 },
+        { id: 1, val: 20, left: 2, right: null, parent: 0, depth: 1 },
+        { id: 2, val: 10, left: null, right: null, parent: 1, depth: 2 },
+      ];
+
+  steps.push({
+    stepNumber: 1,
+    lineNumber: 46,
+    eventType: 'AVL_INSERT',
+    variables: { inserted: 30, balanceFactor: 0 },
+    output: ['Insert 30 as root'],
+    dataStructureState: {
+      type: 'avl',
+      nodes: makeNodes(false).slice(0, 1),
+      activeIndex: 0,
+      balanceFactors: { 30: 0 },
+      label: 'AVL Root = 30',
+      focusInfo: 'Balanced: BF(30) = 0'
+    },
+    explanation: 'First node becomes the AVL root.',
+    aiHint: 'AVL keeps every node balance factor in {-1, 0, +1}.'
+  });
+
+  steps.push({
+    stepNumber: 2,
+    lineNumber: 47,
+    eventType: 'AVL_INSERT',
+    variables: { inserted: 20, balanceFactor: 1 },
+    output: ['Insert 20 → left child of 30'],
+    dataStructureState: {
+      type: 'avl',
+      nodes: makeNodes(false).slice(0, 2),
+      activeIndex: 1,
+      balanceFactors: { 30: 1, 20: 0 },
+      label: 'Insert 20: BF(30) = +1',
+      focusInfo: 'Still balanced'
+    },
+    explanation: 'Node 20 is inserted on the left. Root balance factor becomes +1.',
+    aiHint: 'No rotation is needed while |BF| ≤ 1.'
+  });
+
+  steps.push({
+    stepNumber: 3,
+    lineNumber: 48,
+    eventType: 'AVL_IMBALANCE',
+    variables: { inserted: 10, balanceFactor: 2, rotation: 'RIGHT' },
+    output: ['Insert 10 → BF(30) = +2 → LL case → Right Rotation'],
+    dataStructureState: {
+      type: 'avl',
+      nodes: makeNodes(false),
+      activeIndex: 2,
+      balanceFactors: { 30: 2, 20: 1, 10: 0 },
+      label: 'LL Imbalance Detected at 30',
+      focusInfo: 'Balance factor +2 requires a right rotation'
+    },
+    explanation: 'Inserting 10 creates an LL imbalance. The AVL tree fixes it with a right rotation around 30.',
+    aiHint: 'Right rotation restores O(log n) height.'
+  });
+
+  steps.push({
+    stepNumber: 4,
+    lineNumber: 49,
+    eventType: 'AVL_ROTATION',
+    variables: { rotation: 'RIGHT', oldRoot: 30, newRoot: 20 },
+    output: ['Right Rotation complete: root = 20'],
+    dataStructureState: {
+      type: 'avl',
+      nodes: makeNodes(true),
+      activeIndex: 0,
+      balanceFactors: { 20: 0, 10: 0, 30: 0 },
+      label: 'AVL Balanced After Right Rotation',
+      focusInfo: '20 becomes root; 10 is left child; 30 is right child'
+    },
+    explanation: 'Right rotation promotes 20 to the root and restores balance.',
+    aiHint: 'AVL search, insertion and deletion remain O(log n) in height-balanced trees.'
+  });
+
+  return steps;
+}
+
+/**
+ * Topic-specific Sudoku grid trace
+ */
+export function generateDynamicSudokuTrace(language = 'java') {
+  const puzzle = [
+    [5, 3, 0, 0, 7, 0, 0, 0, 0],
+    [6, 0, 0, 1, 9, 5, 0, 0, 0],
+    [0, 9, 8, 0, 0, 0, 0, 6, 0],
+    [8, 0, 0, 0, 6, 0, 0, 0, 3],
+    [4, 0, 0, 8, 0, 3, 0, 0, 1],
+    [7, 0, 0, 0, 2, 0, 0, 0, 6],
+    [0, 6, 0, 0, 0, 0, 2, 8, 0],
+    [0, 0, 0, 4, 1, 9, 0, 0, 5],
+    [0, 0, 0, 0, 8, 0, 0, 7, 9],
+  ];
+  const solution = [
+    [5, 3, 4, 6, 7, 8, 9, 1, 2],
+    [6, 7, 2, 1, 9, 5, 3, 4, 8],
+    [1, 9, 8, 3, 4, 2, 5, 6, 7],
+    [8, 5, 9, 7, 6, 1, 4, 2, 3],
+    [4, 2, 6, 8, 5, 3, 7, 9, 1],
+    [7, 1, 3, 9, 2, 4, 8, 5, 6],
+    [9, 6, 1, 5, 3, 7, 2, 8, 4],
+    [2, 8, 7, 4, 1, 9, 6, 3, 5],
+    [3, 4, 5, 2, 8, 6, 1, 7, 9],
+  ];
+  const steps = [];
+  let step = 1;
+  const working = puzzle.map((row) => [...row]);
+
+  steps.push({
+    stepNumber: step++,
+    lineNumber: 3,
+    eventType: 'SUDOKU_INIT',
+    variables: { size: '9x9' },
+    output: ['Sudoku 9×9 grid initialized'],
+    dataStructureState: {
+      type: 'matrix',
+      matrix: working.map((row) => [...row]),
+      pointers: { activeRow: 0, activeCol: 0 },
+      label: 'Sudoku Solver: 9×9 Grid',
+      focusInfo: '0 means an empty cell'
+    },
+    explanation: 'The solver scans empty cells and tries a valid digit from 1 to 9.',
+    aiHint: 'Each placement must be valid in its row, column and 3×3 sub-grid.'
+  });
+
+  let placements = 0;
+  for (let r = 0; r < 9 && placements < 18; r++) {
+    for (let col = 0; col < 9 && placements < 18; col++) {
+      if (working[r][col] === 0) {
+        working[r][col] = solution[r][col];
+        placements++;
+        steps.push({
+          stepNumber: step++,
+          lineNumber: 8,
+          eventType: 'SUDOKU_PLACE',
+          variables: { row: r, col, value: working[r][col], placements },
+          output: [`Place ${working[r][col]} at [${r}][${col}]`],
+          dataStructureState: {
+            type: 'matrix',
+            matrix: working.map((row) => [...row]),
+            pointers: { activeRow: r, activeCol: col },
+            label: `Place ${working[r][col]} at [${r}][${col}]`,
+            focusInfo: 'Backtracking chooses a valid candidate for the active cell'
+          },
+          explanation: `Placed digit ${working[r][col]} in row ${r}, column ${col} using a valid Sudoku candidate.`,
+          aiHint: 'A real solver backtracks when no candidate is valid.'
+        });
+      }
+    }
+  }
+
+  steps.push({
+    stepNumber: step,
+    lineNumber: 12,
+    eventType: 'PROGRAM_END',
+    variables: { filledCells: placements },
+    output: [`Visualized ${placements} valid placements`],
+    dataStructureState: {
+      type: 'matrix',
+      matrix: working.map((row) => [...row]),
+      pointers: { activeRow: null, activeCol: null },
+      label: 'Sudoku Grid Visualization Complete',
+      focusInfo: 'Partial backtracking trace shown for clarity'
+    },
+    explanation: 'The 9×9 Sudoku grid is visualized with valid placements; the full solver can continue the same backtracking pattern.',
+    aiHint: 'Sudoku solving is exponential in the worst case, with strong pruning in practice.'
+  });
+
+  return steps;
+}
+
+/**
+ * Dynamic 3D Graph Traversal Trace Generator
+ */
+export function generateDynamicGraphTraversalTrace(mode = 'BFS', language = 'java') {
+  const nodes = [0, 1, 2, 3, 4].map((id) => ({ id, val: `V${id}` }));
+  const edges = [
+    { source: 0, target: 1 },
+    { source: 0, target: 2 },
+    { source: 1, target: 3 },
+    { source: 1, target: 4 },
+    { source: 2, target: 4 },
+    { source: 3, target: 4 },
+  ];
+  const adj = { 0: [1, 2], 1: [0, 3, 4], 2: [0, 4], 3: [1, 4], 4: [1, 2, 3] };
+  const steps = [];
+  const visited = new Set();
+  const order = [];
+  let step = 1;
+
+  if (mode === 'BFS') {
+    const queue = [0];
+    visited.add(0);
+    steps.push({
+      stepNumber: step++,
+      lineNumber: 4,
+      eventType: 'GRAPH_BFS_INIT',
+      variables: { start: 0, queue: '[0]' },
+      output: [],
+      dataStructureState: {
+        type: 'graph', nodes, edges, visited: [0], traversal: { mode: 'BFS', order: [] },
+        activeIndex: 0, queue: [0], label: 'BFS Initialized at V0', focusInfo: 'FIFO queue controls breadth-first exploration'
+      },
+      explanation: 'BFS starts at V0 and explores neighbors level by level using a FIFO queue.',
+      aiHint: 'BFS runs in O(V+E).'
+    });
+
+    while (queue.length) {
+      const u = queue.shift();
+      if (!order.includes(u)) order.push(u);
+      steps.push({
+        stepNumber: step++,
+        lineNumber: 6,
+        eventType: 'GRAPH_BFS_VISIT',
+        variables: { currentVertex: u, queue: JSON.stringify(queue), order: JSON.stringify(order) },
+        output: [`BFS visited V${u}`],
+        dataStructureState: {
+          type: 'graph', nodes, edges, visited: [...order], traversal: { mode: 'BFS', order: [...order] },
+          activeIndex: u, queue: [...queue], label: `BFS Visit: V${u}`, focusInfo: `Visited order: ${order.map((v) => 'V'+v).join(' → ')}`
+        },
+        explanation: `BFS removes V${u} from the front of the FIFO queue and marks it visited.`,
+        aiHint: 'Neighbors are enqueued once, preserving level order.'
+      });
+
+      for (const v of adj[u]) {
+        if (!visited.has(v)) {
+          visited.add(v);
+          queue.push(v);
+          steps.push({
+            stepNumber: step++,
+            lineNumber: 8,
+            eventType: 'GRAPH_BFS_ENQUEUE',
+            variables: { from: u, enqueued: v, queue: JSON.stringify(queue) },
+            output: [`Enqueue V${v}`],
+            dataStructureState: {
+              type: 'graph', nodes, edges, visited: [...order, ...queue], traversal: { mode: 'BFS', order: [...order] },
+              activeIndex: v, queue: [...queue], label: `Enqueue V${v}`, focusInfo: 'FIFO queue'
+            },
+            explanation: `V${v} is an unvisited neighbor of V${u}; enqueue it for later processing.`,
+            aiHint: 'BFS uses a queue: first in, first out.'
+          });
+        }
+      }
+    }
+  } else {
+    const stack = [0];
+    steps.push({
+      stepNumber: step++,
+      lineNumber: 4,
+      eventType: 'GRAPH_DFS_INIT',
+      variables: { start: 0, stack: '[0]' },
+      output: [],
+      dataStructureState: {
+        type: 'graph', nodes, edges, visited: [], traversal: { mode: 'DFS', order: [] },
+        activeIndex: 0, stack: [0], label: 'DFS Initialized at V0', focusInfo: 'LIFO stack controls depth-first exploration'
+      },
+      explanation: 'DFS starts at V0 and follows one branch deeply before backtracking.',
+      aiHint: 'DFS runs in O(V+E).'
+    });
+
+    while (stack.length) {
+      const u = stack.pop();
+      if (visited.has(u)) continue;
+      visited.add(u);
+      order.push(u);
+      steps.push({
+        stepNumber: step++,
+        lineNumber: 6,
+        eventType: 'GRAPH_DFS_VISIT',
+        variables: { currentVertex: u, stack: JSON.stringify(stack), order: JSON.stringify(order) },
+        output: [`DFS visited V${u}`],
+        dataStructureState: {
+          type: 'graph', nodes, edges, visited: [...order], traversal: { mode: 'DFS', order: [...order] },
+          activeIndex: u, stack: [...stack], label: `DFS Visit: V${u}`, focusInfo: `Visited order: ${order.map((v) => 'V'+v).join(' → ')}`
+        },
+        explanation: `DFS visits V${u} from the top of the LIFO stack.`,
+        aiHint: 'DFS uses a stack and explores depth before backtracking.'
+      });
+
+      for (let i = adj[u].length - 1; i >= 0; i--) {
+        const v = adj[u][i];
+        if (!visited.has(v)) stack.push(v);
+      }
+    }
+  }
+
+  steps.push({
+    stepNumber: step,
+    lineNumber: 10,
+    eventType: 'PROGRAM_END',
+    variables: { mode, traversalOrder: JSON.stringify(order) },
+    output: [`${mode} order: ${order.map((v) => 'V'+v).join(' → ')}`],
+    dataStructureState: {
+      type: 'graph', nodes, edges, visited: [...order], traversal: { mode, order: [...order] },
+      activeIndex: null, label: `${mode} Traversal Complete`, focusInfo: order.map((v) => 'V'+v).join(' → ')
+    },
+    explanation: `${mode} traversal completed with explicit visited order and ${mode === 'BFS' ? 'queue' : 'stack'} state.`,
+    aiHint: 'Both traversals run in O(V+E).'
+  });
+
+  return steps;
+}
+
+
+/**
+ * Topic-specific Doubly Linked List Trace
+ */
+export function generateDynamicDoublyLinkedListTrace(values = [10, 20, 30, 40], language = 'java') {
+  const nums = values.length >= 2 ? [...values] : [10, 20, 30, 40];
+  return nums.map((value, index) => ({
+    stepNumber: index + 1,
+    lineNumber: 8 + index,
+    eventType: 'DOUBLY_LIST_TRAVERSAL',
+    variables: {
+      'curr.val': value,
+      prev: index > 0 ? nums[index - 1] : null,
+      next: index < nums.length - 1 ? nums[index + 1] : null,
+    },
+    output: [`Node ${value}: prev=${index > 0 ? nums[index - 1] : 'null'}, next=${index < nums.length - 1 ? nums[index + 1] : 'null'}`],
+    dataStructureState: {
+      type: 'linked-list',
+      values: [...nums],
+      activeIndex: index,
+      pointers: {
+        HEAD: 0,
+        CURR: index,
+        PREV: index > 0 ? index - 1 : null,
+        NEXT: index < nums.length - 1 ? index + 1 : null,
+      },
+      label: `Doubly Node [${index}] = ${value}`,
+      focusInfo: `prev=${index > 0 ? nums[index - 1] : 'null'} ← ${value} → next=${index < nums.length - 1 ? nums[index + 1] : 'null'}`,
+    },
+    explanation: `Visited doubly linked-list node ${value}; both previous and next references are available.`,
+    aiHint: 'Doubly linked lists support bidirectional traversal because every node stores prev and next.'
+  }));
+}
+
+/**
+ * Topic-specific Circular Linked List Trace
+ */
+export function generateDynamicCircularLinkedListTrace(values = [10, 20, 30, 40], language = 'java') {
+  const nums = values.length >= 2 ? [...values] : [10, 20, 30, 40];
+  return nums.map((value, index) => {
+    const nextIndex = (index + 1) % nums.length;
+    return {
+      stepNumber: index + 1,
+      lineNumber: 9 + index,
+      eventType: 'CIRCULAR_LIST_TRAVERSAL',
+      variables: { 'curr.val': value, currentIndex: index, nextIndex },
+      output: [`Node ${value} → Node ${nums[nextIndex]}`],
+      dataStructureState: {
+        type: 'linked-list',
+        values: [...nums],
+        activeIndex: index,
+        pointers: { HEAD: 0, CURR: index, NEXT: nextIndex },
+        isCircular: true,
+        label: `Circular Node [${index}] = ${value}`,
+        focusInfo: `next points to Node [${nextIndex}] = ${nums[nextIndex]}`,
+      },
+      explanation: `Traversed node ${value}; its next reference points to ${nums[nextIndex]}, wrapping to HEAD at the end.`,
+      aiHint: 'A circular linked list has no null tail; the last node links back to the head.'
+    };
+  });
+}
+
+/**
+ * Topic-specific Tree Traversal Trace (In-Order + Level-Order BFS)
+ */
+export function generateDynamicTreeTraversalTrace(language = 'java') {
+  const nodes = [
+    { id: 0, val: 50, left: 1, right: 2, parent: null, depth: 0 },
+    { id: 1, val: 30, left: 3, right: 4, parent: 0, depth: 1 },
+    { id: 2, val: 70, left: 5, right: 6, parent: 0, depth: 1 },
+    { id: 3, val: 20, left: null, right: null, parent: 1, depth: 2 },
+    { id: 4, val: 40, left: null, right: null, parent: 1, depth: 2 },
+    { id: 5, val: 60, left: null, right: null, parent: 2, depth: 2 },
+    { id: 6, val: 80, left: null, right: null, parent: 2, depth: 2 },
+  ];
+  const steps = [];
+  let step = 1;
+  const inOrder = [3, 1, 4, 0, 5, 2, 6];
+
+  for (let index = 0; index < inOrder.length; index++) {
+    const id = inOrder[index];
+    const node = nodes[id];
+    const order = inOrder.slice(0, index + 1).map((x) => nodes[x].val);
+    steps.push({
+      stepNumber: step++,
+      lineNumber: 7,
+      eventType: 'TREE_INORDER_VISIT',
+      variables: { currentNode: node.val },
+      output: [`In-Order Visit: ${node.val}`],
+      dataStructureState: {
+        type: 'tree',
+        nodes,
+        activeIndex: id,
+        traversal: { mode: 'IN_ORDER', order },
+        label: `In-Order → ${node.val}`,
+        focusInfo: 'Left → Root → Right',
+      },
+      explanation: `In-order traversal visits ${node.val}: left subtree, current node, then right subtree.`,
+      aiHint: 'For a BST, in-order traversal produces sorted values.'
+    });
+  }
+
+  const bfs = [0, 1, 2, 3, 4, 5, 6];
+  const queue = [];
+  for (let index = 0; index < bfs.length; index++) {
+    const id = bfs[index];
+    queue.push(id);
+    const node = nodes[id];
+    const order = queue.map((x) => nodes[x].val);
+    steps.push({
+      stepNumber: step++,
+      lineNumber: 13,
+      eventType: 'TREE_BFS_VISIT',
+      variables: { currentNode: node.val, queue: order },
+      output: [`BFS / Level-Order Visit: ${node.val}`],
+      dataStructureState: {
+        type: 'tree',
+        nodes,
+        activeIndex: id,
+        queue: order,
+        traversal: { mode: 'BFS', order },
+        label: `Level-Order BFS → ${node.val}`,
+        focusInfo: 'FIFO queue visits nodes level by level',
+      },
+      explanation: `Level-order traversal visits ${node.val} using a FIFO queue.`,
+      aiHint: 'BFS uses a FIFO queue and runs in O(n).'
+    });
+  }
+  return steps;
+}
+
+/**
+ * Topic-specific Longest Common Subsequence DP Trace
+ */
+export function generateDynamicLcsTrace(language = 'java') {
+  const a = 'abcde';
+  const b = 'ace';
+  const rows = a.length + 1;
+  const cols = b.length + 1;
+  const dp = Array.from({ length: rows }, () => Array(cols).fill(0));
+  const steps = [];
+  let step = 1;
+
+  steps.push({
+    stepNumber: step++,
+    lineNumber: 3,
+    eventType: 'LCS_INIT',
+    variables: { a, b },
+    output: [],
+    dataStructureState: {
+      type: 'dp',
+      matrix: dp.map((row) => [...row]),
+      pointers: { activeRow: 0, activeCol: 0 },
+      label: 'LCS DP Table Initialized',
+      focusInfo: `Rows = "${a}", Columns = "${b}"`,
+    },
+    explanation: 'LCS uses a 2D DP table for prefixes of both strings.',
+    aiHint: 'If characters match, use diagonal + 1; otherwise take max(top, left).'
+  });
+
+  for (let i = 1; i < rows; i++) {
+    for (let j = 1; j < cols; j++) {
+      const match = a[i - 1] === b[j - 1];
+      dp[i][j] = match ? dp[i - 1][j - 1] + 1 : Math.max(dp[i - 1][j], dp[i][j - 1]);
+
+      steps.push({
+        stepNumber: step++,
+        lineNumber: 7,
+        eventType: 'LCS_DP_UPDATE',
+        variables: { row: i, col: j, charA: a[i - 1], charB: b[j - 1], value: dp[i][j] },
+        output: [],
+        dataStructureState: {
+          type: 'dp',
+          matrix: dp.map((row) => [...row]),
+          pointers: { activeRow: i, activeCol: j },
+          label: `dp[${i}][${j}] = ${dp[i][j]}`,
+          focusInfo: match ? `Match "${a[i - 1]}" → diagonal + 1` : 'Mismatch → max(top, left)',
+        },
+        explanation: match
+          ? `Characters match (${a[i - 1]}), so diagonal DP state is extended.`
+          : 'Characters differ, so the larger of the top and left states is kept.',
+        aiHint: 'The table builds optimal answers from smaller prefixes.'
+      });
+    }
+  }
+
+  steps.push({
+    stepNumber: step,
+    lineNumber: 12,
+    eventType: 'PROGRAM_END',
+    variables: { lcsLength: dp[rows - 1][cols - 1] },
+    output: [`LCS length = ${dp[rows - 1][cols - 1]}`],
+    dataStructureState: {
+      type: 'dp',
+      matrix: dp.map((row) => [...row]),
+      pointers: { activeRow: rows - 1, activeCol: cols - 1 },
+      label: `LCS Complete: length = ${dp[rows - 1][cols - 1]}`,
+      focusInfo: 'Final cell contains the optimal subsequence length',
+    },
+    explanation: `The final DP cell gives the LCS length of ${dp[rows - 1][cols - 1]}.`,
+    aiHint: 'Time O(nm), space O(nm) for the full DP table.'
+  });
+
+  return steps;
+}
+
 export function generateDynamicGraphTrace(values = [0, 1, 2, 3, 4], language = 'java') {
   const order = [0, 1, 2, 3, 4];
   const steps = [];
@@ -2379,7 +3162,7 @@ export function generateDynamicReverseTrace(values = [10, 20, 30, 40, 50], langu
       variables: { left, right, swapped: `${a} <-> ${b}` },
       output: [],
       dataStructureState: {
-        type: 'sorting',
+        type: 'array',
         values: [...arr],
         swappedIndices: [left, right],
         pointers: { low: left, high: right },
@@ -2903,7 +3686,7 @@ export function generateDynamicDpTrace(values = [1, 2, 3, 5, 8], language = 'jav
     variables: { 'dp[0]': 1, 'dp[1]': 2 },
     output: [],
     dataStructureState: {
-      type: 'array',
+      type: 'dp',
       values: [...dp],
       activeIndex: 1,
       label: 'DP Base Cases: dp[0]=1, dp[1]=2',
@@ -2924,7 +3707,7 @@ export function generateDynamicDpTrace(values = [1, 2, 3, 5, 8], language = 'jav
       variables: { i, 'dp[i-1]': dp[i - 1], 'dp[i-2]': dp[i - 2], 'dp[i]': val },
       output: [],
       dataStructureState: {
-        type: 'array',
+        type: 'dp',
         values: [...dp],
         activeIndex: i,
         comparedIndices: [i - 2, i - 1],
@@ -3793,7 +4576,7 @@ export function generateDynamicTrieTrace(wordsInput, lang = 'java') {
     variables: { root: 'ROOT', totalWords: 0 },
     output: ['Trie (Prefix Tree) root initialized.'],
     dataStructureState: {
-      type: 'tree',
+      type: 'trie',
       name: 'trie',
       nodes: [trieNodes[0]],
       activeIndex: 0,
@@ -3812,7 +4595,7 @@ export function generateDynamicTrieTrace(wordsInput, lang = 'java') {
     variables: { word: 'cat', path: 'ROOT → c → a → t', isEndOfWord: true },
     output: [...output],
     dataStructureState: {
-      type: 'tree',
+      type: 'trie',
       name: 'trie',
       nodes: [trieNodes[0], trieNodes[1], trieNodes[3], trieNodes[4]],
       activeIndex: 4,
@@ -3831,7 +4614,7 @@ export function generateDynamicTrieTrace(wordsInput, lang = 'java') {
     variables: { word: 'car', sharedPrefix: 'ca', path: 'ROOT → c → a → r', isEndOfWord: true },
     output: [...output],
     dataStructureState: {
-      type: 'tree',
+      type: 'trie',
       name: 'trie',
       nodes: [trieNodes[0], trieNodes[1], trieNodes[3], trieNodes[4], trieNodes[5]],
       activeIndex: 5,
@@ -3850,7 +4633,7 @@ export function generateDynamicTrieTrace(wordsInput, lang = 'java') {
     variables: { word: 'cart', path: 'ROOT → c → a → r → t', isEndOfWord: true },
     output: [...output],
     dataStructureState: {
-      type: 'tree',
+      type: 'trie',
       name: 'trie',
       nodes: [trieNodes[0], trieNodes[1], trieNodes[3], trieNodes[4], trieNodes[5], trieNodes[6]],
       activeIndex: 6,
@@ -3869,7 +4652,7 @@ export function generateDynamicTrieTrace(wordsInput, lang = 'java') {
     variables: { word: 'dog', path: 'ROOT → d → o → g', isEndOfWord: true },
     output: [...output],
     dataStructureState: {
-      type: 'tree',
+      type: 'trie',
       name: 'trie',
       nodes: trieNodes,
       activeIndex: 8,
@@ -3888,7 +4671,7 @@ export function generateDynamicTrieTrace(wordsInput, lang = 'java') {
     variables: { query: 'car', result: true, finalNode: 'r', isEnd: true },
     output: [...output],
     dataStructureState: {
-      type: 'tree',
+      type: 'trie',
       name: 'trie',
       nodes: trieNodes,
       activeIndex: 5,
@@ -3907,7 +4690,7 @@ export function generateDynamicTrieTrace(wordsInput, lang = 'java') {
     variables: { query: 'can', result: false, stoppedAt: 'a', missingChar: 'n' },
     output: [...output],
     dataStructureState: {
-      type: 'tree',
+      type: 'trie',
       name: 'trie',
       nodes: trieNodes,
       activeIndex: 3,
@@ -7355,6 +8138,419 @@ export function generateDynamicUniversalTrace(code, values, lang = 'code', custo
  * Dynamically synthesizes an execution trace for ANY custom user code or program ID.
  * Parses user numbers, detects algorithms & data structures, and provides real 3D steps.
  */
+
+/**
+ * Canonical coverage router for the complete Striver SDE catalog and the
+ * 49 built-in DSA curriculum programs. The problem title/id is authoritative.
+ * This prevents broad archetype fallbacks (e.g. every two-pointer problem
+ * becoming the same generic array animation).
+ */
+function generateCatalogProblemTrace({ id = '', title = '', archetype = '', input = null, code = '', language = 'java' }) {
+  const t = String(title).toLowerCase();
+  const a = String(archetype).toLowerCase().replace(/_/g, '-');
+  const values = extractNumbersFromCode(input);
+  const arr = values.length >= 2 ? values : [7, 2, 5, 1, 9];
+
+  // Exact/near-exact algorithm families with dedicated trace generators.
+  // Exact topic IDs must be resolved before broad title matching.
+  if (id === 'quick-sort') return generateDynamicQuickSortTrace(arr, language);
+  if (id === 'two-pointer-reverse') return generateDynamicTwoPointerReverseTrace(arr, language);
+  if (id === 'sliding-window') return generateDynamicSlidingWindowTrace(arr, language);
+  if (id === 'hash-table') return generateDynamicHashTableTrace(arr, language);
+  if (id === 'avl-tree') return generateDynamicAvlTrace(language);
+  if (id === 'parentheses-stack') return generateDynamicValidParenthesesTrace(input || '()[]{}', language);
+  if (id === 'sudoku-solver') return generateDynamicSudokuTrace(language);
+  if (id === 'graph-bfs') return generateDynamicGraphTraversalTrace('BFS', language);
+  if (id === 'graph-dfs') return generateDynamicGraphTraversalTrace('DFS', language);
+  if (id === 'doubly-linked-list') return generateDynamicDoublyLinkedListTrace(arr, language);
+  if (id === 'circular-linked-list') return generateDynamicCircularLinkedListTrace(arr, language);
+  if (id === 'tree-traversals') return generateDynamicTreeTraversalTrace(language);
+  if (id === 'lcs') return generateDynamicLcsTrace(language);
+  if (t.includes('set matrix zero')) return generateDynamicSetMatrixZeroesTrace(values, language);
+  if (t.includes("pascal")) return generateDynamicPascalsTriangleTrace(values, language);
+  if (t.includes('next permutation')) return generateDynamicNextPermutationTrace(values, language);
+  if (t.includes('kadane') || t.includes('maximum subarray')) return generateDynamicKadaneTrace(arr, language);
+  if (t.includes('sort colors') || t.includes("dutch national flag")) return generateDynamicSortColorsTrace(arr, language);
+  if (t.includes('buy and sell stock') || t.includes('stock span')) return generateDynamicStockTrace(arr, language);
+  if (t.includes('maximum product subarray')) return generateDynamicKadaneTrace(arr, language);
+  if (t.includes('rotate') && (t.includes('matrix') || t.includes('image'))) return generateDynamicRotateMatrixTrace(values, language);
+  if (t.includes('merge over') && t.includes('interval')) return generateDynamicMergeIntervalsTrace(language);
+  if (t.includes('merge two sorted arrays')) return generateDynamicArrayTrace(arr, language);
+  if (t.includes('find the duplicate')) return generateDynamicFindDuplicateTrace(arr, language);
+  if (t.includes('repeat and missing')) return generateDynamicArrayTrace(arr, language);
+  if (t.includes('inversion of array') || t.includes('reverse pairs')) return generateDynamicMergeSortTrace(arr, language);
+  if (t.includes('search in a 2d matrix')) return generateDynamicBinarySearchTrace(arr.length >= 2 ? arr : [1, 3, 5, 7, 9], language);
+  if (t.includes('pow(x, n)') || t.includes('binary exponentiation')) return generateDynamicRecursionTrace([4], language);
+  if (t.includes('majority element')) return generateDynamicMajorityElementTrace(arr, language);
+  if (t.includes('grid unique paths')) return generateDynamicDpTrace([1, 2, 3, 5, 8], language);
+  if (t.includes('2 sum')) return generateDynamicTwoSumTrace(arr, 9, language);
+  if (t.includes('3 sum')) return generateDynamic3SumTrace(arr, language);
+  if (t.includes('4 sum')) return generateDynamic3SumTrace(arr, language);
+  if (t.includes('longest consecutive')) return generateDynamicArrayTrace(arr, language);
+  if (t.includes('largest subarray with 0 sum')) return generateDynamicArrayTrace(arr, language);
+  if (t.includes('subarrays with given xor')) return generateDynamicTwoSumTrace(arr, 0, language);
+  if (t.includes('substring without repeat')) return generateDynamicArrayTrace(arr, language);
+
+  if (t.includes('reverse a linked list')) return generateDynamicReverseLinkedListTrace(arr, language);
+  if (t.includes('merge two sorted lists')) return generateDynamicLinkedListTrace(arr, language);
+  if (t.includes('linked list') || t.includes('node from end') || t.includes('linked-list')) return generateDynamicLinkedListTrace(arr, language);
+
+  if (t.includes('trapping rain water')) return generateDynamicTrappingWaterTrace(arr, language);
+  if (t.includes('container with most water')) return generateDynamicContainerWaterTrace(arr, language);
+  if (t.includes('remove duplicates from sorted array')) return generateDynamicArrayTrace(arr, language);
+  if (t.includes('max consecutive ones')) return generateDynamicArrayTrace(arr, language);
+
+  if (t.includes('meeting') || t.includes('platform') || t.includes('job sequencing') || t.includes('fractional knapsack') || t.includes('assign cookies') || t.includes('greedy coin')) {
+    return generateDynamicSortTrace(arr, language);
+  }
+
+  if (t.includes('subset') || t.includes('combination sum') || t.includes('permutation') || t.includes('palindrome partition') ||
+      t.includes('n-queens') || t.includes('sudoku') || t.includes('m-coloring') || t.includes('rat in a maze') || t.includes('word break') && a.includes('recursion')) {
+    return t.includes('n-queens') ? generateDynamicNQueensTrace(language) : generateDynamicRecursionTrace([4], language);
+  }
+
+  if (t.includes('n-th root') || t.includes('matrix median') || t.includes('search in rotated') || t.includes('median of two sorted') ||
+      t.includes('k-th element') || t.includes('allocate minimum') || t.includes('aggressive cows') || a.includes('binary-search')) {
+    return generateDynamicBinarySearchTrace(arr.length >= 2 ? arr : [1, 4, 7, 10, 13], language);
+  }
+
+  if (t.includes('heap') || t.includes('kth largest') || t.includes('k-th largest') || t.includes('maximum sum combination') ||
+      t.includes('median from data stream') || t.includes('merge k sorted') || t.includes('stream')) {
+    return generateDynamicHeapTrace(arr.length >= 3 ? arr : [10, 15, 20, 17, 25], language);
+  }
+
+  if (t.includes('k most frequent') || t.includes('hash') || t.includes('two sum') ||
+      t.includes('zero sum') || t.includes('given xor') || t.includes('distinct numbers in window')) {
+    return generateDynamicTwoSumTrace(arr, 9, language);
+  }
+
+  if (t.includes('sliding window maximum')) return generateDynamicSlidingWindowMaxTrace(arr, language);
+  if (t.includes('next greater element') || t.includes('next smaller') || t.includes('largest rectangle') ||
+      t.includes('min stack') || t.includes('celebrity problem')) return generateDynamicMonotonicStackTrace(arr, language);
+  if (t.includes('valid parentheses')) return generateDynamicValidParenthesesTrace(input || '()[]{}', language);
+  if (t.includes('lru cache') || t.includes('lfu cache')) return generateDynamicLruCacheTrace(arr, language);
+
+  if (t.includes('rotting oranges')) return generateDynamicRottenOrangesTrace(language);
+  if (t.includes('word search')) return generateDynamicWordSearchTrace(language);
+  if (t.includes('dijkstra') || t.includes('shortest path')) return generateDynamicDijkstraTrace(arr, language);
+  if (t.includes('topological') || t.includes('course schedule')) return generateDynamicTopologicalSortTrace(arr, language);
+  if (t.includes('disjoint') || t.includes('kruskal') || a.includes('dsu')) return generateDynamicDsuTrace(arr, language);
+  if (t.includes('graph') || t.includes('is graph bipartite') || t.includes('islands') || t.includes('bellman') ||
+      t.includes('floyd warshall') || t.includes('prim') || t.includes('kosaraju')) return generateDynamicGraphTrace(arr, language);
+
+  if (t.includes('trie') || t.includes('prefix') || t.includes('distinct substrings')) return generateDynamicTrieTrace([], language);
+
+  if (t.includes('lis') || t.includes('longest increasing subsequence')) return generateDynamicLisTrace(arr, language);
+  if (t.includes('knapsack')) return generateDynamicKnapsackTrace(language);
+  if (t.includes('coin change')) return generateDynamicCoinChangeTrace(arr, language);
+  if (t.includes('edit distance') || t.includes('common subsequence') || t.includes('partition') ||
+      t.includes('rod cutting') || t.includes('egg dropping') || t.includes('matrix chain') ||
+      t.includes('job scheduling') || a === 'dp') return generateDynamicDpTrace(arr, language);
+
+  if (t.includes('power set') || t.includes('bitmask')) return generateDynamicRecursionTrace([4], language);
+
+  // Exact topic ids that are not descriptive enough on their own.
+  if (id === 'student-result') return generateDynamicUniversalTrace(code || String(input || ''), values, language, input);
+  if (id === 'array-loop') return generateDynamicArrayTrace(arr, language);
+  if (id === 'matrix') return generateDynamicMatrixTrace(arr, language);
+  if (id.includes('linked-list')) return generateDynamicLinkedListTrace(arr, language);
+  if (id === 'cycle-detection') return generateDynamicCycleTrace(arr, language);
+  if (id === 'stack' || id.includes('parentheses')) return generateDynamicStackTrace(arr, language);
+  if (id.includes('queue') || id === 'deque') return generateDynamicQueueTrace(arr, language);
+  if (id === 'bst' || id.includes('tree')) return generateDynamicTreeTrace(arr, language);
+  if (id.includes('sort')) return generateDynamicSortTrace(arr, language);
+  if (id.includes('binary-search')) return generateDynamicBinarySearchTrace(arr, language);
+  if (id.includes('graph')) return generateDynamicGraphTrace(arr, language);
+  if (id.includes('heap')) return generateDynamicHeapTrace(arr, language);
+  if (id.includes('trie')) return generateDynamicTrieTrace([], language);
+  if (id.includes('dijkstra')) return generateDynamicDijkstraTrace(arr, language);
+  if (id.includes('knapsack')) return generateDynamicKnapsackTrace(language);
+  if (id.includes('lcs') || id.includes('fibonacci') || id.includes('dp')) return generateDynamicDpTrace(arr, language);
+  if (id.includes('n-queens')) return generateDynamicNQueensTrace(language);
+  if (id.includes('sudoku')) return generateDynamicRecursionTrace([4], language);
+  if (id.includes('rotten')) return generateDynamicRottenOrangesTrace(language);
+  if (id.includes('word-search')) return generateDynamicWordSearchTrace(language);
+
+  // Final archetype fallback: every catalog entry still gets a real registered
+  // visualizer state rather than an empty trace.
+  if (a.includes('matrix') || a.includes('grid')) return generateDynamicMatrixTrace(arr, language);
+  if (a.includes('linked')) return generateDynamicLinkedListTrace(arr, language);
+  if (a.includes('stack')) return generateDynamicStackTrace(arr, language);
+  if (a.includes('queue')) return generateDynamicQueueTrace(arr, language);
+  if (a.includes('tree') || a.includes('bst')) return generateDynamicTreeTrace(arr, language);
+  if (a.includes('graph')) return generateDynamicGraphTrace(arr, language);
+  if (a.includes('heap')) return generateDynamicHeapTrace(arr, language);
+  if (a.includes('trie')) return generateDynamicTrieTrace([], language);
+  if (a.includes('dp') || a.includes('lis')) return generateDynamicDpTrace(arr, language);
+  if (a.includes('recursion')) return generateDynamicRecursionTrace([4], language);
+  if (a.includes('sort')) return generateDynamicSortTrace(arr, language);
+  if (a.includes('search') || a.includes('two-pointer') || a.includes('sliding-window')) return generateDynamicArrayTrace(arr, language);
+  return generateDynamicArrayTrace(arr, language);
+}
+
+/**
+ * Align simulator-generated trace steps with the actual source code.
+ *
+ * The rich DSA traces are intentionally deterministic and historically used
+ * template line numbers. Once a topic's code was edited, those numbers could
+ * point at a blank/wrong line in Monaco (for example array-loop's i++ pointed
+ * at line 3 instead of the for statement on line 6). This pass keeps the rich
+ * 3D state but resolves each step to a semantically matching source line.
+ */
+export function alignTraceLinesWithSource(code, steps, language = 'java') {
+  if (typeof code !== 'string' || !code.trim() || !Array.isArray(steps) || !steps.length) {
+    return steps;
+  }
+
+  const sourceLines = code.split(/\r?\n/);
+  const normalized = sourceLines.map((line) => line.replace(/\/\/.*$/, '').trim());
+
+  const patterns = [
+    [/^(?:ARRAY_CREATION|ARRAY_INIT|ARRAY_ASSIGN|ARRAY_WRITE|MATRIX_INIT|MATRIX_SCAN|GRID_INIT|BOARD_INIT|SUDOKU_INIT)$/i,
+      [/\b(?:int|long|double|float|char|boolean|String)\s*\[\]\s*\\w+\s*=|\b(?:int|long|double|float|char|boolean|String)\s+\\w+\s*\[\]\s*=|\b(?:array|matrix|grid|board)\b.*(?:=|new)\s+/i]],
+    [/^(?:LOOP_INIT|LOOP_INCREMENT|CONDITION_CHECK|COUNTER_INCREMENT|NESTED_LOOP_INIT|LOOP_ITERATION)$/i,
+      [/\b(?:for|while|do)\b/i]],
+    [/^(?:IF_CONDITION_CHECK|TARGET_SEARCH_INIT|BREAKPOINT_FOUND)$/i,
+      [/\b(?:if|else\s+if|switch|case)\b/i]],
+    [/^(?:ARRAY_ACCESS|PRINT_OUTPUT|OUTPUT|PROGRAM_OUTPUT|TARGET_FOUND|WORD_FOUND|TRIE_SEARCH_FOUND|TRIE_SEARCH_MISSING)$/i,
+      [/\b(?:System\.out\.(?:print|println)|print(?:ln)?|console\.log)\b/i, /\[[^\]]+\]/]],
+    [/^(?:SWAP|SWAP_ELEMENTS|TWO_POINTER_SWAP|PARTITION_SWAP|TRANSPOSE_SWAP|ROW_REVERSE|REVERSE_STEP)$/i,
+      [/(?:(?:swap|temp|tmp)|\[[^\]]+\]\s*=)/i]],
+    [/^(?:POINTER_INIT|POINTER_REVERSE|POINTER_SCAN|TWO_POINTER_INIT|TWO_POINTER_ADVANCE|TWO_POINTER_STEP|WINDOW_INIT|WINDOW_SLIDE)$/i,
+      [/(?:left|right|slow|fast|pointer|window|start|end)/i]],
+    [/^(?:STACK_INIT|STACK_PUSH|STACK_POP)$/i,
+      [/(?:stack|push|pop)/i]],
+    [/^(?:QUEUE_ENQUEUE|QUEUE_DEQUEUE|QUEUE_INIT)$/i,
+      [/(?:queue|offer|poll|enqueue|dequeue)/i]],
+    [/^(?:TREE_INSERT_ROOT|TREE_INSERT_NODE|TREE_COMPARE_LEFT|TREE_COMPARE_RIGHT|TREE_INORDER_VISIT|TREE_BFS_VISIT|AVL_INSERT|AVL_IMBALANCE|AVL_ROTATION)$/i,
+      [/(?:tree|node|root|insert|rotate|rotation|balance|height|inorder|travers)/i]],
+    [/^(?:GRAPH_BFS_INIT|GRAPH_BFS_VISIT|GRAPH_BFS_ENQUEUE|GRAPH_DFS_INIT|GRAPH_DFS_VISIT|GRAPH_VISIT|EDGE_RELAXATION|VERTEX_PROCESSED|DIJKSTRA_INIT|DIJKSTRA_COMPLETE|TOPO_INIT)$/i,
+      [/(?:graph|bfs|dfs|visited|queue|stack|edge|dist|distance|vertex|topolog|priorityqueue)/i]],
+    [/^(?:HEAP_INIT|HEAP_INSERT|HEAP_COMPARE|HEAP_SWAP)$/i,
+      [/(?:heap|parent|child|sift|bubble|priority)/i]],
+    [/^(?:HASH_INIT|HASH_INSERT|HASH_LOOKUP|SET_INSERT)$/i,
+      [/(?:hash|map|set|bucket|key|lookup|put|get)/i]],
+    [/^(?:TRIE_INIT|TRIE_INSERT)$/i,
+      [/(?:trie|prefix|children|insert)/i]],
+    [/^(?:DSU_INIT|DSU_UNION|DSU_FIND_CONNECTED|DSU_FIND_DISCONNECTED)$/i,
+      [/(?:dsu|union|find|parent|rank|disjoint)/i]],
+    [/^(?:DP_INIT|DP_UPDATE|DP_TRANSITION|DP_BASE_CASE|DP_TABLE_INIT|LCS_INIT|LCS_DP_UPDATE|KADANE_INIT|LIS_INIT|LIS_EXTEND)$/i,
+      [/(?:dp|memo|table|lcs|lis|kadane|max|sum|transition|recurrence)/i]],
+    [/^(?:RECURSION_RETURN|FUNCTION_DECLARE|FUNCTION_CALL|FUNCTION_EXECUTE|FUNCTION_RETURN|FRAME_POP)$/i,
+      [/(?:return|void|function|method|call|recursive)/i]],
+    [/^(?:DIVIDE|MERGE_SUBARRAY|PIVOT_SELECT|PARTITION_COMPARE|PIVOT_PLACED)$/i,
+      [/(?:merge|divide|mid|pivot|partition)/i]],
+    [/^(?:WATER_TRAPPED|TRAPPING_WATER_INIT|UPDATE_LEFT_MAX|UPDATE_RIGHT_MAX)$/i,
+      [/(?:water|height|leftMax|rightMax|maxLeft|maxRight)/i]],
+    [/^(?:LRU_INIT)$/i, [/(?:lru|cache|capacity|linked)/i]],
+    [/^(?:STOCK_INIT|NEW_MIN_PRICE)$/i, [/(?:price|stock|min|profit)/i]],
+    [/^(?:SCANNER_INIT|INPUT_READ|ARITHMETIC_CALCULATION|IO_CLOSE|VARIABLES_INITIALIZED)$/i,
+      [/(?:Scanner|nextInt|nextLine|nextDouble|System\.out|close\(\)|=)/i]],
+    [/^(?:CONTAGION_SPREAD|GRID_INIT|CHAR_MATCH|SOLUTION_FOUND|QUEEN_PLACED|CONFLICT_DETECTED)$/i,
+      [/(?:grid|board|queue|visited|char|queen|backtrack|conflict|solution)/i]],
+  ];
+
+  const findPatterns = (eventType) => {
+    const normalizedEvent = String(eventType || '').toUpperCase();
+    const match = patterns.find(([eventRegex]) => eventRegex.test(normalizedEvent));
+    return match?.[1] || [];
+  };
+
+  const isCandidate = (line) => {
+    const trimmed = String(line || '').trim();
+    return Boolean(trimmed) && !trimmed.startsWith('//') && !trimmed.startsWith('/*') && trimmed !== '*' && trimmed !== '*/';
+  };
+
+  const scoreLine = (step, lineNumber) => {
+    const index = lineNumber - 1;
+    if (index < 0 || index >= normalized.length || !isCandidate(normalized[index])) return -Infinity;
+
+    const line = normalized[index];
+    const patternsForStep = findPatterns(step?.eventType);
+    if (!patternsForStep.length) return 0;
+
+    let score = 0;
+    for (const regex of patternsForStep) {
+      if (regex.test(line)) score += 10;
+    }
+
+    const oldLine = Number(step?.lineNumber);
+    if (Number.isFinite(oldLine) && oldLine === lineNumber) score += 3;
+
+    if (patternsForStep.some((regex) => regex.test(line))) return score;
+    return -1;
+  };
+
+  return steps.map((step) => {
+    const current = Number(step?.lineNumber);
+    const currentScore = Number.isFinite(current) ? scoreLine(step, current) : -1;
+
+    // Preserve already-correct mappings.
+    if (currentScore >= 0) return step;
+
+    const candidates = [];
+    for (let lineNumber = 1; lineNumber <= normalized.length; lineNumber += 1) {
+      const score = scoreLine(step, lineNumber);
+      if (score >= 0) {
+        candidates.push({
+          lineNumber,
+          score,
+          distance: Number.isFinite(current) ? Math.abs(lineNumber - current) : lineNumber,
+        });
+      }
+    }
+
+    if (!candidates.length) {
+      // Last resort: never point Monaco at a blank/out-of-range line.
+      const fallback = Number.isFinite(current) && current >= 1 && current <= normalized.length
+        ? current
+        : Math.max(1, Math.min(normalized.length, 1));
+      if (isCandidate(normalized[fallback - 1])) {
+        return { ...step, lineNumber: fallback };
+      }
+      const firstExecutable = normalized.findIndex(isCandidate);
+      return { ...step, lineNumber: firstExecutable >= 0 ? firstExecutable + 1 : 1 };
+    }
+
+    candidates.sort((a, b) => b.score - a.score || a.distance - b.distance);
+    return { ...step, lineNumber: candidates[0].lineNumber };
+  });
+}
+
+function hardenStriver130to182Trace(steps, id, archetype, values = []) {
+  const problemId = Number(id);
+  if (!Number.isInteger(problemId) || problemId < 130 || problemId > 182) {
+    return steps;
+  }
+
+  const arch = String(archetype || '').toLowerCase().replace(/_/g, '-');
+  let fallbackType = 'array';
+  if (arch.includes('bst') || arch.includes('tree')) fallbackType = 'tree';
+  else if (arch.includes('heap')) fallbackType = 'heap';
+  else if (arch.includes('graph') || arch.includes('topological') || arch.includes('dijkstra')) fallbackType = 'graph';
+  else if (arch.includes('matrix') || arch.includes('grid')) fallbackType = 'matrix';
+  else if (arch.includes('trie')) fallbackType = 'trie';
+  else if (arch.includes('dp') || arch.includes('lis')) fallbackType = 'dp';
+  else if (arch.includes('stack')) fallbackType = 'stack';
+  else if (arch.includes('queue')) fallbackType = 'queue';
+  else if (arch.includes('recursion')) fallbackType = 'recursion';
+  else if (arch.includes('hash')) fallbackType = 'hash-table';
+  else if (arch.includes('sort') || arch.includes('search') || arch.includes('two-pointer') || arch.includes('sliding-window')) fallbackType = 'array';
+
+  const safeValues = Array.isArray(values) && values.length
+    ? values.filter(Number.isFinite).slice(0, 20)
+    : [7, 2, 5, 1, 9];
+
+  const fallbackState = () => {
+    if (fallbackType === 'matrix' || fallbackType === 'dp') {
+      return {
+        type: fallbackType,
+        values: fallbackType === 'matrix' ? [[1, 2, 3], [4, 5, 6], [7, 8, 9]] : safeValues,
+        activeIndex: 0,
+        label: 'Execution ready',
+        focusInfo: 'Safe fallback trace for this Striver problem.',
+      };
+    }
+    if (fallbackType === 'tree') {
+      return {
+        type: 'tree',
+        values: [50, 30, 70, 20, 40, 60, 80],
+        activeIndex: 0,
+        label: 'Tree execution ready',
+        focusInfo: 'Safe fallback tree state.',
+      };
+    }
+    if (fallbackType === 'heap') {
+      const heap = [...safeValues].sort((a, b) => a - b).slice(0, 12);
+      return {
+        type: 'heap',
+        values: heap.length ? heap : [10, 15, 20, 17, 25],
+        activeIndex: 0,
+        label: 'Heap execution ready',
+        focusInfo: 'Safe fallback heap state.',
+      };
+    }
+    if (fallbackType === 'trie') {
+      return {
+        type: 'trie',
+        values: ['C', 'O', 'D', 'E'],
+        activeIndex: 0,
+        label: 'Trie execution ready',
+        focusInfo: 'Safe fallback trie state.',
+      };
+    }
+    if (fallbackType === 'graph') {
+      return {
+        type: 'graph',
+        values: [0, 1, 2, 3, 4],
+        activeIndex: 0,
+        label: 'Graph execution ready',
+        focusInfo: 'Safe fallback graph state.',
+      };
+    }
+    return {
+      type: fallbackType,
+      values: safeValues,
+      activeIndex: safeValues.length ? 0 : null,
+      label: 'Execution ready',
+      focusInfo: 'Safe fallback trace for this Striver problem.',
+    };
+  };
+
+  const source = Array.isArray(steps) && steps.length ? steps : [{
+    stepNumber: 1,
+    lineNumber: 1,
+    algorithm: `Striver #${problemId}`,
+    eventType: 'EXECUTION_STEP',
+    variables: {},
+    output: [],
+    dataStructureState: fallbackState(),
+    explanation: 'Safe fallback execution state.',
+    aiHint: 'Safe fallback execution state.',
+  }];
+
+  return source.map((step, index) => {
+    const state = step?.dataStructureState && typeof step.dataStructureState === 'object'
+      ? { ...step.dataStructureState }
+      : fallbackState();
+
+    const registeredTypes = new Set([
+      'array', 'sorting', 'searching', 'two-pointer', 'sliding-window', 'linked-list',
+      'stack', 'queue', 'tree', 'bst', 'heap', 'graph', 'topological-sort', 'dijkstra',
+      'hash-table', 'matrix', 'dp', 'trapping-rain-water', 'monotonic-stack',
+      'container-water', 'lis', 'recursion', 'trie'
+    ]);
+    const normalizedType = String(state.type || '').toLowerCase().replace(/_/g, '-');
+    if (!registeredTypes.has(normalizedType)) {
+      Object.assign(state, fallbackState());
+    } else {
+      state.type = normalizedType;
+    }
+
+    // Never allow malformed values to reach a 3D visualizer.
+    if (state.type === 'matrix') {
+      state.values = Array.isArray(state.values) && state.values.every(Array.isArray)
+        ? state.values
+        : [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+    } else if (!Array.isArray(state.values)) {
+      state.values = safeValues;
+    }
+
+    if (Number.isFinite(state.activeIndex)) {
+      state.activeIndex = Math.max(0, Math.floor(state.activeIndex));
+    } else {
+      state.activeIndex = null;
+    }
+
+    return {
+      ...step,
+      stepNumber: Number.isInteger(step?.stepNumber) ? step.stepNumber : index + 1,
+      lineNumber: Number.isInteger(step?.lineNumber) && step.lineNumber > 0 ? step.lineNumber : 1,
+      dataStructureState: state,
+    };
+  });
+}
+
 export function getExecutionTrace(code, language = 'java', customInput = null, explicitArchetype = null) {
   if (!code || typeof code !== 'string') {
     return ARRAY_LOOP_EXECUTION_TRACE;
@@ -7364,11 +8560,83 @@ export function getExecutionTrace(code, language = 'java', customInput = null, e
   const inputVals = customInput ? extractNumbersFromCode(customInput) : [];
   const values = inputVals.length > 0 ? inputVals : extractNumbersFromCode(code);
 
-  const rawSteps = _computeExecutionTrace(code, cleanCode, values, language, customInput, explicitArchetype);
-  return ensureTraceOutputs(rawSteps, values, code);
+  const rawSteps = String(explicitArchetype || '').startsWith('striver|')
+    ? (() => {
+        const [, id, title, archetype] = String(explicitArchetype).split('|');
+        return generateCatalogProblemTrace({
+          id,
+          title,
+          archetype,
+          input: customInput || values.join(', '),
+          code,
+          language,
+        });
+      })()
+    : String(explicitArchetype || '').startsWith('topic|')
+      ? (() => {
+          const [, id, title, category] = String(explicitArchetype).split('|');
+          return generateCatalogProblemTrace({
+            id,
+            title,
+            archetype: id || category,
+            input: customInput || values.join(', '),
+            code,
+            language,
+          });
+        })()
+      : _computeExecutionTrace(code, cleanCode, values, language, customInput, explicitArchetype);
+  const hardenedSteps = (() => {
+    if (!String(explicitArchetype || '').startsWith('striver|')) return rawSteps;
+    const [, id, , archetype] = String(explicitArchetype).split('|');
+    return hardenStriver130to182Trace(rawSteps, id, archetype, values);
+  })();
+  const alignedSteps = alignTraceLinesWithSource(code, hardenedSteps, language);
+  return ensureTraceOutputs(alignedSteps, values, code);
 }
 
 function _computeExecutionTrace(code, cleanCode, values, language, customInput, explicitArchetype) {
+
+  // A selected DSA topic is authoritative. Do this before code-text heuristics;
+  // otherwise generic variable names such as `queue`, `tree`, `max`, or `node`
+  // can accidentally route a perfectly valid topic to the wrong 3D scene.
+  if (explicitArchetype) {
+    const arch = String(explicitArchetype).toLowerCase().replace(/_/g, '-');
+    
+    
+    
+    
+    
+    // Prefer the dedicated rich trace generators before falling back to
+    // broad data-structure traces. This is what makes the 49 curriculum
+    // algorithms and 182 Striver problems render their actual algorithm
+    // state instead of sharing one generic array/tree trace.
+    if (arch.includes('trie')) return generateDynamicTrieTrace([], language);
+    if (arch.includes('lru')) return generateDynamicLruCacheTrace(values, language);
+    if (arch.includes('dijkstra')) return generateDynamicDijkstraTrace(values, language);
+    if (arch.includes('topological')) return generateDynamicTopologicalSortTrace(values, language);
+    if (arch.includes('dsu') || arch.includes('disjoint-set')) return generateDynamicDsuTrace(values, language);
+    if (arch.includes('monotonic-stack')) return generateDynamicMonotonicStackTrace(values, language);
+    if (arch.includes('trapping-water')) return generateDynamicTrappingWaterTrace(values, language);
+    if (arch.includes('container-water')) return generateDynamicContainerWaterTrace(values, language);
+    if (arch.includes('sliding-window-max')) return generateDynamicSlidingWindowMaxTrace(values, language);
+    if (arch.includes('knapsack')) return generateDynamicKnapsackTrace(language);
+    if (arch.includes('coin-change')) return generateDynamicCoinChangeTrace(values, language);
+    if (arch.includes('lis')) return generateDynamicLisTrace(values, language);
+    if (arch.includes('kadane')) return generateDynamicKadaneTrace(values, language);
+    if (arch.includes('binary-search')) return generateDynamicBinarySearchTrace(values.length >= 2 ? values : undefined, language);
+    if (arch.includes('matrix') || arch.includes('grid')) return generateDynamicMatrixTrace(values.length >= 2 ? values : undefined, language);
+    if (arch.includes('linked-list') || arch.includes('linkedlist') || arch.includes('cycle')) return generateDynamicLinkedListTrace(values.length >= 2 ? values : [10, 20, 30, 40], language);
+    if (arch.includes('stack') || arch.includes('parentheses')) return generateDynamicStackTrace(values.length >= 2 ? values : [10, 20, 30], language);
+    if (arch.includes('queue') || arch.includes('deque')) return generateDynamicQueueTrace(values.length >= 2 ? values : [10, 20, 30], language);
+    if (arch.includes('tree') || arch.includes('bst') || arch.includes('avl')) return generateDynamicTreeTrace(values.length >= 3 ? values : [50, 30, 70, 20, 40], language);
+    if (arch.includes('graph')) return generateDynamicGraphTrace(values.length >= 3 ? values : [0, 1, 2, 3, 4], language);
+    if (arch.includes('heap')) return generateDynamicHeapTrace(values.length >= 3 ? values : [10, 15, 20, 17, 25], language);
+    if (arch.includes('hash') || arch.includes('map') || arch.includes('two-sum')) return generateDynamicTwoSumTrace(values.length >= 2 ? values : [2, 7, 11, 15], 9, language);
+    if (arch.includes('dp') || arch.includes('dynamic-programming')) return generateDynamicDpTrace(values.length >= 3 ? values : [1, 2, 3, 5, 8], language);
+    if (arch.includes('recursion') || arch.includes('backtracking')) return generateDynamicRecursionTrace(values.length ? [Math.max(1, Math.min(7, Math.abs(values[0])))] : [4], language);
+    if (arch.includes('sort')) return generateDynamicSortTrace(values.length >= 2 ? values : [45, 12, 89, 23, 7], language);
+    if (arch.includes('search') || arch.includes('array') || arch.includes('two-pointer') || arch.includes('sliding-window')) return generateDynamicArrayTrace(values.length >= 2 ? values : [10, 20, 30, 40], language);
+  }
 
   // 00. Procedural / Scanner / Student Result / Variable Execution
   const hasArraySyntaxCheck = cleanCode.includes('[') || cleanCode.includes(']') || cleanCode.includes('int[]') || cleanCode.includes('vector<');

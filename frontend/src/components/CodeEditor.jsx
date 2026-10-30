@@ -1,523 +1,966 @@
 import React, { useRef, useEffect, useState } from 'react';
+
 import Editor from '@monaco-editor/react';
-import { Play, Pause, Square, SkipBack, SkipForward, RotateCcw, FileCode, CheckCircle2, Code2, Sparkles, Trophy, BookOpen, Lightbulb, RefreshCw, AlignLeft, Map } from 'lucide-react';
+
+import { Play, RotateCcw, FileCode, CheckCircle2, RefreshCw, ChevronDown, Coffee, Braces, Hash, Terminal } from 'lucide-react';
+
 import { useTheme } from '../context/ThemeContext';
 
+
+
 const LANGUAGE_CONFIG = {
+
   java: {
+
     monacoLang: 'java',
+
     fileName: 'Main.java',
+
     badge: 'Java 21',
-    icon: '☕'
+
+    label: 'Java',
+
+    icon: Coffee
+
   },
+
   python: {
+
     monacoLang: 'python',
+
     fileName: 'main.py',
+
     badge: 'Python 3.12',
-    icon: '🐍'
+
+    label: 'Python',
+
+    icon: Terminal
+
   },
+
   c: {
+
     monacoLang: 'c',
+
     fileName: 'main.c',
+
     badge: 'C17 Standard',
-    icon: '🇨'
+
+    label: 'C',
+
+    icon: Hash
+
   },
+
   cpp: {
+
     monacoLang: 'cpp',
+
     fileName: 'main.cpp',
+
     badge: 'C++20 STL',
-    icon: '⚡'
+
+    label: 'C++',
+
+    icon: Braces
+
   },
+
   javascript: {
+
     monacoLang: 'javascript',
+
     fileName: 'main.js',
+
     badge: 'Node.js / ES2024',
-    icon: '🟨'
+
+    label: 'JavaScript',
+
+    icon: Braces
+
   }
+
 };
 
+
+
+const LANGUAGE_OPTIONS = ['java', 'javascript', 'python', 'c', 'cpp'];
+
+
+
 export default function CodeEditor({
+
   code,
+
   onChangeCode,
+
   currentLineNumber,
+
   language = 'java',
+
   onChangeLanguage,
-  onOpenCustomCode,
+
   onOpenCodeDoctor,
+
   onOpenPersonalProblem,
-  onOpenLeetCode,
-  onOpenStriverSheet,
+
   isPlaying,
+
   onPlay,
+
   onPause,
+
   onNext,
+
   onPrev,
+
   onReset,
+
   isAtStart,
+
   isAtEnd,
+
   isCodeDirty = false,
+
   onRunCode,
+  onCancelExecution,
+
   onResetCode,
+
   isExecuting = false,
+
   syntaxErrorLine = null,
+
   breakpoints = new Set(),
+
   onToggleBreakpoint,
+
   onSelectLine = null,
+
+  readOnly = false,
+  hideRunButton = false,
+
 }) {
+
   const editorRef = useRef(null);
+
   const monacoRef = useRef(null);
+
   const decorationsRef = useRef([]);
+
   const { isBright } = useTheme();
-  const [showMinimap, setShowMinimap] = useState(false);
+
+  const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
+  const [runFeedback, setRunFeedback] = useState(false);
+
+  const languageMenuRef = useRef(null);
+
+
 
   const currentLangConfig = LANGUAGE_CONFIG[language] || LANGUAGE_CONFIG.java;
 
-  const handleFormatCode = () => {
-    if (editorRef.current) {
-      editorRef.current.getAction('editor.action.formatDocument')?.run();
-    }
-  };
+
+
+  useEffect(() => {
+
+    const handleOutsideClick = (event) => {
+
+      if (languageMenuRef.current && !languageMenuRef.current.contains(event.target)) {
+
+        setLanguageMenuOpen(false);
+
+      }
+
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+
+  }, []);
+
+
 
   const handleEditorDidMount = (editor, monaco) => {
+
     editorRef.current = editor;
+
     monacoRef.current = monaco;
 
-    // Dark Theme definition - Warm obsidian & amber technical palette
+
+
+    // Dark Theme definition - Deep obsidian palette harmonized with 3D canvas
+
     monaco.editor.defineTheme('code3dDark', {
+
       base: 'vs-dark',
+
       inherit: true,
+
       rules: [
-        { token: 'keyword', foreground: 'f59e0b', fontStyle: 'bold' },
-        { token: 'type', foreground: 'e4e4e7' },
-        { token: 'string', foreground: '10b981' },
-        { token: 'number', foreground: 'fb923c' },
-        { token: 'comment', foreground: '6b7280', fontStyle: 'italic' },
-        { token: 'delimiter', foreground: '9ca3af' },
-        { token: 'identifier', foreground: 'f3f4f6' },
+
+        { token: 'keyword', foreground: '00f2fe', fontStyle: 'bold' },
+
+        { token: 'type', foreground: '38bdf8' },
+
+        { token: 'string', foreground: '34d399' },
+
+        { token: 'number', foreground: 'fbbf24' },
+
+        { token: 'comment', foreground: '64748b', fontStyle: 'italic' },
+
       ],
+
       colors: {
-        'editor.background': '#13161b',
-        'editor.lineHighlightBackground': '#1a1e2455',
-        'editorLineNumber.foreground': '#4b5563',
-        'editorLineNumber.activeForeground': '#f59e0b',
-        'editorCursor.foreground': '#f59e0b',
-        'editorGutter.background': '#13161b',
+
+        'editor.background': '#070b14',
+
+        'editor.lineHighlightBackground': '#1e293b44',
+
+        'editorLineNumber.foreground': '#475569',
+
+        'editorLineNumber.activeForeground': '#00f2fe',
+
       },
+
     });
 
-    // Bright Theme definition - Warm alabaster & deep amber palette
+
+
+    // Bright Theme definition
+
     monaco.editor.defineTheme('code3dLight', {
+
       base: 'vs',
+
       inherit: true,
+
       rules: [
-        { token: 'keyword', foreground: 'b45309', fontStyle: 'bold' },
-        { token: 'type', foreground: '27272a' },
+
+        { token: 'keyword', foreground: '0284c7', fontStyle: 'bold' },
+
+        { token: 'type', foreground: '0369a1' },
+
         { token: 'string', foreground: '059669' },
-        { token: 'number', foreground: 'c2410c' },
-        { token: 'comment', foreground: '78716c', fontStyle: 'italic' },
-        { token: 'delimiter', foreground: '52525b' },
-        { token: 'identifier', foreground: '18181b' },
+
+        { token: 'number', foreground: 'd97706' },
+
+        { token: 'comment', foreground: '94a3b8', fontStyle: 'italic' },
+
       ],
+
       colors: {
+
         'editor.background': '#ffffff',
-        'editor.lineHighlightBackground': '#f7f6f3',
-        'editorLineNumber.foreground': '#a8a29e',
-        'editorLineNumber.activeForeground': '#d97706',
-        'editorCursor.foreground': '#d97706',
-        'editorGutter.background': '#ffffff',
+
+        'editor.lineHighlightBackground': '#f1f5f9',
+
+        'editorLineNumber.foreground': '#94a3b8',
+
+        'editorLineNumber.activeForeground': '#0284c7',
+
       },
+
     });
+
+
 
     monaco.editor.setTheme(isBright ? 'code3dLight' : 'code3dDark');
 
-    // Register Ctrl+Enter / Cmd+Enter shortcut to run code
+
+
+    // Register Ctrl+Enter / Cmd+Enter shortcut
+
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+
       if (onRunCode) {
+
         onRunCode();
+
       } else if (onPlay) {
+
         onPlay();
+
       }
+
     });
 
-    // Register Ctrl+S / Cmd+S shortcut to format code
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-      editor.getAction('editor.action.formatDocument')?.run();
-    });
+
 
     // F5: Play / Resume execution
+
     editor.addCommand(monaco.KeyCode.F5, () => {
+
       if (isPlaying) {
+
         if (onPause) onPause();
+
       } else {
+
         if (onPlay) onPlay();
+
         else if (onRunCode) onRunCode();
+
       }
+
     });
+
+
 
     // F10: Step forward
+
     editor.addCommand(monaco.KeyCode.F10, () => {
+
       if (onNext) onNext();
+
     });
+
+
 
     // Shift + F10: Step backward
+
     editor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.F10, () => {
+
       if (onPrev) onPrev();
+
     });
+
+
 
     // Escape: Stop / Reset execution
+
     editor.addCommand(monaco.KeyCode.Escape, () => {
+
       if (onReset) onReset();
+
     });
+
+
 
     // Glyph margin click listener to toggle breakpoints & line click navigation
+
     editor.onMouseDown((e) => {
+
       const line = e.target.position?.lineNumber;
+
       if (
+
         e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN ||
+
         e.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS
+
       ) {
+
         if (line && onToggleBreakpoint) {
+
           onToggleBreakpoint(line);
+
         }
+
       } else if (line && onSelectLine) {
+
         onSelectLine(line);
+
       }
+
     });
+
   };
 
+
+
   // Switch editor theme whenever bright mode changes
+
   useEffect(() => {
+
     if (monacoRef.current) {
+
       monacoRef.current.editor.setTheme(isBright ? 'code3dLight' : 'code3dDark');
+
     }
+
   }, [isBright]);
 
+
+
   // Update line highlighting & breakpoints whenever currentLineNumber, syntaxErrorLine, or breakpoints change
+
   useEffect(() => {
+
     if (!editorRef.current) return;
+
     const editor = editorRef.current;
+
+
 
     const newDecorations = [];
 
+
+
     // 1. Breakpoints in glyph margin
+
     if (breakpoints && breakpoints.size > 0) {
+
       breakpoints.forEach((line) => {
+
         newDecorations.push({
+
           range: {
+
             startLineNumber: line,
+
             startColumn: 1,
+
             endLineNumber: line,
+
             endColumn: 1,
+
           },
+
           options: {
+
             isWholeLine: false,
+
             glyphMarginClassName: line === currentLineNumber ? 'breakpoint-active-glyph' : 'breakpoint-glyph',
+
             glyphMarginHoverMessage: { value: `Breakpoint on line ${line}` },
+
           },
+
         });
+
       });
+
     }
+
+
 
     // 2. Syntax Error or Active Line
+
     if (syntaxErrorLine) {
+
       newDecorations.push({
+
         range: {
+
           startLineNumber: syntaxErrorLine,
+
           startColumn: 1,
+
           endLineNumber: syntaxErrorLine,
+
           endColumn: 1,
+
         },
+
         options: {
+
           isWholeLine: true,
+
           className: 'syntax-error-line-bg',
+
           glyphMarginClassName: 'syntax-error-glyph',
+
         },
+
       });
+
       editor.revealLineInCenterIfOutsideViewport(syntaxErrorLine);
+
     } else if (currentLineNumber) {
+
       newDecorations.push({
+
         range: {
+
           startLineNumber: currentLineNumber,
+
           startColumn: 1,
+
           endLineNumber: currentLineNumber,
+
           endColumn: 1,
+
         },
+
         options: {
+
           isWholeLine: true,
+
           className: 'active-execution-line-bg',
+
           glyphMarginClassName: 'active-execution-line-glyph',
+
         },
+
       });
+
       editor.revealLineInCenterIfOutsideViewport(currentLineNumber);
+
     }
 
+
+
     decorationsRef.current = editor.deltaDecorations(decorationsRef.current, newDecorations);
+
   }, [currentLineNumber, syntaxErrorLine, breakpoints]);
 
+
+
   return (
+
     <div className={`flex flex-col h-full border-r select-none transition-colors duration-200 ${
+
       isBright ? 'bg-white border-slate-200' : 'bg-[#0b0f19] border-slate-800/80'
+
     }`}>
-      {/* Editor Header Bar with Language Switcher */}
-      <div className={`h-10 border-b px-2.5 flex items-center justify-between gap-1.5 transition-colors overflow-hidden min-w-0 ${
-        isBright ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/90 border-slate-800/70'
+
+      {/* Clean Editor Header */}
+
+      <div className={`h-11 border-b px-3 flex items-center justify-between gap-2 transition-colors ${
+
+        isBright
+
+          ? 'bg-slate-50 border-slate-200'
+
+          : 'bg-[#0b0f19] border-slate-800/80'
+
       }`}>
-        <div className="flex items-center gap-1.5 min-w-0 shrink">
-          <FileCode size={14} className={`shrink-0 ${isBright ? 'text-cyan-600' : 'text-cyan-400'}`} />
-          <span className={`text-xs font-mono font-medium truncate max-w-[90px] sm:max-w-none ${isBright ? 'text-slate-800' : 'text-slate-200'}`}>
+
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+
+          <FileCode
+
+            size={15}
+
+            className={`shrink-0 ${isBright ? 'text-cyan-600' : 'text-cyan-400'}`}
+
+          />
+
+
+
+          <span className={`text-xs font-mono font-semibold truncate ${
+
+            isBright ? 'text-slate-800' : 'text-slate-200'
+
+          }`}>
+
             {currentLangConfig.fileName}
+
           </span>
+
+
 
           {isCodeDirty && (
-            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-              <span className="hidden md:inline">Modified</span>
-            </span>
-          )}
-          
-          {/* Language Selector Dropdown */}
-          <select
-            value={language}
-            onChange={(e) => onChangeLanguage && onChangeLanguage(e.target.value)}
-            className={`border rounded px-1.5 py-0.5 text-[11px] font-mono focus:outline-none focus:border-cyan-500 cursor-pointer shrink-0 ${
-              isBright
-                ? 'bg-white border-slate-300 text-slate-800'
-                : 'bg-slate-950 border-slate-700 text-cyan-300'
-            }`}
-          >
-            <option value="java">☕ Java</option>
-            <option value="javascript">🟨 JS</option>
-            <option value="python">🐍 Py</option>
-            <option value="c">🇨 C</option>
-            <option value="cpp">⚡ C++</option>
-          </select>
 
-          <span className={`hidden xl:inline-block text-[10px] px-1.5 py-0.5 rounded font-mono shrink-0 ${
-            isBright ? 'bg-slate-200 text-slate-700' : 'bg-slate-800 text-slate-400'
+            <span
+
+              title="Code modified"
+
+              className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0"
+
+            />
+
+          )}
+
+
+
+          {!readOnly && (
+          <div ref={languageMenuRef} className="relative shrink-0">
+
+            <button
+
+              type="button"
+
+              onClick={() => setLanguageMenuOpen((prev) => !prev)}
+
+              title="Programming language"
+
+              aria-label="Programming language"
+
+              aria-expanded={languageMenuOpen}
+
+              className={`h-8 min-w-[88px] px-2.5 rounded-lg border flex items-center gap-2 text-[11px] font-semibold transition ${
+
+                isBright
+
+                  ? 'bg-white border-slate-300 text-slate-800 hover:border-cyan-400'
+
+                  : 'bg-slate-950 border-slate-700 text-slate-200 hover:border-cyan-500'
+
+              }`}
+
+            >
+
+              {React.createElement(currentLangConfig.icon, {
+
+                size: 14,
+
+                className: isBright ? 'text-cyan-700' : 'text-cyan-400'
+
+              })}
+
+              <span className="truncate">{currentLangConfig.label}</span>
+
+              <ChevronDown size={12} className={`ml-auto transition-transform ${languageMenuOpen ? 'rotate-180' : ''}`} />
+
+            </button>
+
+
+
+            {languageMenuOpen && (
+
+              <div className={`absolute left-0 top-[calc(100%+6px)] z-50 w-44 rounded-xl border p-1.5 shadow-2xl ${
+
+                isBright
+
+                  ? 'bg-white border-slate-200 shadow-slate-300/50'
+
+                  : 'bg-[#101621] border-slate-700 shadow-black/50'
+
+              }`}>
+
+                {LANGUAGE_OPTIONS.map((lang) => {
+
+                  const option = LANGUAGE_CONFIG[lang];
+
+                  const Icon = option.icon;
+
+                  const active = lang === language;
+
+                  return (
+
+                    <button
+
+                      key={lang}
+
+                      type="button"
+
+                      onClick={() => {
+
+                        setLanguageMenuOpen(false);
+
+                        if (onChangeLanguage) onChangeLanguage(lang);
+
+                      }}
+
+                      className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-[11px] transition ${
+
+                        active
+
+                          ? isBright
+
+                            ? 'bg-cyan-50 text-cyan-800'
+
+                            : 'bg-cyan-500/10 text-cyan-300'
+
+                          : isBright
+
+                            ? 'text-slate-700 hover:bg-slate-100'
+
+                            : 'text-slate-300 hover:bg-slate-800'
+
+                      }`}
+
+                    >
+
+                      <span className={`w-7 h-7 rounded-md flex items-center justify-center ${
+
+                        active
+
+                          ? isBright ? 'bg-cyan-100' : 'bg-cyan-500/15'
+
+                          : isBright ? 'bg-slate-100' : 'bg-slate-900'
+
+                      }`}>
+
+                        <Icon size={14} />
+
+                      </span>
+
+                      <span className="flex-1 font-semibold">{option.label}</span>
+
+                      {active && <CheckCircle2 size={13} className="text-cyan-500" />}
+
+                    </button>
+
+                  );
+
+                })}
+
+              </div>
+
+            )}
+
+          </div>
+          )}
+
+
+          <span className={`hidden lg:inline-block text-[10px] px-2 py-1 rounded-lg font-mono ${
+
+            isBright
+
+              ? 'bg-slate-200 text-slate-600'
+
+              : 'bg-slate-800 text-slate-400'
+
           }`}>
+
             {currentLangConfig.badge}
+
           </span>
+
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
-          {/* Minimap Toggle */}
-          <button
-            onClick={() => setShowMinimap(!showMinimap)}
-            className={`h-7 flex items-center gap-1 text-xs px-2 rounded-md border transition cursor-pointer shrink-0 ${
-              showMinimap
-                ? isBright ? 'bg-cyan-100 text-cyan-800 border-cyan-300' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
-                : isBright ? 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100' : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800'
-            }`}
-            title="Toggle Monaco Editor Minimap"
-          >
-            <Map size={12} />
-            <span className="hidden lg:inline text-[11px]">Minimap</span>
-          </button>
 
-          {/* Striver SDE Sheet Button */}
-          {(onOpenStriverSheet || onOpenLeetCode) && (
-            <button
-              onClick={onOpenStriverSheet || onOpenLeetCode}
-              className={`h-7 flex items-center gap-1 text-xs px-2 rounded-md border transition font-semibold shadow-xs cursor-pointer shrink-0 ${
-                isBright
-                  ? 'bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200'
-                  : 'bg-gradient-to-r from-amber-500/15 to-orange-500/15 hover:from-amber-500/25 hover:to-orange-500/25 text-amber-300 border-amber-500/40'
-              }`}
-              title="Open Striver SDE Sheet (182 Core Problems) in 3D"
-            >
-              <BookOpen size={12} className="text-amber-400 shrink-0" />
-              <span className="hidden xl:inline">Striver 📜</span>
-            </button>
-          )}
 
-          {/* Direct "Input Any Code" Button */}
-          {onOpenCustomCode && (
-            <button
-              onClick={onOpenCustomCode}
-              className={`h-7 flex items-center gap-1 text-xs px-2 rounded-md border transition font-semibold shadow-xs cursor-pointer shrink-0 ${
-                isBright
-                  ? 'bg-stone-100 text-stone-800 border-stone-300 hover:bg-stone-200'
-                  : 'bg-stone-800 hover:bg-stone-700 text-stone-200 border-stone-700'
-              }`}
-              title="Input Any Code in JS, C, C++, Python, or Java to visualize in 3D"
-            >
-              <Code2 size={12} className="shrink-0 text-amber-500" />
-              <span className="hidden xl:inline">Input ⚡</span>
-            </button>
-          )}
+        <div className="flex items-center gap-1.5 shrink-0">
 
           {currentLineNumber && (
-            <div className={`h-7 flex items-center gap-1 text-xs font-mono px-2 rounded-md border shrink-0 ${
-              isBright
-                ? 'text-amber-800 bg-amber-50 border-amber-300'
-                : 'text-amber-400 bg-amber-950/40 border-amber-700/50'
-            }`}>
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
-              <span className="whitespace-nowrap font-bold">Line {currentLineNumber}</span>
+
+            <div
+
+              title={`Current execution line: ${currentLineNumber}`}
+
+              className={`hidden sm:flex h-7 items-center gap-1.5 text-[11px] font-mono px-2 rounded-lg border ${
+
+                isBright
+
+                  ? 'text-cyan-700 bg-cyan-50 border-cyan-200'
+
+                  : 'text-cyan-400 bg-cyan-950/40 border-cyan-800/50'
+
+              }`}
+
+            >
+
+              <span className={`w-1.5 h-1.5 rounded-full ${
+
+                isBright ? 'bg-cyan-600' : 'bg-cyan-400'
+
+              }`} />
+
+              L{currentLineNumber}
+
             </div>
+
           )}
+
         </div>
+
       </div>
+
+
 
       {/* Monaco Code Editor */}
+
       <div className="flex-1 w-full overflow-hidden">
+
         <Editor
+
+          path={currentLangConfig.fileName}
+
           height="100%"
+
           language={currentLangConfig.monacoLang}
+
           theme={isBright ? 'code3dLight' : 'code3dDark'}
+
           value={code}
+
           onChange={(val) => onChangeCode && onChangeCode(val)}
+
           onMount={handleEditorDidMount}
+
           options={{
+
+            readOnly,
+
+            domReadOnly: readOnly,
+
             fontSize: 13.5,
+
             fontFamily: "'Fira Code', 'JetBrains Mono', Consolas, monospace",
+
             fontLigatures: true,
+
             lineNumbers: 'on',
-            minimap: { enabled: showMinimap },
+
+            minimap: { enabled: false },
+
             scrollBeyondLastLine: false,
+
             automaticLayout: true,
+
+            wordWrap: 'on',
+
+            wrappingStrategy: 'advanced',
+
+            wordWrapColumn: 100,
+
+            autoIndent: 'full',
+
+            formatOnType: true,
+
+            formatOnPaste: true,
+
             tabSize: 4,
+
             cursorBlinking: 'smooth',
+
             smoothScrolling: true,
+
             renderLineHighlight: 'all',
+
             glyphMargin: true,
+
             folding: true,
+
           }}
+
         />
+
       </div>
 
-      {/* Editor Controls Bar */}
-      <div className={`border-t p-2 flex items-center justify-between gap-1.5 transition-colors overflow-hidden min-w-0 ${
-        isBright ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/90 border-slate-800/80'
+
+
+      {/* Simple Editor Actions */}
+
+      <div className={`h-12 border-t px-3 flex items-center justify-between gap-2 transition-colors ${
+
+        isBright
+
+          ? 'bg-slate-50 border-slate-200'
+
+          : 'bg-[#0b0f19] border-slate-800/80'
+
       }`}>
-        <div className="flex items-center gap-1 min-w-0 shrink flex-wrap">
-          {/* 1. Run Button */}
-          <button
-            onClick={() => {
-              if (isExecuting) return;
-              if (onRunCode) onRunCode();
-              else if (onPlay) onPlay();
-            }}
-            disabled={isExecuting}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition shadow-xs cursor-pointer shrink-0 ${
-              isExecuting
-                ? 'opacity-70 cursor-not-allowed bg-stone-700 text-stone-300'
-                : isCodeDirty
-                  ? 'bg-amber-500 hover:bg-amber-400 text-stone-950 ring-2 ring-amber-400/50 shadow-md shadow-amber-500/20'
-                  : 'bg-amber-500 hover:bg-amber-400 text-stone-950 shadow-xs'
-            }`}
-            title={isExecuting ? "Executing code..." : "Run Code (Ctrl+Enter)"}
-          >
-            {isExecuting ? (
-              <>
-                <RefreshCw size={12} className="animate-spin" />
-                <span>Compiling...</span>
-              </>
-            ) : (
-              <>
-                <Play size={12} className="fill-current" />
-                <span>Run</span>
-              </>
-            )}
-          </button>
 
-          {/* 2. Stop Button */}
-          {isPlaying && (
-            <button
-              onClick={onPause}
-              className={`flex items-center gap-1 px-2 py-1.5 rounded border text-xs font-medium transition cursor-pointer shrink-0 ${
-                isBright
-                  ? 'bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200'
-                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
-              }`}
-              title="Stop / Pause Simulation"
-            >
-              <Pause size={12} className="fill-current" />
-              <span>Stop</span>
-            </button>
-          )}
+        <div className="flex items-center gap-1.5 min-w-0">
 
-          {/* 3. Reset Button */}
           <button
+
+            type="button"
+
             onClick={onReset}
-            className={`flex items-center gap-1 px-2 py-1.5 rounded border text-xs font-medium transition cursor-pointer shrink-0 ${
+
+            title="Reset execution"
+
+            aria-label="Reset execution"
+
+            className={`w-8 h-8 flex items-center justify-center rounded-lg transition cursor-pointer ${
+
               isBright
-                ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
-                : 'border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white'
+
+                ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
+
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
+
             }`}
-            title="Reset Simulation to Step 1"
+
           >
-            <RotateCcw size={12} />
-            <span className="hidden sm:inline">Reset</span>
+
+            <RotateCcw size={15} />
+
           </button>
 
-          {/* 4. Format Button */}
-          <button
-            onClick={handleFormatCode}
-            className={`flex items-center gap-1 px-2 py-1.5 rounded border text-xs font-medium transition cursor-pointer shrink-0 ${
-              isBright
-                ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
-                : 'border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white'
-            }`}
-            title="Format Code (Ctrl+S)"
-          >
-            <AlignLeft size={12} />
-            <span className="hidden md:inline">Format</span>
-          </button>
 
-          {/* 5. Restore Sample Button */}
-          {onResetCode && (
+
+          {!readOnly && onResetCode && (
+
             <button
+
+              type="button"
+
               onClick={onResetCode}
-              className={`flex items-center gap-1 px-2 py-1.5 rounded border text-xs font-medium transition cursor-pointer shrink-0 ${
+
+              title="Reset code to default"
+
+              aria-label="Reset code to default"
+
+              className={`w-8 h-8 flex items-center justify-center rounded-lg border transition cursor-pointer ${
+
                 isBright
-                  ? 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  : 'border-slate-700/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/70'
+
+                  ? 'border-slate-300 text-slate-500 hover:text-slate-900 hover:bg-white'
+
+                  : 'border-slate-700 text-slate-400 hover:text-slate-100 hover:bg-slate-800'
+
               }`}
-              title="Restore Original Sample Code"
+
             >
-              <RefreshCw size={11} className="opacity-70" />
-              <span className="hidden sm:inline">Restore Sample</span>
+
+              <RefreshCw size={14} />
+
             </button>
+
           )}
+
         </div>
 
-        {/* Step-by-Step Step Back / Next */}
-        <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={onPrev}
-            disabled={isAtStart}
-            className={`flex items-center gap-0.5 px-2 py-1.5 rounded text-xs font-medium transition border shrink-0 ${
-              isAtStart
-                ? 'opacity-40 cursor-not-allowed border-slate-300 dark:border-slate-800 text-slate-400 dark:text-slate-500'
-                : isBright
-                  ? 'border-slate-300 text-slate-700 hover:bg-slate-100 cursor-pointer'
-                  : 'border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white cursor-pointer'
-            }`}
-            title="Previous Execution Step"
-          >
-            <SkipBack size={12} />
-            <span className="hidden sm:inline">Prev</span>
-          </button>
+        {!readOnly && !hideRunButton && (
+        <button
+          type="button"
 
-          <button
-            onClick={onNext}
-            disabled={isAtEnd}
-            className={`flex items-center gap-0.5 px-2 py-1.5 rounded-md text-xs font-medium transition border shrink-0 ${
-              isAtEnd
-                ? 'opacity-40 cursor-not-allowed border-stone-300 dark:border-stone-800 text-stone-400 dark:text-stone-500'
-                : isBright
-                  ? 'border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 cursor-pointer font-semibold'
-                  : 'border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 cursor-pointer font-semibold'
-            }`}
-            title="Next Execution Step"
-          >
-            <span className="hidden sm:inline">Next</span>
-            <SkipForward size={12} />
-          </button>
-        </div>
+          onClick={() => {
+            if (isExecuting && onCancelExecution) {
+              onCancelExecution?.();
+              return;
+            }
+            if (isExecuting) return;
+            setRunFeedback(true);
+            window.setTimeout(() => setRunFeedback(false), 900);
+            if (onRunCode) onRunCode();
+            else if (onPlay) onPlay();
+          }}
+
+          disabled={isExecuting && !onCancelExecution}
+
+          className={`h-9 px-4 rounded-lg flex items-center justify-center gap-2 text-xs font-bold transition shadow-md cursor-pointer disabled:cursor-not-allowed ${
+
+            isExecuting
+
+              ? 'bg-cyan-700 text-cyan-100 opacity-80'
+
+              : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-cyan-500/20'
+
+          }`}
+
+          title={isExecuting ? (onCancelExecution ? 'Cancel code execution' : 'Executing code...') : 'Run code and visualize execution'}
+
+        >
+
+          {isExecuting ? (
+
+            <>
+
+              <RefreshCw size={14} className="animate-spin" />
+
+              <span>{onCancelExecution ? 'Cancel' : 'Running...'}</span>
+
+            </>
+
+          ) : (
+
+            <>
+
+              <Play size={14} className="fill-current" />
+
+              <span>{runFeedback ? 'Visualized ✓' : 'Run &amp; Visualize'}</span>
+
+            </>
+
+          )}
+
+        </button>        )}
+
+
       </div>
+
     </div>
+
   );
+
 }
+
 

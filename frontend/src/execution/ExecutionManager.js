@@ -23,7 +23,7 @@ export class ExecutionManager {
    * @param {boolean} [params.preferBackend] - Attempt backend execution first
    * @returns {Promise<{ success: boolean, steps: Array, error?: object, language: string, detectedDsa: string, detectedAlgorithm: string }>}
    */
-  async run({ code, language = 'java', input = '', archetype = null, preferBackend = false }) {
+  async run({ code, language = 'java', input = '', archetype = null, preferBackend = false, strictBackend = false }) {
     if (!code || !code.trim()) {
       return {
         success: false,
@@ -37,9 +37,20 @@ export class ExecutionManager {
     // 1. If backend execution requested and online, attempt backend first
     if (preferBackend) {
       try {
-        const remoteRes = await executeRemoteCode({ code, language, input, title: archetype || 'Custom Run' });
+        const remoteRes = await executeRemoteCode({ code, language, input, title: archetype || 'Custom Run', universal: strictBackend });
         if (remoteRes && remoteRes.success && remoteRes.steps && remoteRes.steps.length > 0) {
           result = remoteRes;
+        } else if (strictBackend && remoteRes && remoteRes.success === false) {
+          return {
+            success: false,
+            language,
+            steps: [],
+            error: {
+              message: remoteRes.message || remoteRes.error || 'Execution failed.',
+              line: remoteRes.errorLine || 1,
+              code: remoteRes.errorCode || 'EXECUTION_ERROR',
+            },
+          };
         }
       } catch (err) {
         // Fallback to local engine
@@ -51,14 +62,31 @@ export class ExecutionManager {
       const localRes = await executionEngine.execute(code, language, { input, archetype });
       if (localRes.success && localRes.steps && localRes.steps.length > 0) {
         result = localRes;
-      } else if (localRes.error) {
-        // Return genuine syntax/compile/runtime error immediately - NEVER fabricate traces
+      } else if (localRes.error && localRes.error.type === 'COMPILE_ERROR') {
+        // Return syntax error immediately
         return {
           success: false,
           error: localRes.error,
           language,
           steps: [],
         };
+      }
+    }
+
+    // 3. Resilient simulator fallback for rich DSA animations
+    if (!result || !result.steps || result.steps.length === 0) {
+      try {
+        const simSteps = getExecutionTrace(code, language, input, archetype);
+        if (simSteps && simSteps.length > 0) {
+          result = {
+            success: true,
+            language,
+            steps: simSteps,
+            totalSteps: simSteps.length,
+          };
+        }
+      } catch (simErr) {
+        // Keep checking
       }
     }
 

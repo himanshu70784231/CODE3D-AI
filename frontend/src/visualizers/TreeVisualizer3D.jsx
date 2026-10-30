@@ -26,7 +26,7 @@ function TreeBranch({ start, end, isActive }) {
       <mesh>
         <cylinderGeometry args={[0.045, 0.045, length, 16]} />
         <meshStandardMaterial
-          color={isActive ? '#f59e0b' : '#334155'}
+          color={isActive ? '#38bdf8' : '#334155'}
           emissive={isActive ? '#0284c7' : '#0f172a'}
           emissiveIntensity={isActive ? 1.0 : 0.25}
           metalness={0.6}
@@ -38,7 +38,7 @@ function TreeBranch({ start, end, isActive }) {
         <mesh>
           <cylinderGeometry args={[0.09, 0.09, length, 16]} />
           <meshBasicMaterial
-            color="#f59e0b"
+            color="#38bdf8"
             transparent
             opacity={0.35}
           />
@@ -52,9 +52,7 @@ function TreeBranch({ start, end, isActive }) {
  * Helper to build a BST structure if given a raw flat list of values or incomplete nodes
  */
 function buildBstFromValues(values) {
-  if (!values || values.length === 0) {
-    values = [50, 30, 70, 20, 40, 60, 80];
-  }
+  if (!Array.isArray(values) || values.length === 0) return [];
 
   const nodes = [];
   let nextId = 0;
@@ -107,201 +105,95 @@ export default function TreeVisualizer3D({ dataStructureState }) {
   const { isBright } = useTheme();
   const [hoveredNodeId, setHoveredNodeId] = useState(null);
 
-  const { activeIndex = null, nodes: rawNodes = [], values = [] } = dataStructureState || {};
+  const { activeIndex = null, nodes: rawNodes = [], values = [], edges: rawEdges = [] } = dataStructureState || {};
 
   // Compute clean tree nodes with guaranteed parent-child pointers
   const treeNodes = useMemo(() => {
     if (rawNodes && rawNodes.length > 0) {
-      // Ensure each node has left, right, parent, depth
-      return rawNodes.map((n, i) => ({
-        id: n.id ?? i,
-        val: n.val ?? n.value ?? n.id ?? i,
-        left: n.left ?? null,
-        right: n.right ?? null,
-        parent: n.parent ?? null,
-        depth: n.depth ?? 0,
-      }));
+      // Some runtime adapters provide nodes and labelled edges separately.
+      // Reconstruct child pointers from the actual edge list before laying out the tree.
+      const nodeIds = rawNodes.map((node, index) => node.id ?? index);
+      const normalizeEndpoint = (endpoint) => {
+        const raw = endpoint && typeof endpoint === 'object'
+          ? (endpoint.id ?? endpoint.value ?? endpoint.val ?? endpoint.label)
+          : endpoint;
+        const exact = nodeIds.find((id) => String(id) === String(raw));
+        if (exact !== undefined) return exact;
+        const numeric = Number(raw);
+        return Number.isInteger(numeric) && numeric >= 0 && numeric < nodeIds.length ? nodeIds[numeric] : null;
+      };
+      const relations = (Array.isArray(rawEdges) ? rawEdges : []).map((edge) => ({
+        from: normalizeEndpoint(Array.isArray(edge) ? edge[0] : (edge.from ?? edge.source ?? edge.u)),
+        to: normalizeEndpoint(Array.isArray(edge) ? edge[1] : (edge.to ?? edge.target ?? edge.v)),
+        label: String(Array.isArray(edge) ? '' : (edge.label ?? edge.relation ?? edge.side ?? '')).toLowerCase(),
+      })).filter((edge) => edge.from !== null && edge.to !== null && edge.from !== edge.to);
+      return rawNodes.map((n, i) => {
+        const id = n.id ?? i;
+        const leftEdge = relations.find((edge) => String(edge.from) === String(id) && edge.label === 'left');
+        const rightEdge = relations.find((edge) => String(edge.from) === String(id) && edge.label === 'right');
+        const parentEdge = relations.find((edge) => String(edge.to) === String(id) && ['left', 'right', 'child', 'children'].includes(edge.label));
+        return {
+          id,
+          val: n.val ?? n.value ?? n.label ?? n.id ?? i,
+          left: n.left ?? leftEdge?.to ?? null,
+          right: n.right ?? rightEdge?.to ?? null,
+          parent: n.parent ?? parentEdge?.from ?? null,
+          depth: n.depth ?? 0,
+        };
+      });
     }
     return buildBstFromValues(values);
-  }, [rawNodes, values]);
+  }, [rawNodes, values, rawEdges]);
 
-  // Compute collision-free layout using Reingold-Tilford / Tidy Tree algorithm
+  // Deterministic tidy layout: inorder gives stable horizontal ordering and
+  // depth gives a strict horizontal level. This avoids modifier/contour drift
+  // that could move nodes from the same level onto different Y coordinates.
   const layoutData = useMemo(() => {
     if (!treeNodes || treeNodes.length === 0) {
-      return { positionedNodes: [], branches: [], levels: [], treeScale: 1.0, minX: -2 };
+      return { positionedNodes: [], branches: [], levels: [], treeScale: 1.0, minX: -2, maxX: 2 };
     }
 
-    const nodeMap = new Map();
-    treeNodes.forEach((n) => nodeMap.set(n.id, { ...n, x: 0, y: 0, mod: 0 }));
-
-    // Find root (node with no parent or parent === null)
+    const nodeMap = new Map(treeNodes.map((n) => [n.id, { ...n }]));
     let root = treeNodes.find((n) => n.parent === null || n.parent === undefined);
     if (!root) root = treeNodes[0];
-    const rootNode = nodeMap.get(root.id);
 
-    const totalN = Math.max(treeNodes.length, 1);
-    // Dynamic horizontal spacing: contracts gracefully for wide trees
-    const siblingDistance = Math.max(1.8, Math.min(2.4, 16.0 / totalN));
     const levelHeight = 1.95;
+    const nodeSpacing = 1.75;
+    const xById = new Map();
+    let inorderIndex = 0;
 
-    // Pass 1: Post-order traversal to calculate initial X and modifiers
-    function firstPass(nodeId, depth = 0, leftSiblingId = null) {
-      const node = nodeMap.get(nodeId);
+    const assignX = (id, depth = 0) => {
+      const node = nodeMap.get(id);
       if (!node) return;
       node.depth = depth;
-      node.y = -depth * levelHeight;
+      if (node.left !== null && nodeMap.has(node.left)) assignX(node.left, depth + 1);
+      xById.set(id, (inorderIndex++) * nodeSpacing);
+      if (node.right !== null && nodeMap.has(node.right)) assignX(node.right, depth + 1);
+    };
 
-      const leftId = node.left;
-      const rightId = node.right;
-      const hasLeft = leftId !== null && nodeMap.has(leftId);
-      const hasRight = rightId !== null && nodeMap.has(rightId);
+    assignX(root.id, 0);
 
-      if (hasLeft) firstPass(leftId, depth + 1, null);
-      if (hasRight) firstPass(rightId, depth + 1, hasLeft ? leftId : null);
+    const rootX = xById.get(root.id) ?? 0;
+    let minX = Infinity;
+    let maxX = -Infinity;
 
-      if (!hasLeft && !hasRight) {
-        if (leftSiblingId !== null && nodeMap.has(leftSiblingId)) {
-          node.x = nodeMap.get(leftSiblingId).x + siblingDistance;
-        } else {
-          node.x = 0;
-        }
-      } else if (hasLeft && !hasRight) {
-        const leftChild = nodeMap.get(leftId);
-        const mid = leftChild.x;
-        if (leftSiblingId !== null && nodeMap.has(leftSiblingId)) {
-          node.x = nodeMap.get(leftSiblingId).x + siblingDistance;
-          node.mod = node.x - mid;
-        } else {
-          node.x = mid;
-        }
-      } else if (!hasLeft && hasRight) {
-        const rightChild = nodeMap.get(rightId);
-        const mid = rightChild.x;
-        if (leftSiblingId !== null && nodeMap.has(leftSiblingId)) {
-          node.x = nodeMap.get(leftSiblingId).x + siblingDistance;
-          node.mod = node.x - mid;
-        } else {
-          node.x = mid;
-        }
-      } else {
-        const leftChild = nodeMap.get(leftId);
-        const rightChild = nodeMap.get(rightId);
-        const mid = (leftChild.x + rightChild.x) / 2;
-        if (leftSiblingId !== null && nodeMap.has(leftSiblingId)) {
-          node.x = nodeMap.get(leftSiblingId).x + siblingDistance;
-          node.mod = node.x - mid;
-        } else {
-          node.x = mid;
-        }
-      }
-
-      // Contour collision resolution between subtrees
-      if (hasLeft && hasRight) {
-        resolveContourCollisions(nodeId);
-      }
-    }
-
-    function resolveContourCollisions(nodeId) {
-      const node = nodeMap.get(nodeId);
-      if (!node.left || !node.right) return;
-
-      let maxOverlap = 0;
-      const leftContour = [];
-      const rightContour = [];
-
-      function getRightmostContour(id, currDepth, modSum) {
-        const n = nodeMap.get(id);
-        if (!n) return;
-        const x = n.x + modSum;
-        if (leftContour[currDepth] === undefined || x > leftContour[currDepth]) {
-          leftContour[currDepth] = x;
-        }
-        if (n.right) getRightmostContour(n.right, currDepth + 1, modSum + n.mod);
-        if (n.left) getRightmostContour(n.left, currDepth + 1, modSum + n.mod);
-      }
-
-      function getLeftmostContour(id, currDepth, modSum) {
-        const n = nodeMap.get(id);
-        if (!n) return;
-        const x = n.x + modSum;
-        if (rightContour[currDepth] === undefined || x < rightContour[currDepth]) {
-          rightContour[currDepth] = x;
-        }
-        if (n.left) getLeftmostContour(n.left, currDepth + 1, modSum + n.mod);
-        if (n.right) getLeftmostContour(n.right, currDepth + 1, modSum + n.mod);
-      }
-
-      getRightmostContour(node.left, 0, 0);
-      getLeftmostContour(node.right, 0, 0);
-
-      const minDepth = Math.min(leftContour.length, rightContour.length);
-      for (let d = 0; d < minDepth; d++) {
-        const distance = rightContour[d] - leftContour[d];
-        if (distance < siblingDistance) {
-          const overlap = siblingDistance - distance;
-          if (overlap > maxOverlap) maxOverlap = overlap;
-        }
-      }
-
-      if (maxOverlap > 0) {
-        const rightChild = nodeMap.get(node.right);
-        rightChild.x += maxOverlap;
-        rightChild.mod += maxOverlap;
-        const leftChild = nodeMap.get(node.left);
-        node.x = (leftChild.x + rightChild.x) / 2;
-      }
-    }
-
-    // Pass 2: Pre-order traversal to apply modifier sums
-    function secondPass(nodeId, modSum = 0) {
-      const node = nodeMap.get(nodeId);
-      if (!node) return;
-      node.x += modSum;
-      if (node.left) secondPass(node.left, modSum + node.mod);
-      if (node.right) secondPass(node.right, modSum + node.mod);
-    }
-
-    firstPass(rootNode.id);
-    secondPass(rootNode.id);
-
-    // Center root on X = 0
-    const rootX = rootNode.x;
-    nodeMap.forEach((n) => { n.x -= rootX; });
-
-    let minX = Infinity, maxX = -Infinity;
-    let minY = Infinity, maxY = -Infinity;
-    nodeMap.forEach((node) => {
-      if (node.x < minX) minX = node.x;
-      if (node.x > maxX) maxX = node.x;
-      if (node.y < minY) minY = node.y;
-      if (node.y > maxY) maxY = node.y;
+    const positionedNodes = treeNodes.map((original) => {
+      const node = nodeMap.get(original.id) || original;
+      const x = (xById.get(node.id) ?? 0) - rootX;
+      const y = -node.depth * levelHeight;
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      return { ...original, depth: node.depth, pos: [x, y, 0] };
     });
 
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
-    const treeHeight = Math.max(maxY - minY, 1);
-    const treeWidth = Math.max(maxX - minX, 1);
-    const treeScale = Math.min(1.0, 9.5 / Math.max(treeWidth, treeHeight * 1.15));
-
-    const positionedNodes = treeNodes.map((node) => {
-      const n = nodeMap.get(node.id);
-      return {
-        ...node,
-        pos: [n.x, n.y, 0],
-      };
-    });
-
-    const posMap = new Map();
-    positionedNodes.forEach((n) => posMap.set(n.id, n.pos));
-
-    // Build branches connecting parent -> child
+    const posMap = new Map(positionedNodes.map((n) => [n.id, n.pos]));
     const branches = [];
     positionedNodes.forEach((node) => {
       if (node.parent !== null && node.parent !== undefined) {
         const parentPos = posMap.get(node.parent);
         if (parentPos) {
           branches.push({
-            id: `b-${node.parent}-${node.id}`,
+            id: 'b-' + node.parent + '-' + node.id,
             parentId: node.parent,
             childId: node.id,
             start: parentPos,
@@ -311,31 +203,26 @@ export default function TreeVisualizer3D({ dataStructureState }) {
       }
     });
 
-    // Extract unique levels for level markers
     const maxDepth = Math.max(...positionedNodes.map((n) => n.depth), 0);
-    const levels = [];
-    for (let d = 0; d <= maxDepth; d++) {
-      const sample = positionedNodes.find((n) => n.depth === d);
-      if (sample) {
-        levels.push({
-          depth: d,
-          y: sample.pos[1],
-          label: d === 0 ? 'Level 0 (Root)' : `Level ${d}`,
-        });
-      }
-    }
+    const levels = Array.from({ length: maxDepth + 1 }, (_, depth) => ({
+      depth,
+      y: -depth * levelHeight,
+      label: depth === 0 ? 'Level 0 (Root)' : 'Level ' + depth,
+    })).filter((level) => positionedNodes.some((n) => n.depth === level.depth));
 
-    return { positionedNodes, branches, levels, minX, maxX, treeScale, centerX, centerY };
+    const treeWidth = Math.max(maxX - minX, 1);
+    const treeScale = treeWidth > 11 ? Math.min(1, 11 / treeWidth) : 1;
+
+    return { positionedNodes, branches, levels, minX, maxX, treeScale };
   }, [treeNodes]);
-
-  const { positionedNodes, branches, levels, minX = -4, maxX = 4, treeScale = 1.0, centerX = 0, centerY = 0 } = layoutData;
+  const { positionedNodes, branches, levels, minX = -4, maxX = 4, treeScale = 1.0 } = layoutData;
   const hoveredNode = positionedNodes.find((n) => n.id === hoveredNodeId);
 
   const markerOffset = Math.min(minX - 1.2, -3.8);
 
   return (
-    <group position={[-centerX * treeScale, -centerY * treeScale + 0.5, 0]} scale={[treeScale, treeScale, treeScale]}>
-      {/* Level Markers */}
+    <group position={[0, 0, 0]} scale={[treeScale, treeScale, treeScale]}>
+      {/* Symmetrically balanced Level Markers so <Center> stays perfectly centered on Root */}
       <group position={[markerOffset, 0, 0]}>
         {levels.map((lvl) => (
           <Billboard key={`lvl-${lvl.depth}`} position={[0, lvl.y, 0]}>
@@ -349,6 +236,12 @@ export default function TreeVisualizer3D({ dataStructureState }) {
               {lvl.label} ──
             </Text>
           </Billboard>
+        ))}
+      </group>
+      {/* Invisible right balance anchor to keep Center root at X=0 */}
+      <group position={[-markerOffset, 0, 0]}>
+        {levels.map((lvl) => (
+          <group key={`lvl-balance-${lvl.depth}`} position={[0, lvl.y, 0]} />
         ))}
       </group>
 
@@ -365,7 +258,7 @@ export default function TreeVisualizer3D({ dataStructureState }) {
         );
       })}
 
-      {/* 3D Spheres for Nodes */}
+      {/* 3D Glowing Spheres for Nodes */}
       {positionedNodes.map((node) => {
         const isActive = activeIndex === node.id;
         const isHovered = hoveredNodeId === node.id;
@@ -384,13 +277,13 @@ export default function TreeVisualizer3D({ dataStructureState }) {
               setHoveredNodeId(null);
             }}
           >
-            {/* Sphere Mesh */}
+            {/* Sphere Mesh with cyber glowing material */}
             <mesh castShadow receiveShadow>
               <sphereGeometry args={[radius, 32, 32]} />
               <meshStandardMaterial
-                color={isActive ? '#f59e0b' : isHovered ? '#fbbf24' : isBright ? '#e2e8f0' : '#1e293b'}
-                emissive={isActive ? '#d97706' : isHovered ? '#b45309' : isBright ? '#cbd5e1' : '#0f172a'}
-                emissiveIntensity={isActive ? 1.4 : isHovered ? 0.8 : 0.2}
+                color={isActive ? '#06b6d4' : isHovered ? '#f59e0b' : isBright ? '#e2e8f0' : '#1e293b'}
+                emissive={isActive ? '#0891b2' : isHovered ? '#d97706' : isBright ? '#cbd5e1' : '#0f172a'}
+                emissiveIntensity={isActive ? 1.0 : isHovered ? 0.6 : 0.2}
                 metalness={0.5}
                 roughness={0.2}
               />
@@ -400,15 +293,15 @@ export default function TreeVisualizer3D({ dataStructureState }) {
             <lineSegments>
               <edgesGeometry args={[new THREE.SphereGeometry(radius + 0.015, 16, 16)]} />
               <lineBasicMaterial
-                color={isActive ? '#fbbf24' : isHovered ? '#f59e0b' : isBright ? '#94a3b8' : '#334155'}
+                color={isActive ? '#67e8f9' : isHovered ? '#fbbf24' : isBright ? '#94a3b8' : '#334155'}
               />
             </lineSegments>
 
-            {/* Node Value Text Billboard */}
+            {/* Node Value Text Billboard (Always faces camera) */}
             <Billboard position={[0, 0, radius + 0.08]}>
               <Text
                 fontSize={0.34}
-                color={isActive ? '#1c1917' : isBright ? '#0f172a' : '#ffffff'}
+                color={isActive ? '#082f49' : isBright ? '#0f172a' : '#ffffff'}
                 anchorX="center"
                 anchorY="middle"
                 fontWeight="bold"
@@ -437,15 +330,15 @@ export default function TreeVisualizer3D({ dataStructureState }) {
                   <mesh rotation={[Math.PI, 0, 0]}>
                     <coneGeometry args={[0.18, 0.42, 16]} />
                     <meshStandardMaterial
-                      color="#f59e0b"
-                      emissive="#d97706"
-                      emissiveIntensity={1.2}
+                      color="#22d3ee"
+                      emissive="#06b6d4"
+                      emissiveIntensity={1.0}
                     />
                   </mesh>
                   <Billboard position={[0, 0.35, 0]}>
                     <Text
                       fontSize={0.22}
-                      color="#f59e0b"
+                      color="#38bdf8"
                       fontWeight="bold"
                       anchorX="center"
                       anchorY="middle"
@@ -465,7 +358,7 @@ export default function TreeVisualizer3D({ dataStructureState }) {
                     <planeGeometry args={[2.8, 0.8]} />
                     <meshBasicMaterial color="#090d16" transparent opacity={0.9} />
                   </mesh>
-                  <Text position={[0, 0.2, 0]} fontSize={0.2} color="#f59e0b" fontWeight="bold">
+                  <Text position={[0, 0.2, 0]} fontSize={0.2} color="#38bdf8" fontWeight="bold">
                     Node: {node.val} (Level {node.depth})
                   </Text>
                   <Text position={[0, -0.15, 0]} fontSize={0.16} color="#94a3b8">

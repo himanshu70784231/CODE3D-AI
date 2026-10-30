@@ -1,21 +1,27 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Sparkles, HelpCircle, Lightbulb, Compass, Code, X, ChevronRight, Check } from 'lucide-react';
 import { requestAiExplanation } from '../services/apiService';
 import { useTheme } from '../context/ThemeContext';
 
-export default function AiAssistantModal({ isOpen, onClose, code, currentLineNumber, currentStepNumber }) {
+export default function AiAssistantModal({ isOpen, onClose, code, currentLineNumber, currentStepNumber, language = 'java', currentStep = null, output = [], error = null, detectedDsa = null, detectedAlgorithm = null }) {
   const { isBright } = useTheme();
   const [level, setLevel] = useState('Beginner');
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState(null);
   const [activeQuery, setActiveQuery] = useState('WHY');
 
+  useEffect(() => {
+    if (isOpen && code) {
+      handleAsk(error ? 'WHY' : 'EXPLAIN_CODE');
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleAsk = async (queryType) => {
     setActiveQuery(queryType);
     setLoading(true);
-    const res = await requestAiExplanation(code, currentLineNumber, currentStepNumber, queryType, level);
+    const res = await requestAiExplanation(code, currentLineNumber, currentStepNumber, queryType, level, language, { currentStep, output, error, detectedDsa, detectedAlgorithm });
     if (res) {
       setResponse(res);
     } else {
@@ -229,6 +235,31 @@ export default function AiAssistantModal({ isOpen, onClose, code, currentLineNum
                     <span className={`text-[10px] uppercase font-bold block ${isBright ? 'text-amber-700' : 'text-amber-400'}`}>Pro Tip / Hint</span>
                     <p className="text-xs mt-0.5">{response.hint}</p>
                   </div>
+                </div>
+              )}
+
+              {response.whatWentWrong && (
+                <div className={`border rounded-xl p-3.5 ${isBright ? 'bg-rose-50 border-rose-200 text-rose-900' : 'bg-rose-950/20 border-rose-800/40 text-rose-200'}`}>
+                  <span className={`text-[10px] uppercase font-bold block ${isBright ? 'text-rose-700' : 'text-rose-400'}`}>What went wrong</span>
+                  <p className="text-xs mt-1 leading-relaxed">{response.whatWentWrong}</p>
+                </div>
+              )}
+              {response.whyItHappened && (
+                <div className={`border rounded-xl p-3.5 ${isBright ? 'bg-amber-50 border-amber-200 text-amber-950' : 'bg-amber-950/20 border-amber-800/40 text-amber-200'}`}>
+                  <span className={`text-[10px] uppercase font-bold block ${isBright ? 'text-amber-700' : 'text-amber-400'}`}>Why it happened</span>
+                  <p className="text-xs mt-1 leading-relaxed">{response.whyItHappened}</p>
+                </div>
+              )}
+              {response.solution && (
+                <div className={`border rounded-xl p-3.5 ${isBright ? 'bg-blue-50 border-blue-200 text-blue-950' : 'bg-blue-950/20 border-blue-800/40 text-blue-200'}`}>
+                  <span className={`text-[10px] uppercase font-bold block ${isBright ? 'text-blue-700' : 'text-blue-400'}`}>Solution</span>
+                  <p className="text-xs mt-1 leading-relaxed">{response.solution}</p>
+                </div>
+              )}
+              {response.prevention && (
+                <div className={`border rounded-xl p-3.5 ${isBright ? 'bg-violet-50 border-violet-200 text-violet-950' : 'bg-violet-950/20 border-violet-800/40 text-violet-200'}`}>
+                  <span className={`text-[10px] uppercase font-bold block ${isBright ? 'text-violet-700' : 'text-violet-400'}`}>How to prevent it</span>
+                  <p className="text-xs mt-1 leading-relaxed">{response.prevention}</p>
                 </div>
               )}
 
