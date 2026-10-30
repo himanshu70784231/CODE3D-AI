@@ -8,16 +8,18 @@
  * - Token authorization + HttpOnly credentials
  */
 
+import { buildApiUrl } from '../api.js';
+
 const isLocalhost =
   typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-const DEFAULT_URL = isLocalhost ? 'http://localhost:8080/api' : 'https://code3d-ai.onrender.com/api';
+const DEFAULT_URL = isLocalhost ? 'http://localhost:5000/api' : 'https://code3d-ai.onrender.com/api';
 
 const rawUrl =
-  import.meta.env.VITE_BACKEND_URL ||
-  import.meta.env.VITE_API_BASE_URL ||
-  import.meta.env.VITE_API_URL ||
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL) ||
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
   DEFAULT_URL;
 
 export const API_BASE_URL = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl;
@@ -43,7 +45,7 @@ export async function request(endpoint, options = {}) {
     ...fetchOptions
   } = options;
 
-  let url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  let url = buildApiUrl(API_BASE_URL, endpoint);
 
   if (params) {
     const search = new URLSearchParams(params).toString();

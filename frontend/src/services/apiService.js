@@ -3,8 +3,9 @@
  */
 
 import { solvePersonalProblem, correctPersonalCode } from './personalProblemSolver.js';
+import { buildApiUrl } from './api.js';
 
-const LIVE_RENDER_URL = 'https://code3d-ai-oscc.onrender.com/api';
+const LIVE_RENDER_URL = 'https://code3d-ai.onrender.com/api';
 const LOCAL_URL = 'http://localhost:5000/api';
 const CONFIGURED_FALLBACK_URL = import.meta.env?.VITE_FALLBACK_BACKEND_URL || '';
 
@@ -14,9 +15,19 @@ const isLocalhost =
   (window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1');
 
-const BACKEND_BASE_URL =
-  import.meta.env?.VITE_BACKEND_URL ||
-  (isLocalhost ? LOCAL_URL : LIVE_RENDER_URL);
+function resolveBackendBaseUrl() {
+  const envUrl = (
+    import.meta.env?.VITE_BACKEND_URL ||
+    import.meta.env?.VITE_API_URL ||
+    import.meta.env?.VITE_API_BASE_URL ||
+    ''
+  ).trim();
+
+  if (envUrl) return envUrl;
+  return isLocalhost ? LOCAL_URL : LIVE_RENDER_URL;
+}
+
+const BACKEND_BASE_URL = resolveBackendBaseUrl();
 
 function isSafeFallbackUrl(value) {
   try {
@@ -35,9 +46,11 @@ async function smartFetch(endpoint, options = {}, { allowFallback = true } = {})
     credentials: 'include',
   };
 
+  const targetUrl = buildApiUrl(BACKEND_BASE_URL, endpoint);
+
   try {
     const res = await fetch(
-      `${BACKEND_BASE_URL}${endpoint}`,
+      targetUrl,
       fetchOpts
     );
 
@@ -50,8 +63,9 @@ async function smartFetch(endpoint, options = {}, { allowFallback = true } = {})
           `Backend unreachable at ${BACKEND_BASE_URL}. Trying the explicitly configured fallback...`
         );
 
+        const fallbackTarget = buildApiUrl(CONFIGURED_FALLBACK_URL, endpoint);
         return await fetch(
-          `${CONFIGURED_FALLBACK_URL.replace(/\/+$/, '')}${endpoint}`,
+          fallbackTarget,
           fetchOpts
         );
       } catch (fallbackErr) {
@@ -1049,7 +1063,11 @@ export const solveAndVisualizePersonalProblem =
 export async function getAiExplanation({
   code,
   language = 'java',
-  question = ''
+  question = '',
+  action = 'EXPLAIN_CODE',
+  level = 'Beginner',
+  output = [],
+  history = []
 }) {
   const res =
     await smartFetch(
@@ -1061,12 +1079,13 @@ export async function getAiExplanation({
             'application/json'
         },
         body: JSON.stringify({
+          action,
           code,
           language,
-          action: 'ANALYZE_CODE',
-          level: 'Beginner',
-          question,
-          output: []
+          question: question || 'Explain this code',
+          level,
+          output: Array.isArray(output) ? output : [],
+          history: Array.isArray(history) ? history : []
         }),
       }
     );

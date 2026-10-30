@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import NaturalLanguageSceneRenderer from '../visualizers/NaturalLanguageSceneRenderer';
+import { apiRequest } from '../services/api.js';
 
 const SAMPLE_PROMPTS = [
   {
@@ -60,14 +61,12 @@ export default function NlTo3dPage() {
     setError(null);
 
     try {
-      const res = await fetch('/api/scene/generate', {
+      const data = await apiRequest('/scene/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: textToRun }),
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
+      if (!data?.success) {
         throw new Error(data?.error?.message || 'Failed to generate 3D scene from prompt.');
       }
 

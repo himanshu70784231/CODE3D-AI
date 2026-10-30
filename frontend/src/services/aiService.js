@@ -1,98 +1,109 @@
 /**
  * CODE3D-AI - Standardized AI Service Interface
  * 
- * Complies strictly with Section 45:
- * If an AI backend isn't configured, reports: 'AI service is not configured.'
- * Never returns fake hardcoded responses.
+ * Secure frontend AI dispatcher communicating with the backend /api/ai/explain endpoint.
+ * Private API keys (e.g. GROQ_API_KEY) remain strictly server-side.
  */
 
 import { apiRequest } from './api.js';
 
 export class AIService {
-  static isConfigured() {
-    return Boolean(import.meta.env.VITE_AI_ENABLED === 'true' || import.meta.env.VITE_AI_API_KEY);
-  }
-
   static async explainCode(code, language = 'java') {
-    if (!this.isConfigured()) {
-      return {
-        configured: false,
-        message: 'AI service is not configured. Configure VITE_AI_API_KEY to enable live AI code explanations.',
-      };
-    }
     try {
-      return await apiRequest('/ai/explain-code', {
+      const data = await apiRequest('/ai/explain', {
         method: 'POST',
-        body: JSON.stringify({ code, language }),
+        body: JSON.stringify({
+          action: 'EXPLAIN_CODE',
+          code,
+          language,
+          question: 'Explain this code',
+          level: 'Beginner',
+          output: [],
+          history: [],
+        }),
       });
+      return data;
     } catch (err) {
       return { configured: true, error: err.message };
     }
   }
 
   static async explainStep(step, code, language = 'java') {
-    if (!this.isConfigured()) {
-      return {
-        configured: false,
-        message: 'AI service is not configured. Configure VITE_AI_API_KEY to enable live AI step insights.',
-      };
-    }
     try {
-      return await apiRequest('/ai/explain-step', {
+      const data = await apiRequest('/ai/explain', {
         method: 'POST',
-        body: JSON.stringify({ step, code, language }),
+        body: JSON.stringify({
+          action: 'EXPLAIN_STEP',
+          code,
+          language,
+          currentStep: step,
+          level: 'Beginner',
+          output: [],
+          history: [],
+        }),
       });
+      return data;
     } catch (err) {
       return { configured: true, error: err.message };
     }
   }
 
   static async explainError(error, code, language = 'java') {
-    if (!this.isConfigured()) {
-      return {
-        configured: false,
-        message: 'AI service is not configured. Configure VITE_AI_API_KEY to enable live AI error diagnostics.',
-      };
-    }
     try {
-      return await apiRequest('/ai/explain-error', {
+      const data = await apiRequest('/ai/explain', {
         method: 'POST',
-        body: JSON.stringify({ error, code, language }),
+        body: JSON.stringify({
+          action: 'DEBUG_CODE',
+          code,
+          language,
+          error,
+          question: 'Find errors in my code',
+          level: 'Beginner',
+          output: [],
+          history: [],
+        }),
       });
+      return data;
     } catch (err) {
       return { configured: true, error: err.message };
     }
   }
 
   static async generateHints(problemTitle, code) {
-    if (!this.isConfigured()) {
-      return {
-        configured: false,
-        message: 'AI service is not configured. Configure VITE_AI_API_KEY to enable live AI problem hints.',
-      };
-    }
     try {
-      return await apiRequest('/ai/hints', {
+      const data = await apiRequest('/ai/explain', {
         method: 'POST',
-        body: JSON.stringify({ problemTitle, code }),
+        body: JSON.stringify({
+          action: 'CHAT',
+          code,
+          language: 'java',
+          question: `Give hints for solving: ${problemTitle}`,
+          level: 'Beginner',
+          output: [],
+          history: [],
+        }),
       });
+      return data;
     } catch (err) {
       return { configured: true, error: err.message };
     }
   }
 
   static async identifyAlgorithm(code) {
-    if (!this.isConfigured()) {
-      return {
-        configured: false,
-        message: 'AI service is not configured.',
-      };
-    }
     try {
-      return await apiRequest('/ai/identify-algorithm', {
+      const data = await apiRequest('/ai/explain', {
         method: 'POST',
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({
+          action: 'ANALYZE_COMPLEXITY',
+          code,
+          language: 'java',
+          question: 'Analyze algorithm and complexity',
+          level: 'Beginner',
+          output: [],
+          history: [],
+        }),
       });
+      return data;
     } catch (err) {
       return { configured: true, error: err.message };
     }

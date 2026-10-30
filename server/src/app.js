@@ -17,11 +17,10 @@ app.use(
   })
 );
 
-// Exact CORS allowlist. Configure FRONTEND_URL and optionally CORS_ALLOWED_ORIGINS
-// (comma-separated) in production. Local development origins are also needed
-// when the Node service runs in Docker with NODE_ENV=production.
+// Exact CORS allowlist and trusted domain patterns for deployed frontend clients.
 const allowedOrigins = new Set([
   'https://code-3d-ai.vercel.app',
+  'https://code3d-ai.vercel.app',
   'http://localhost:5173',
   'http://localhost:5174',
   'http://127.0.0.1:5173',
@@ -33,11 +32,29 @@ const allowedOrigins = new Set([
     .filter(Boolean),
 ]);
 
+export function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  if (allowedOrigins.has(origin)) return true;
+  try {
+    const parsed = new URL(origin);
+    if (
+      parsed.protocol === 'https:' &&
+      (parsed.hostname === 'code-3d-ai.vercel.app' ||
+        parsed.hostname === 'code3d-ai.vercel.app' ||
+        parsed.hostname.endsWith('.vercel.app') ||
+        parsed.hostname.endsWith('.github.io'))
+    ) {
+      return true;
+    }
+  } catch {}
+  return false;
+}
+
 app.use(
   cors({
     origin: (origin, callback) => {
       // Requests without an Origin header are non-browser/server-to-server clients.
-      callback(null, !origin || allowedOrigins.has(origin));
+      callback(null, isAllowedOrigin(origin));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -50,7 +67,7 @@ app.use(
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   const stateChanging = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
-  if (origin && stateChanging && !allowedOrigins.has(origin)) {
+  if (origin && stateChanging && !isAllowedOrigin(origin)) {
     return res.status(403).json({
       success: false,
       error: 'ORIGIN_NOT_ALLOWED',

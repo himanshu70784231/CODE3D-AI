@@ -176,8 +176,8 @@ export async function executeProgram({ code, language = 'javascript', input = ''
   if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
     try {
       const backendUrl =
-        (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
-        'http://localhost:8080/api';
+        (typeof import.meta !== 'undefined' && (import.meta.env?.VITE_BACKEND_URL || import.meta.env?.VITE_API_URL)) ||
+        'https://code3d-ai.onrender.com/api';
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 1200);
 
