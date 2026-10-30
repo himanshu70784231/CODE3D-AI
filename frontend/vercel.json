@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "https://code3d-ai.onrender.com/api/:path*"
+    },
+    {
       "source": "/CODE3D-AI/assets/:path*",
       "destination": "/assets/:path*"
     },
