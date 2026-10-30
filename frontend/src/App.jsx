@@ -18,6 +18,9 @@ import ProfilePage from './pages/ProfilePage';
 import PlaygroundPage from './pages/PlaygroundPage';
 import NlTo3dPage from './pages/NlTo3dPage';
 import FlashcardsPage from './pages/FlashcardsPage';
+import DsaLearningPage from './pages/DsaLearningPage';
+import ComingSoonPage from './pages/ComingSoonPage';
+import HomeDashboard from './pages/HomeDashboard';
 import LoginModal from './components/LoginModal';
 import CodeDoctorModal from './components/CodeDoctorModal';
 import ChallengeDashboard from './features/challenges/pages/ChallengeDashboard';
@@ -221,6 +224,17 @@ function MainAppContent() {
 
           {/* AI Flashcards */}
           <Route path="/flashcards" element={<FlashcardsPage onSelectConcept={handleLaunchConcept} />} />
+
+          {/* Comprehensive DSA Theory, Visual Notes & Memory Models */}
+          <Route path="/dsa-learning" element={<DsaLearningPage />} />
+          <Route path="/learning" element={<DsaLearningPage />} />
+
+          {/* Alternate Home Workspace Overview */}
+          <Route path="/overview" element={<HomeDashboard />} />
+
+          {/* Platform Status & Launch Countdown */}
+          <Route path="/coming-soon" element={<ComingSoonPage />} />
+          <Route path="/maintenance" element={<ComingSoonPage />} />
 
           {/* Predict & Repair Challenge Arena */}
           <Route

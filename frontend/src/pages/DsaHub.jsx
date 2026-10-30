@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SAMPLE_PROGRAMS, CURRICULUM_CATEGORIES } from '../utils/sampleCodes';
 import { STRIVER_DAYS, STRIVER_PROBLEMS } from '../utils/striverCatalog';
 import { ALGORITHM_CATALOG, generateAlgorithmSteps } from '../algorithms/index';
@@ -26,6 +27,7 @@ import {
 const STORAGE_KEY = 'code3d_striver_solved_v1';
 
 export default function DsaHub({ onSelectConcept, initialTab = 'algorithms' }) {
+  const navigate = useNavigate();
   const { isBright, currentAccent } = useTheme();
   const accentHex = isBright ? currentAccent.bright : currentAccent.dark;
 
@@ -291,6 +293,17 @@ export default function DsaHub({ onSelectConcept, initialTab = 'algorithms' }) {
               }`}>
                 {totalStriverCount}
               </span>
+            </button>
+
+            <button
+              onClick={() => navigate('/dsa-learning')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                isBright ? 'text-amber-800 hover:text-amber-950 bg-amber-50/80 hover:bg-amber-100' : 'text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20'
+              }`}
+              title="Read complete theory, dry runs, and memory diagrams for 16 core DSA topics"
+            >
+              <BookOpen size={14} />
+              <span>Theory Notes 📖</span>
             </button>
           </div>
         </div>

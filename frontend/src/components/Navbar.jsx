@@ -24,6 +24,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
     { id: 'editor', path: '/editor', label: 'Code Editor', icon: '⚡' },
     { id: 'visualizer', path: '/visualizer', label: '3D Studio', icon: '🧊' },
     { id: 'dsa', path: '/dsa', label: 'DSA Hub', icon: '📚' },
+    { id: 'dsa-learning', path: '/dsa-learning', label: 'DSA Notes', icon: '📖' },
     { id: 'ai', path: '/ai', label: 'AI Tutor', icon: '🤖' },
     { id: 'quiz', path: '/quiz', label: 'Quiz', icon: '🎯' },
     { id: 'flashcards', path: '/flashcards', label: 'Flashcards', icon: '🎴' },

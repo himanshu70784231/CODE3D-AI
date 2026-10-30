@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Bookmark, History, Settings, LogOut, UserPlus } from 'lucide-react';
+import { User, Bookmark, History, Settings, LogOut, UserPlus, BookOpen, Layers } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -78,6 +78,26 @@ export default function AccountMenu({ onClose }) {
             <span>Profile</span>
           </button>
         )}
+
+        <button
+          onClick={() => handleAction(() => navigate('/dsa-learning'))}
+          className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2 cursor-pointer transition ${
+            isBright ? 'hover:bg-stone-100 text-stone-700' : 'hover:bg-stone-800/80 text-stone-300'
+          }`}
+        >
+          <BookOpen size={13} className="text-amber-500" />
+          <span>DSA Theory &amp; Notes</span>
+        </button>
+
+        <button
+          onClick={() => handleAction(() => navigate('/flashcards'))}
+          className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2 cursor-pointer transition ${
+            isBright ? 'hover:bg-stone-100 text-stone-700' : 'hover:bg-stone-800/80 text-stone-300'
+          }`}
+        >
+          <Layers size={13} className="text-amber-500" />
+          <span>AI Flashcards</span>
+        </button>
 
         <button
           onClick={() =>

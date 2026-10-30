@@ -167,6 +167,22 @@ export default function Dashboard({ onNavigate, onLaunchConcept }) {
       path: '/quiz',
       accent: 'emerald',
     },
+    {
+      icon: Layers,
+      title: 'DSA Theory Notes',
+      description: 'Comprehensive theory, memory models, Hinglish dry-runs and interview prep for 16 core DSA topics.',
+      action: 'Read Notes',
+      path: '/dsa-learning',
+      accent: 'amber',
+    },
+    {
+      icon: Zap,
+      title: 'AI Flashcards',
+      description: 'Active recall spaced-repetition flashcards across 12 DSA topics with adaptive mastery levels.',
+      action: 'Practice Cards',
+      path: '/flashcards',
+      accent: 'rose',
+    },
   ];
 
   return (
