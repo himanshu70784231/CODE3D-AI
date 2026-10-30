@@ -1,17 +1,47 @@
 /** Normalize the execution API response for the Universal Editor UI. */
 export function normalizeUniversalExecutionResult(result = {}) {
-  const status = result.status || (result.success === true ? 'COMPLETED' : 'ERROR');
-  const output = Array.isArray(result.output) && result.output.length > 0
-    ? result.output.map(String).filter((line, index, lines) => !(index === lines.length - 1 && line === ''))
-    : typeof result.stdout === 'string'
-      ? result.stdout.replace(/\r/g, '').split('\n').filter((line, index, lines) => !(index === lines.length - 1 && line === ''))
-      : typeof result.output === 'string'
-        ? result.output.replace(/\r/g, '').split('\n').filter((line, index, lines) => !(index === lines.length - 1 && line === ''))
-        : [];
-  const failed = status !== 'COMPLETED' || result.success === false;
+  const rawStatus = String(result.status || '').toUpperCase();
+  const isExplicitSuccess =
+    result.success === true ||
+    rawStatus === 'SUCCESS' ||
+    rawStatus === 'COMPLETED' ||
+    rawStatus === 'OK';
+  const isExplicitError =
+    result.success === false ||
+    rawStatus === 'ERROR' ||
+    rawStatus === 'FAILED';
+
+  const status = isExplicitSuccess && !isExplicitError ? 'COMPLETED' : (rawStatus || 'ERROR');
+  const failed = !isExplicitSuccess || isExplicitError;
+
+  // Extract stdout / output from multiple possible backend formats:
+  // 1. result.output (array or string)
+  // 2. result.stdout (string)
+  // 3. steps with output (e.g. step with eventType === 'OUTPUT' or last step's output stream)
+  let rawOutput = [];
+  if (Array.isArray(result.output) && result.output.length > 0) {
+    rawOutput = result.output;
+  } else if (typeof result.stdout === 'string' && result.stdout.length > 0) {
+    rawOutput = result.stdout.replace(/\r/g, '').split('\n');
+  } else if (typeof result.output === 'string' && result.output.length > 0) {
+    rawOutput = result.output.replace(/\r/g, '').split('\n');
+  } else if (Array.isArray(result.steps) && result.steps.length > 0) {
+    // Find output from the last step or steps containing output
+    const stepWithOutput = [...result.steps].reverse().find(s => Array.isArray(s.output) && s.output.length > 0);
+    if (stepWithOutput) {
+      rawOutput = stepWithOutput.output;
+    }
+  }
+
+  const output = rawOutput.map(String).filter((line, index, lines) => !(index === lines.length - 1 && line === ''));
   const executionTimeMs = result.executionTimeMs == null ? NaN : Number(result.executionTimeMs);
   const traceSupported = !failed && result.traceSupported === true;
-  const errorDetails = [...new Set([result.message, result.stderr].filter((value) => typeof value === 'string' && value.trim()))];
+  const errorDetails = [
+    ...new Set(
+      [result.error, result.message, result.stderr]
+        .filter((value) => typeof value === 'string' && value.trim())
+    ),
+  ];
 
   return {
     status,
@@ -24,7 +54,7 @@ export function normalizeUniversalExecutionResult(result = {}) {
       ? 'Only generic source-level events were detected; no reliable data-structure trace is available.'
       : result.traceReason || null,
     complexity: result.complexity && typeof result.complexity === 'object' ? result.complexity : null,
-    // Generic events are source-level models, not runtime instrumentation.
+    // Provide steps whenever execution succeeded
     steps: !failed && Array.isArray(result.steps) ? result.steps : [],
   };
 }

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Volume2, VolumeX, Pause, Play, Square, X } from 'lucide-react';
+import { Volume2, VolumeX, Pause, Play, Square, X, RotateCcw } from 'lucide-react';
 import { useTextToSpeech } from '../hooks/useTextToSpeech';
 
 function explainSourceLine(sourceLine, language, step) {
@@ -137,6 +137,7 @@ export default function ExecutionNarration({ step, stepIndex = 0, isBright = fal
           <button type="button" className={button} disabled={!narration.speaking || narration.paused} onClick={narration.pause}><Pause size={14} />Pause</button>
           <button type="button" className={button} disabled={!narration.paused} onClick={narration.resume}><Play size={14} />Resume</button>
           <button type="button" className={button} disabled={!narration.speaking && !narration.paused} onClick={narration.stop}><Square size={13} />Stop</button>
+          <button type="button" className={button} disabled={!summary} onClick={() => { if (!narration.enabled) narration.toggleEnabled(); narration.speak(summary, { lang: narration.voiceLanguage }); }}><RotateCcw size={13} />Repeat</button>
         </div>
         <p className="mt-3 rounded-lg bg-slate-500/10 p-2.5 text-xs leading-relaxed" aria-live="polite">
           <strong>{line ? `Line ${line}: ` : ''}</strong>{sourceLine || 'No matching source line'}

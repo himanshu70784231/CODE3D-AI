@@ -4,6 +4,7 @@ import {
   Play,
   Square,
   RotateCcw,
+  Trash2,
   ShieldCheck,
   AlertTriangle,
   Terminal,
@@ -17,6 +18,71 @@ import {
 import { useTheme } from '../context/ThemeContext';
 
 export const PLAYGROUND_PRESETS = [
+  {
+    id: 'web-card',
+    title: 'HTML/CSS/JS Live Web Card',
+    description: 'Interactive HTML component with CSS styles and JavaScript event listeners.',
+    code: `<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #090d16, #1e293b);
+      font-family: system-ui, -apple-system, sans-serif;
+      color: #f8fafc;
+    }
+    .card {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 360px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    }
+    h2 { margin: 0 0 0.5rem 0; color: #38bdf8; font-size: 1.5rem; }
+    p { color: #94a3b8; font-size: 0.9rem; line-height: 1.5; }
+    button {
+      margin-top: 1.25rem;
+      background: #0ea5e9;
+      color: white;
+      border: none;
+      padding: 0.6rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.2s;
+    }
+    button:hover { background: #0284c7; transform: translateY(-2px); }
+    .counter { font-size: 2rem; font-weight: bold; color: #38bdf8; margin: 1rem 0; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>⚡ Web Playground</h2>
+    <p>Live interactive HTML5, CSS3 & JavaScript component running in secure sandbox.</p>
+    <div class="counter" id="num">0</div>
+    <button id="btn">Click to Count</button>
+  </div>
+  <script>
+    let count = 0;
+    const btn = document.getElementById('btn');
+    const num = document.getElementById('num');
+    btn.addEventListener('click', () => {
+      count++;
+      num.textContent = count;
+      console.log('Count incremented to:', count);
+    });
+  </script>
+</body>
+</html>`,
+  },
   {
     id: 'torus-knot',
     title: 'Animated Torus Knot',
@@ -147,6 +213,23 @@ export default function SandboxedCodePlayground() {
 
   // Generates complete isolated HTML for the sandbox
   const generateSandboxSrcDoc = (userCode) => {
+    const trimmed = (userCode || '').trim();
+    // If the code is already a full or partial HTML document
+    if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html') || (trimmed.startsWith('<') && trimmed.includes('>'))) {
+      const consoleScript = `<script>
+        const sendLog = (level, msg) => window.parent.postMessage({ type: 'SANDBOX_LOG', level, msg }, '*');
+        const sendError = (err) => window.parent.postMessage({ type: 'SANDBOX_ERROR', error: String(err) }, '*');
+        window.onerror = (msg, url, line) => { sendError(msg + ' (Line ' + line + ')'); return true; };
+        console.log = (...args) => sendLog('info', args.map(String).join(' '));
+        console.error = (...args) => sendError(args.map(String).join(' '));
+        console.warn = (...args) => sendLog('warn', args.map(String).join(' '));
+      </script>`;
+      if (trimmed.includes('<head>')) {
+        return trimmed.replace('<head>', '<head>' + consoleScript);
+      }
+      return `<!DOCTYPE html><html><head>${consoleScript}</head><body>${trimmed}</body></html>`;
+    }
+
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -239,6 +322,17 @@ export default function SandboxedCodePlayground() {
   const handleReset = () => {
     setCode(selectedPreset.code);
     handleRun();
+  };
+
+  // Clear editor and output
+  const handleClear = () => {
+    setCode('');
+    setLogs([]);
+    setError(null);
+    setIsRunning(false);
+    if (iframeRef.current) {
+      iframeRef.current.srcdoc = '';
+    }
   };
 
   // Select Preset
@@ -380,6 +474,15 @@ export default function SandboxedCodePlayground() {
             >
               <RotateCcw className="w-3.5 h-3.5" />
               Reset
+            </button>
+
+            <button
+              onClick={handleClear}
+              className="h-8 px-3 rounded-xl border border-slate-700 hover:bg-slate-800 text-xs font-semibold text-rose-400 hover:text-rose-300 flex items-center gap-1.5 transition cursor-pointer"
+              title="Clear editor code and canvas"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Clear
             </button>
           </div>
 

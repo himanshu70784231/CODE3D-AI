@@ -48,7 +48,11 @@ export function useTextToSpeech() {
 
   const speak = useCallback((text, options = {}) => {
     const message = String(text ?? '').trim();
-    if (!message || !enabled || typeof window === 'undefined' ||
+    const isForced = options.force === true;
+    if (isForced && !enabled) {
+      setEnabled(true);
+    }
+    if (!message || (!enabled && !isForced) || typeof window === 'undefined' ||
       !window.speechSynthesis || typeof window.SpeechSynthesisUtterance !== 'function') {
       stop();
       return false;

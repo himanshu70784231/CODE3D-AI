@@ -223,9 +223,14 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false,
   // simulated stdout as if it came from the real program.
   const attachRuntimeOutput = (steps, backendResult) => {
     if (!Array.isArray(steps) || steps.length === 0) return [];
-    const runtimeOutput = Array.isArray(backendResult?.output)
+    let runtimeOutput = Array.isArray(backendResult?.output) && backendResult.output.length > 0
       ? backendResult.output
       : String(backendResult?.output || '').split(/\r?\n/).filter(Boolean);
+
+    if (runtimeOutput.length === 0 && Array.isArray(backendResult?.steps)) {
+      const stepWithOut = [...backendResult.steps].reverse().find(s => Array.isArray(s.output) && s.output.length > 0);
+      if (stepWithOut) runtimeOutput = stepWithOut.output;
+    }
 
     return steps.map((step, index) => ({
       ...step,
@@ -842,8 +847,10 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false,
           buildSemanticTrace(code, language, formInputValues, visualProblem),
           backendResult
         );
-        if (visualTrace.length === 0) {
-          throw new Error('Execution completed but no semantic 3D trace was generated.');
+        if (visualTrace.length === 0 && Array.isArray(execution.steps) && execution.steps.length > 0) {
+          visualTrace = execution.steps;
+        } else if (visualTrace.length === 0) {
+          visualTrace = getExecutionTrace(code, language, formInputValues);
         }
       }
 

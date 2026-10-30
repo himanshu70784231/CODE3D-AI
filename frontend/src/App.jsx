@@ -14,6 +14,7 @@ import DsaProblemPage from './pages/DsaProblemPage';
 import DsaLearningPage from './pages/DsaLearningPage';
 import FlashcardsPage from './pages/FlashcardsPage';
 import SavedVisualizationsPage from './pages/SavedVisualizationsPage';
+import PlaygroundPage from './pages/PlaygroundPage';
 import ComingSoonPage from './pages/ComingSoonPage';
 import LoginModal from './components/LoginModal';
 import CodeDoctorModal from './components/CodeDoctorModal';
@@ -90,6 +91,7 @@ function MainAppContent() {
           <Route path="/flashcards" element={<ProtectedRoute><FlashcardsPage onSelectConcept={handleLaunchConcept} /></ProtectedRoute>} />
           <Route path="/history" element={<ProtectedRoute><HistoryPage onRerunProgram={handleRerunFromHistory} /></ProtectedRoute>} />
           <Route path="/saved" element={<ProtectedRoute><SavedVisualizationsPage onReplay={handleLaunchConcept} /></ProtectedRoute>} />
+          <Route path="/playground" element={<ProtectedRoute><PlaygroundPage /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           <Route path="/sheets" element={<ProtectedRoute><SheetsPage onSelectProblem={handleLaunchConcept} /></ProtectedRoute>} />
           <Route path="/sheets/:sheetSlug" element={<ProtectedRoute><SheetsPage onSelectProblem={handleLaunchConcept} /></ProtectedRoute>} />

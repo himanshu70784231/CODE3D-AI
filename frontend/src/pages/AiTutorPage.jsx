@@ -10,6 +10,8 @@ import {
   askAiFollowUp,
   getAiExplanation,
 } from '../services/apiService';
+import { Volume2, Square } from 'lucide-react';
+import { useTextToSpeech } from '../hooks/useTextToSpeech';
 
 import './AiTutorPage.css';
 
@@ -101,6 +103,7 @@ export default function AiTutorPage() {
   const [analysis, setAnalysis] = useState(null);
 
   const [analysisLoading, setAnalysisLoading] = useState(false);
+  const tts = useTextToSpeech();
 
   const runRequestId = useRef(0);
 
@@ -821,10 +824,25 @@ export default function AiTutorPage() {
                         }
                       >
 
-                        <div className="message-label">
-                          {message.role === 'user'
-                            ? 'You'
-                            : 'Code Vision 3D'}
+                        <div className="message-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span>{message.role === 'user' ? 'You' : 'Code Vision 3D'}</span>
+                          {message.role === 'ai' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (tts.speaking) {
+                                  tts.stop();
+                                } else {
+                                  tts.speak(message.content, { force: true });
+                                }
+                              }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#06b6d4', padding: '2px 6px', borderRadius: '4px' }}
+                              title={tts.speaking ? 'Stop speech' : 'Listen with TTS'}
+                            >
+                              {tts.speaking ? <Square size={12} /> : <Volume2 size={12} />}
+                              <span>{tts.speaking ? 'Stop' : 'Listen'}</span>
+                            </button>
+                          )}
                         </div>
 
                         <div className="message-content">
@@ -946,10 +964,23 @@ export default function AiTutorPage() {
               </div>
 
               <div className="complexity-explanation">
-
-                {analysis?.explanation ||
-                  'Run Analyze to inspect the current code. You can also ask the AI Tutor directly.'}
-
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '4px' }}>
+                  <span>{analysis?.explanation || 'Run Analyze to inspect the current code. You can also ask the AI Tutor directly.'}</span>
+                  {analysis?.explanation && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (tts.speaking) tts.stop();
+                        else tts.speak(analysis.explanation, { force: true });
+                      }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: '#06b6d4', flexShrink: 0 }}
+                      title="Listen to complexity analysis"
+                    >
+                      {tts.speaking ? <Square size={11} /> : <Volume2 size={11} />}
+                      <span>{tts.speaking ? 'Stop' : 'Listen'}</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
             </div>

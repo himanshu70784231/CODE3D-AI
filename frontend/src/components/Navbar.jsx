@@ -68,6 +68,11 @@ export default function Navbar({ activeTab, setActiveTab }) {
           path: '/flashcards',
           label: 'Flashcards',
         },
+        {
+          id: 'playground',
+          path: '/playground',
+          label: 'Playground',
+        },
       ]
     : []),
 ];
