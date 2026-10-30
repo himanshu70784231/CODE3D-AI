@@ -5,13 +5,18 @@ import path from 'path';
 // https://vitejs.dev/config/
 export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const resolvedBackendUrl = (
+  let resolvedBackendUrl = (
     env.VITE_BACKEND_URL ||
     env.VITE_API_URL ||
     env.VITE_API_BASE_URL ||
     env.BACKEND_URL ||
     ''
   ).trim();
+
+  // Strip any obsolete or defunct subdomain from environment overrides
+  if (/code3d-ai-oscc\.onrender\.com/i.test(resolvedBackendUrl)) {
+    resolvedBackendUrl = resolvedBackendUrl.replace(/code3d-ai-oscc\.onrender\.com/gi, 'code3d-ai.onrender.com');
+  }
 
   return {
     plugins: [react()],

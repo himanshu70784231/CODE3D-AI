@@ -8,7 +8,7 @@
  * - Token authorization + HttpOnly credentials
  */
 
-import { buildApiUrl } from '../api.js';
+import { buildApiUrl, sanitizeBackendUrl } from '../api.js';
 
 const isLocalhost =
   typeof window !== 'undefined' &&
@@ -16,11 +16,12 @@ const isLocalhost =
 
 const DEFAULT_URL = isLocalhost ? 'http://localhost:5000/api' : 'https://code3d-ai.onrender.com/api';
 
-const rawUrl =
+const rawUrl = sanitizeBackendUrl(
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL) ||
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
-  DEFAULT_URL;
+  DEFAULT_URL
+);
 
 export const API_BASE_URL = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl;
 

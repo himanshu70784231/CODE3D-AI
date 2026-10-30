@@ -12,13 +12,25 @@ const isLocalhost =
   typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
+/**
+ * Sanitizes and guards against obsolete or defunct Render subdomains.
+ */
+export function sanitizeBackendUrl(url) {
+  if (!url) return '';
+  let cleaned = String(url).trim();
+  if (/code3d-ai-oscc\.onrender\.com/i.test(cleaned)) {
+    cleaned = cleaned.replace(/code3d-ai-oscc\.onrender\.com/gi, 'code3d-ai.onrender.com');
+  }
+  return cleaned;
+}
+
 function resolveRawBaseUrl() {
-  const envUrl = (
+  const envUrl = sanitizeBackendUrl(
     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL) ||
     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
     ''
-  ).trim();
+  );
 
   if (envUrl) return envUrl;
   return isLocalhost ? LOCAL_BACKEND_URL : LIVE_RENDER_URL;
@@ -29,8 +41,8 @@ function resolveRawBaseUrl() {
  * Automatically ensures the /api namespace while preventing duplicate /api/api paths.
  */
 export function buildApiUrl(baseUrl, endpoint) {
-  const rawBase = String(baseUrl || '').trim().replace(/\/+$/, '');
-  const rawEndpoint = String(endpoint || '').trim();
+  let rawBase = sanitizeBackendUrl(baseUrl).replace(/\/+$/, '');
+  let rawEndpoint = sanitizeBackendUrl(endpoint);
 
   if (/^https?:\/\//i.test(rawEndpoint)) {
     return rawEndpoint;
@@ -100,8 +112,9 @@ export async function apiRequest(endpoint, options = {}) {
     if (err.status) throw err;
 
     console.warn(`API call to ${url} failed network connection:`, err.message);
+    const targetBase = sanitizeBackendUrl(API_BASE_URL);
     throw new Error(
-      `Cannot connect to CODE3D backend server at ${API_BASE_URL}. Ensure server is running.`
+      `Cannot connect to CODE3D backend server at ${targetBase}. Ensure server is running.`
     );
   }
 }

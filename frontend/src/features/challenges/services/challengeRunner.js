@@ -9,6 +9,7 @@
 
 import { executionEngine } from '../../../execution/ExecutionEngine.js';
 import { detectDataStructure, detectAlgorithm } from '../../../dsa/index.js';
+import { buildApiUrl, sanitizeBackendUrl } from '../../../services/api.js';
 
 const MAX_ITERATIONS = 50000;
 const TIMEOUT_MS = 2500;
@@ -175,13 +176,14 @@ export async function executeProgram({ code, language = 'javascript', input = ''
   // If in browser and backend might be reachable
   if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
     try {
-      const backendUrl =
+      const rawBackendUrl =
         (typeof import.meta !== 'undefined' && (import.meta.env?.VITE_BACKEND_URL || import.meta.env?.VITE_API_URL)) ||
         'https://code3d-ai.onrender.com/api';
+      const backendUrl = sanitizeBackendUrl(rawBackendUrl);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 1200);
 
-      const resp = await fetch(`${backendUrl}/execute`, {
+      const resp = await fetch(buildApiUrl(backendUrl, '/execute'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, language, input, archetype }),

@@ -3,11 +3,11 @@
  */
 
 import { solvePersonalProblem, correctPersonalCode } from './personalProblemSolver.js';
-import { buildApiUrl } from './api.js';
+import { buildApiUrl, sanitizeBackendUrl } from './api.js';
 
 const LIVE_RENDER_URL = 'https://code3d-ai.onrender.com/api';
 const LOCAL_URL = 'http://localhost:5000/api';
-const CONFIGURED_FALLBACK_URL = import.meta.env?.VITE_FALLBACK_BACKEND_URL || '';
+const CONFIGURED_FALLBACK_URL = sanitizeBackendUrl(import.meta.env?.VITE_FALLBACK_BACKEND_URL || '');
 
 // When accessed from phone, GitHub Pages, or Vercel, always use the live Render backend!
 const isLocalhost =
@@ -16,12 +16,12 @@ const isLocalhost =
     window.location.hostname === '127.0.0.1');
 
 function resolveBackendBaseUrl() {
-  const envUrl = (
+  const envUrl = sanitizeBackendUrl(
     import.meta.env?.VITE_BACKEND_URL ||
     import.meta.env?.VITE_API_URL ||
     import.meta.env?.VITE_API_BASE_URL ||
     ''
-  ).trim();
+  );
 
   if (envUrl) return envUrl;
   return isLocalhost ? LOCAL_URL : LIVE_RENDER_URL;
