@@ -15,6 +15,7 @@ import {
   Flame,
   Info,
   Sparkles,
+  Volume2,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { requestUniversalAiExplanation } from '../services/aiExplanationEngine';
@@ -212,11 +213,13 @@ export default function SandboxedCodePlayground() {
   const [logs, setLogs] = useState([]);
   const [error, setError] = useState(null);
   const [showSecurityModal, setShowSecurityModal] = useState(false);
+  const [isVoiceTutorOpen, setIsVoiceTutorOpen] = useState(false);
   const [voiceTutorExplanation, setVoiceTutorExplanation] = useState(null);
   const [isExplaining, setIsExplaining] = useState(false);
   const [highlightedLine, setHighlightedLine] = useState(null);
 
   const handleExplainPlaygroundCode = async () => {
+    setIsVoiceTutorOpen(true);
     setIsExplaining(true);
     try {
       const res = await requestUniversalAiExplanation({
@@ -504,17 +507,25 @@ export default function SandboxedCodePlayground() {
             </button>
 
             <button
-              onClick={handleExplainPlaygroundCode}
+              onClick={() => {
+                if (!isVoiceTutorOpen && !voiceTutorExplanation) {
+                  handleExplainPlaygroundCode();
+                } else {
+                  setIsVoiceTutorOpen((prev) => !prev);
+                }
+              }}
               disabled={isExplaining}
               className={`h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50 ${
-                isBright
-                  ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
-                  : 'border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+                isVoiceTutorOpen
+                  ? 'bg-amber-500 text-slate-950 border-amber-400'
+                  : isBright
+                    ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                    : 'border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
               }`}
-              title="Explain HTML/CSS/JS with AI Voice Tutor"
+              title="Toggle Universal AI Voice Tutor"
             >
-              <Sparkles className={`w-3.5 h-3.5 ${isExplaining ? 'animate-spin' : 'text-amber-400'}`} />
-              {isExplaining ? 'Explaining...' : 'Explain Code'}
+              <Volume2 className="w-3.5 h-3.5 text-amber-400" />
+              <span>Voice Tutor</span>
             </button>
 
             <button
@@ -606,7 +617,7 @@ export default function SandboxedCodePlayground() {
         </div>
       )}
       {/* Voice Tutor Panel */}
-      {voiceTutorExplanation && (
+      {isVoiceTutorOpen && (
         <div className="fixed bottom-4 right-4 z-50 w-full max-w-md animate-slideUp">
           <VoiceTutorPanel
             explanationData={voiceTutorExplanation}
@@ -614,10 +625,10 @@ export default function SandboxedCodePlayground() {
             language="html"
             currentLineNumber={highlightedLine}
             onHighlightLine={(line) => setHighlightedLine(line)}
-            onClose={() => {
-              setVoiceTutorExplanation(null);
-              setHighlightedLine(null);
-            }}
+            onExplainCode={handleExplainPlaygroundCode}
+            onExplainLine={handleExplainPlaygroundCode}
+            isExplaining={isExplaining}
+            onClose={() => setIsVoiceTutorOpen(false)}
           />
         </div>
       )}

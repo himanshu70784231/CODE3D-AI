@@ -142,6 +142,8 @@ export default function CodeEditor({
   onExplainCode = null,
   onExplainLine = null,
   isExplaining = false,
+  isVoiceTutorOpen = false,
+  onToggleVoiceTutor = null,
 
 }) {
 
@@ -718,6 +720,25 @@ export default function CodeEditor({
 
 
         <div className="flex items-center gap-1.5 shrink-0">
+
+          {onToggleVoiceTutor && (
+            <button
+              type="button"
+              onClick={onToggleVoiceTutor}
+              className={`h-7 px-2.5 rounded-lg border flex items-center gap-1.5 text-xs font-bold transition cursor-pointer shadow-sm ${
+                isVoiceTutorOpen
+                  ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-amber-500/25'
+                  : isBright
+                    ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                    : 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25'
+              }`}
+              title="Toggle Universal AI Voice Tutor"
+              aria-label="Toggle Universal AI Voice Tutor"
+            >
+              <Volume2 size={13} className={isVoiceTutorOpen ? 'text-slate-950' : 'text-amber-400'} />
+              <span>Voice Tutor</span>
+            </button>
+          )}
 
           {currentLineNumber && (
 

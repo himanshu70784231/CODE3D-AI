@@ -50,6 +50,7 @@ import {
   Trophy,
   BookOpen,
   Scale,
+  Volume2,
 } from 'lucide-react';
 
 /**
@@ -275,11 +276,13 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false,
   const [syntaxErrorLine, setSyntaxErrorLine] = useState(null);
 
   // Universal Voice Tutor state & handlers
+  const [isVoiceTutorOpen, setIsVoiceTutorOpen] = useState(false);
   const [voiceTutorExplanation, setVoiceTutorExplanation] = useState(null);
   const [isExplainingWithVoice, setIsExplainingWithVoice] = useState(false);
   const [voiceTutorHighlightedLine, setVoiceTutorHighlightedLine] = useState(null);
 
   const handleExplainCodeWithVoice = async () => {
+    setIsVoiceTutorOpen(true);
     setIsExplainingWithVoice(true);
     try {
       const res = await requestUniversalAiExplanation({
@@ -300,6 +303,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false,
   };
 
   const handleExplainLineWithVoice = async (line) => {
+    setIsVoiceTutorOpen(true);
     setIsExplainingWithVoice(true);
     try {
       const res = await requestUniversalAiExplanation({
@@ -318,6 +322,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false,
   };
 
   const handleExplainErrorWithVoice = async (errText) => {
+    setIsVoiceTutorOpen(true);
     setIsExplainingWithVoice(true);
     try {
       const res = await requestUniversalAiExplanation({
@@ -1238,6 +1243,23 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false,
           </span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsVoiceTutorOpen((prev) => !prev)}
+            title="Universal AI Voice Tutor"
+            aria-label="Universal AI Voice Tutor"
+            className={`h-8 px-2.5 rounded-lg border flex items-center gap-1.5 text-xs font-bold transition cursor-pointer shadow-sm ${
+              isVoiceTutorOpen
+                ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-amber-500/25'
+                : isBright
+                  ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                  : 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25'
+            }`}
+          >
+            <Volume2 size={14} className={isVoiceTutorOpen ? 'text-slate-950' : 'text-amber-400'} />
+            <span className="hidden sm:inline">Voice Tutor</span>
+          </button>
+
           {!universalOnly && <button
             type="button"
             onClick={() => setIsCodeDoctorOpen(true)}
@@ -1401,6 +1423,8 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false,
                 onExplainCode={handleExplainCodeWithVoice}
                 onExplainLine={handleExplainLineWithVoice}
                 isExplaining={isExplainingWithVoice}
+                isVoiceTutorOpen={isVoiceTutorOpen}
+                onToggleVoiceTutor={() => setIsVoiceTutorOpen((prev) => !prev)}
                 readOnly={!universalOnly}
               />
             </EditorErrorBoundary>
@@ -1628,7 +1652,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false,
         isOpen={isCompareOpen}
         onClose={() => setIsCompareOpen(false)}
       />
-      {voiceTutorExplanation && (
+      {isVoiceTutorOpen && (
         <div className="fixed bottom-4 right-4 z-50 w-full max-w-md animate-slideUp">
           <VoiceTutorPanel
             explanationData={voiceTutorExplanation}
@@ -1636,10 +1660,10 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false,
             language={language}
             currentLineNumber={voiceTutorHighlightedLine || currentStep?.lineNumber || null}
             onHighlightLine={(line) => setVoiceTutorHighlightedLine(line)}
-            onClose={() => {
-              setVoiceTutorExplanation(null);
-              setVoiceTutorHighlightedLine(null);
-            }}
+            onExplainCode={handleExplainCodeWithVoice}
+            onExplainLine={handleExplainLineWithVoice}
+            isExplaining={isExplainingWithVoice}
+            onClose={() => setIsVoiceTutorOpen(false)}
           />
         </div>
       )}

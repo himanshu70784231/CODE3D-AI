@@ -13,7 +13,8 @@ import {
   Code2,
   AlertTriangle,
   X,
-  CheckCircle,
+  RefreshCw,
+  Layers,
 } from 'lucide-react';
 import { useTextToSpeech } from '../hooks/useTextToSpeech';
 import { useTheme } from '../context/ThemeContext';
@@ -24,8 +25,10 @@ export default function VoiceTutorPanel({
   language = 'java',
   currentLineNumber = null,
   onHighlightLine = null,
+  onExplainCode = null,
+  onExplainLine = null,
+  isExplaining = false,
   onClose = null,
-  compact = false,
 }) {
   const { isBright } = useTheme();
   const {
@@ -60,11 +63,20 @@ export default function VoiceTutorPanel({
     }
   }, [activeStep, onHighlightLine]);
 
+  // When new explanationData arrives, reset step index to 0
+  useEffect(() => {
+    if (explanationData?.lineSteps?.length) {
+      setCurrentStepIdx(0);
+    }
+  }, [explanationData]);
+
   // Handle Play All sequence
   const handlePlayAll = () => {
     if (steps.length === 0) {
       if (explanationData?.overview) {
         speak(explanationData.overview, { force: true });
+      } else if (onExplainCode) {
+        onExplainCode();
       }
       return;
     }
@@ -90,9 +102,7 @@ export default function VoiceTutorPanel({
     if (stepToSpeak.lineNumber && typeof onHighlightLine === 'function') {
       onHighlightLine(stepToSpeak.lineNumber);
     }
-    const textToNarrate = voiceLanguage.startsWith('hi')
-      ? `Line ${stepToSpeak.lineNumber}. ${stepToSpeak.explanation}`
-      : `Line ${stepToSpeak.lineNumber}. ${stepToSpeak.explanation}`;
+    const textToNarrate = stepToSpeak.text || `Line ${stepToSpeak.lineNumber}. ${stepToSpeak.explanation}`;
     speak(textToNarrate, { force: true, lineNumber: stepToSpeak.lineNumber });
   };
 
@@ -133,38 +143,38 @@ export default function VoiceTutorPanel({
     stop();
   };
 
-  if (!explanationData) return null;
-
   return (
     <div
-      className={`rounded-xl border transition-all duration-200 overflow-hidden shadow-xl ${
+      className={`rounded-2xl border transition-all duration-200 overflow-hidden shadow-2xl ${
         isBright
-          ? 'bg-white border-slate-200 text-slate-800'
-          : 'bg-slate-900/95 border-cyan-500/30 text-slate-100 shadow-cyan-950/40'
+          ? 'bg-white border-slate-300 text-slate-800 shadow-slate-300'
+          : 'bg-[#090d16]/95 border-amber-500/40 text-slate-100 shadow-amber-950/40 backdrop-blur-md'
       }`}
     >
       {/* Top Header */}
       <div
-        className={`px-3.5 py-2.5 border-b flex items-center justify-between gap-2 ${
-          isBright ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/70 border-slate-800'
+        className={`px-4 py-3 border-b flex items-center justify-between gap-2 ${
+          isBright ? 'bg-gradient-to-r from-amber-50/60 to-slate-100 border-slate-200' : 'bg-gradient-to-r from-amber-950/30 to-slate-900 border-slate-800'
         }`}
       >
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-            <Sparkles size={14} />
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+            <Volume2 size={16} />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold tracking-wide">Universal AI Voice Tutor</span>
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 uppercase">
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 uppercase font-semibold">
                 {language}
               </span>
             </div>
-            {steps.length > 0 && (
-              <span className="text-[10px] opacity-70">
-                Step {currentStepIdx + 1} of {steps.length}
-              </span>
-            )}
+            <span className="text-[10px] opacity-70">
+              {steps.length > 0
+                ? `Step ${currentStepIdx + 1} of ${steps.length}`
+                : isExplaining
+                ? 'AI is analyzing code...'
+                : 'Spoken learning & line sync ready'}
+            </span>
           </div>
         </div>
 
@@ -174,7 +184,7 @@ export default function VoiceTutorPanel({
             value={voiceLanguage}
             onChange={(e) => setVoiceLanguage(e.target.value)}
             className={`text-[11px] h-7 px-2 rounded-lg border cursor-pointer font-medium ${
-              isBright ? 'bg-white border-slate-300' : 'bg-slate-800 border-slate-700 text-cyan-200'
+              isBright ? 'bg-white border-slate-300' : 'bg-slate-800 border-slate-700 text-amber-200'
             }`}
             title="Narration Language"
           >
@@ -202,7 +212,7 @@ export default function VoiceTutorPanel({
                 stop();
                 onClose();
               }}
-              className="p-1 rounded-md opacity-60 hover:opacity-100 hover:bg-slate-700/30 transition cursor-pointer"
+              className="p-1.5 rounded-lg opacity-70 hover:opacity-100 hover:bg-slate-700/40 transition cursor-pointer"
               title="Close Voice Tutor"
             >
               <X size={15} />
@@ -212,11 +222,54 @@ export default function VoiceTutorPanel({
       </div>
 
       {/* Main Body */}
-      <div className="p-3.5 space-y-3">
+      <div className="p-4 space-y-3.5">
+        {/* Action Triggers: Explain Code & Explain Current Line */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => onExplainCode && onExplainCode()}
+            disabled={isExplaining}
+            className={`py-2 px-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50 ${
+              isBright
+                ? 'bg-amber-50 border-amber-300 text-amber-900 hover:bg-amber-100'
+                : 'bg-amber-500/15 border-amber-500/30 text-amber-300 hover:bg-amber-500/25'
+            }`}
+          >
+            {isExplaining ? (
+              <RefreshCw size={13} className="animate-spin text-amber-400" />
+            ) : (
+              <Sparkles size={13} className="text-amber-400" />
+            )}
+            <span>Explain Code</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onExplainLine && onExplainLine(currentLineNumber || 1)}
+            disabled={isExplaining}
+            className={`py-2 px-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50 ${
+              isBright
+                ? 'bg-cyan-50 border-cyan-300 text-cyan-900 hover:bg-cyan-100'
+                : 'bg-cyan-500/15 border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/25'
+            }`}
+          >
+            <Code2 size={13} className="text-cyan-400" />
+            <span>Explain Line {currentLineNumber ? `L${currentLineNumber}` : '1'}</span>
+          </button>
+        </div>
+
+        {/* Loading Indicator */}
+        {isExplaining && (
+          <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center gap-3 text-xs text-amber-200">
+            <RefreshCw size={16} className="animate-spin text-amber-400 shrink-0" />
+            <span>Analyzing code structure with AI and generating line-by-line speech...</span>
+          </div>
+        )}
+
         {/* Overview Box */}
-        {explanationData.overview && (
+        {explanationData?.overview && (
           <div
-            className={`p-2.5 rounded-lg text-xs leading-relaxed border ${
+            className={`p-3 rounded-xl text-xs leading-relaxed border ${
               isBright
                 ? 'bg-cyan-50/60 border-cyan-200 text-slate-700'
                 : 'bg-cyan-950/20 border-cyan-800/40 text-cyan-100'
@@ -224,11 +277,11 @@ export default function VoiceTutorPanel({
           >
             <p className="font-medium">{explanationData.overview}</p>
             {explanationData.complexity && (
-              <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
-                <span className="px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 font-mono text-cyan-300">
+              <div className="mt-2.5 flex flex-wrap gap-2 text-[11px]">
+                <span className="px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 font-mono text-cyan-300 font-semibold">
                   Time: {explanationData.complexity.time}
                 </span>
-                <span className="px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 font-mono text-purple-300">
+                <span className="px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 font-mono text-purple-300 font-semibold">
                   Space: {explanationData.complexity.space}
                 </span>
               </div>
@@ -239,10 +292,10 @@ export default function VoiceTutorPanel({
         {/* Active Line Step Card */}
         {activeStep ? (
           <div
-            className={`p-3 rounded-xl border transition-all ${
+            className={`p-3.5 rounded-xl border transition-all ${
               isBright
                 ? 'bg-slate-50 border-slate-200'
-                : 'bg-slate-950/60 border-slate-800 shadow-inner'
+                : 'bg-slate-950/70 border-slate-800 shadow-inner'
             }`}
           >
             <div className="flex items-center justify-between gap-2 mb-2">
@@ -259,27 +312,32 @@ export default function VoiceTutorPanel({
               {activeStep.explanation}
             </p>
           </div>
-        ) : (
-          <p className="text-xs opacity-70 italic">Select or step through lines to hear explanations.</p>
-        )}
+        ) : !isExplaining && !explanationData?.overview ? (
+          <div className="p-3.5 rounded-xl border border-dashed border-slate-700 text-center text-xs text-slate-400 space-y-1">
+            <p className="font-medium text-slate-300">No explanation generated yet.</p>
+            <p className="text-[11px] text-slate-500">
+              Click <strong>Explain Code</strong> or <strong>Explain Line</strong> above to start spoken AI walkthrough.
+            </p>
+          </div>
+        ) : null}
 
         {/* Error warning if present */}
-        {explanationData.error && (
+        {explanationData?.error && (
           <div className="p-2.5 rounded-lg text-xs bg-rose-950/40 border border-rose-800/50 text-rose-200 flex items-start gap-2">
             <AlertTriangle size={15} className="text-rose-400 shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold">Error Explanation:</p>
+              <p className="font-semibold">Execution Error Guidance:</p>
               <p className="opacity-90">{explanationData.error}</p>
             </div>
           </div>
         )}
 
         {/* Playback & Step Controls */}
-        <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/60">
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-800/60">
           <div className="flex items-center gap-1.5">
             <button
               onClick={handleTogglePlay}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition cursor-pointer shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 hover:from-amber-400 hover:to-amber-500 transition cursor-pointer shadow-sm"
               title={speaking ? (paused ? 'Resume Narration' : 'Pause Narration') : 'Play All Steps'}
             >
               {speaking && !paused ? (
@@ -303,14 +361,16 @@ export default function VoiceTutorPanel({
               </button>
             )}
 
-            <button
-              onClick={() => handleSpeakCurrentStep(activeStep)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-700 hover:border-cyan-500 transition cursor-pointer"
-              title="Explain Current Line Only"
-            >
-              <Volume2 size={13} />
-              <span>Current Line</span>
-            </button>
+            {activeStep && (
+              <button
+                onClick={() => handleSpeakCurrentStep(activeStep)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-700 hover:border-amber-500 transition cursor-pointer"
+                title="Speak Current Line Only"
+              >
+                <Volume2 size={13} />
+                <span>Repeat Line</span>
+              </button>
+            )}
 
             <button
               onClick={repeat}
@@ -327,7 +387,7 @@ export default function VoiceTutorPanel({
               <button
                 onClick={handlePrev}
                 disabled={currentStepIdx === 0}
-                className="p-1.5 rounded-lg border border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed hover:border-cyan-500 transition cursor-pointer"
+                className="p-1.5 rounded-lg border border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed hover:border-amber-500 transition cursor-pointer"
                 title="Previous Step"
               >
                 <ChevronLeft size={14} />
@@ -338,7 +398,7 @@ export default function VoiceTutorPanel({
               <button
                 onClick={handleNext}
                 disabled={currentStepIdx === steps.length - 1}
-                className="p-1.5 rounded-lg border border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed hover:border-cyan-500 transition cursor-pointer"
+                className="p-1.5 rounded-lg border border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed hover:border-amber-500 transition cursor-pointer"
                 title="Next Step"
               >
                 <ChevronRight size={14} />
