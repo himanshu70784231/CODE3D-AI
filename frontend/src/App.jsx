@@ -17,6 +17,7 @@ import SavedVisualizationsPage from './pages/SavedVisualizationsPage';
 import ProfilePage from './pages/ProfilePage';
 import PlaygroundPage from './pages/PlaygroundPage';
 import NlTo3dPage from './pages/NlTo3dPage';
+import FlashcardsPage from './pages/FlashcardsPage';
 import LoginModal from './components/LoginModal';
 import CodeDoctorModal from './components/CodeDoctorModal';
 import ChallengeDashboard from './features/challenges/pages/ChallengeDashboard';
@@ -217,6 +218,9 @@ function MainAppContent() {
 
           {/* Quiz Arena */}
           <Route path="/quiz" element={<QuizArena />} />
+
+          {/* AI Flashcards */}
+          <Route path="/flashcards" element={<FlashcardsPage onSelectConcept={handleLaunchConcept} />} />
 
           {/* Predict & Repair Challenge Arena */}
           <Route

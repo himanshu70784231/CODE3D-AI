@@ -11,6 +11,7 @@ import CodeEditorPanel from '../features/editor/CodeEditorPanel';
 import VisualizationViewport from '../features/visualization/VisualizationViewport';
 import ExplanationPanel from '../features/explanation/ExplanationPanel';
 import ExecutionTimelineBar from '../features/timeline/ExecutionTimelineBar';
+import ExecutionNarration from '../components/ExecutionNarration';
 import OutputConsoleDrawer from '../features/console/OutputConsoleDrawer';
 import { normalizeTrace } from '../features/execution/normalizeTrace';
 
@@ -371,6 +372,14 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false 
             onClose={() => setShowConsole(false)}
           />
         }
+      />
+
+      {/* Line-by-line Voice Narration (Browser TTS) */}
+      <ExecutionNarration
+        step={currentStep}
+        stepIndex={currentStepIndex}
+        code={code}
+        language={language === 'hi' ? 'hi-IN' : 'en-US'}
       />
 
       {/* Docked Execution Timeline Scrubber */}
