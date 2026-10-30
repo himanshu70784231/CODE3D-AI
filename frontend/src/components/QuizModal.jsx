@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { HelpCircle, CheckCircle, XCircle, Award, RotateCcw, X } from 'lucide-react';
+import { HelpCircle, CheckCircle, XCircle, Award, RotateCcw, X, Volume2 } from 'lucide-react';
 import { fetchQuizQuestions, recordQuizHistory } from '../services/apiService';
 import { useTheme } from '../context/ThemeContext';
+import { useTextToSpeech } from '../hooks/useTextToSpeech';
 
 export default function QuizModal({ isOpen, onClose, conceptId }) {
   const { isBright } = useTheme();
+  const { speak, stop, speaking } = useTextToSpeech();
   const [questions, setQuestions] = useState([]);
   const [currentQIndex, setCurrentQIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
@@ -65,6 +67,7 @@ export default function QuizModal({ isOpen, onClose, conceptId }) {
   };
 
   const handleNext = () => {
+    stop();
     if (currentQIndex < questions.length - 1) {
       setCurrentQIndex((prev) => prev + 1);
       setSelectedOption(null);
@@ -220,10 +223,20 @@ export default function QuizModal({ isOpen, onClose, conceptId }) {
                     ? 'bg-slate-50 border-slate-200 text-slate-800'
                     : 'bg-slate-950 border-slate-800 text-slate-200'
                 }`}>
-                  <div className={`flex items-center gap-1.5 text-xs font-bold ${
-                    isBright ? 'text-cyan-700' : 'text-cyan-400'
-                  }`}>
-                    <span>Explanation:</span>
+                  <div className="flex items-center justify-between gap-1.5 text-xs font-bold">
+                    <span className={isBright ? 'text-cyan-700' : 'text-cyan-400'}>Explanation:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (speaking) stop();
+                        else speak(currentQ.explanation, { force: true });
+                      }}
+                      className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 transition cursor-pointer"
+                      title={speaking ? 'Stop Narration' : 'Listen to Explanation'}
+                    >
+                      <Volume2 size={12} />
+                      {speaking ? 'Stop' : 'Listen'}
+                    </button>
                   </div>
                   <p className={`text-xs leading-relaxed font-sans ${isBright ? 'text-slate-700' : 'text-slate-300'}`}>
                     {currentQ.explanation}

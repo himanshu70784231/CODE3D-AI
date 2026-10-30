@@ -6,7 +6,40 @@ import { useTextToSpeech } from '../hooks/useTextToSpeech';
 function explainSourceLine(sourceLine, language, step) {
   const line = String(sourceLine || '').trim().replace(/\/\/.*/, '').trim();
   const hindi = language === 'hi-IN';
-  const event = String(step?.eventType || '').toUpperCase();
+  const event = String(step?.eventType || step?.operation || '').toUpperCase();
+
+  // If the step already has a concrete, high-quality algorithm explanation (e.g. from ALGORITHM_CATALOG)
+  if (step?.explanation && step.explanation.length > 15 && !step.explanation.startsWith('Step ')) {
+    return step.explanation;
+  }
+
+  // DSA Algorithm specific operations
+  if (/SWAP/i.test(event)) {
+    return hindi
+      ? `Elements swap ho rahe hain. ${step?.explanation || 'Memory positions exchange ho rahi hain.'}`
+      : `Swapping elements: ${step?.explanation || 'Exchanging positions in memory.'}`;
+  }
+  if (/COMPARE|COMPARISON/i.test(event)) {
+    return hindi
+      ? `Elements compare ho rahe hain. ${step?.explanation || 'Values compare karke order check kiya ja raha hai.'}`
+      : `Comparison step: ${step?.explanation || 'Comparing values to determine ordering.'}`;
+  }
+  if (/INSERT|PUSH|ENQUEUE/i.test(event)) {
+    return hindi
+      ? `Data structure mein element insert ho raha hai. ${step?.explanation || ''}`
+      : `Insertion step: ${step?.explanation || 'Inserting element into the active data structure.'}`;
+  }
+  if (/DELETE|REMOVE|POP|DEQUEUE/i.test(event)) {
+    return hindi
+      ? `Element remove ho raha hai. ${step?.explanation || ''}`
+      : `Removal step: ${step?.explanation || 'Removing element from the active data structure.'}`;
+  }
+  if (/TRAVERS|VISIT/i.test(event)) {
+    return hindi
+      ? `Traversal step: ${step?.explanation || 'Agla node ya index visit ho raha hai.'}`
+      : `Traversal step: ${step?.explanation || 'Visiting the next node or index in sequence.'}`;
+  }
+
   if (!line) return hindi
     ? (step?.explanation || 'Is execution step ke liye source line available nahi hai.')
     : (step?.explanation || 'No source line is available for this execution step.');

@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 /**
  * Browser-native speech controller. Uses voices installed by the user's browser/OS:
  * no speech API key, server request, or provider quota is involved.
+ * Fully supports Play, Pause, Resume, Stop, Repeat, Speed control, English & Hindi voice detection,
+ * boundary progress tracking, and sequential step-by-step synchronized code line narration.
  */
 export function useTextToSpeech() {
   const [supported, setSupported] = useState(false);
@@ -13,10 +15,59 @@ export function useTextToSpeech() {
   const [rate, setRate] = useState(1);
   const [voices, setVoices] = useState([]);
   const [voiceName, setVoiceName] = useState('');
+  const [currentBoundaryIndex, setCurrentBoundaryIndex] = useState(0);
+  const [activeStepIndex, setActiveStepIndex] = useState(0);
+  const [activeLineNumber, setActiveLineNumber] = useState(null);
+
   const generation = useRef(0);
+  const lastSpokenRef = useRef({ text: '', options: {} });
+  const sequenceRef = useRef({
+    items: [],
+    index: 0,
+    active: false,
+    onStepChange: null,
+    onComplete: null,
+  });
+
+  // Pick suitable voice for current language (English / Hindi)
+  const resolveVoice = useCallback(
+    (targetLang, targetVoiceName, voiceList) => {
+      const list = voiceList || voices;
+      if (!list || list.length === 0) return null;
+
+      if (targetVoiceName) {
+        const exact = list.find((v) => v.name === targetVoiceName);
+        if (exact) return exact;
+      }
+
+      const langCode = (targetLang || voiceLanguage).toLowerCase();
+
+      // Hindi voice matching
+      if (langCode.startsWith('hi')) {
+        const hindiVoice =
+          list.find((v) => v.lang?.toLowerCase().includes('hi')) ||
+          list.find((v) => /hindi|हिन्दी/i.test(v.name));
+        if (hindiVoice) return hindiVoice;
+      }
+
+      // English voice matching
+      if (langCode.startsWith('en')) {
+        const enVoice =
+          list.find((v) => v.lang?.toLowerCase() === langCode) ||
+          list.find((v) => v.lang?.toLowerCase().startsWith('en')) ||
+          list.find((v) => /english/i.test(v.name));
+        if (enVoice) return enVoice;
+      }
+
+      // Fallback
+      return list[0] || null;
+    },
+    [voiceLanguage, voices]
+  );
 
   useEffect(() => {
-    const available = typeof window !== 'undefined' &&
+    const available =
+      typeof window !== 'undefined' &&
       'speechSynthesis' in window &&
       typeof window.SpeechSynthesisUtterance === 'function';
     setSupported(available);
@@ -24,65 +75,236 @@ export function useTextToSpeech() {
 
     const synth = window.speechSynthesis;
     const refreshVoices = () => {
-      const next = synth.getVoices();
+      const next = synth.getVoices() || [];
       setVoices(next);
-      setVoiceName((current) => current && next.some((voice) => voice.name === current)
-        ? current
-        : (next.find((voice) => voice.lang?.toLowerCase().startsWith('en'))?.name || next[0]?.name || ''));
+
+      setVoiceName((current) => {
+        if (current && next.some((v) => v.name === current)) {
+          return current;
+        }
+        const defaultVoice = resolveVoice(voiceLanguage, null, next);
+        return defaultVoice ? defaultVoice.name : '';
+      });
     };
+
     refreshVoices();
     synth.addEventListener?.('voiceschanged', refreshVoices);
+
+    // Cancel speech on page unload or component unmount
+    const handleBeforeUnload = () => {
+      generation.current += 1;
+      synth.cancel();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     return () => {
       generation.current += 1;
       synth.cancel();
       synth.removeEventListener?.('voiceschanged', refreshVoices);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, []);
+  }, [resolveVoice, voiceLanguage]);
+
+  // When language changes, auto-select a matching voice
+  const handleSetVoiceLanguage = useCallback(
+    (newLang) => {
+      setVoiceLanguage(newLang);
+      const matchedVoice = resolveVoice(newLang, null, voices);
+      if (matchedVoice) {
+        setVoiceName(matchedVoice.name);
+      }
+    },
+    [resolveVoice, voices]
+  );
 
   const stop = useCallback(() => {
     generation.current += 1;
-    if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel();
+    sequenceRef.current.active = false;
+    sequenceRef.current.items = [];
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
     setSpeaking(false);
     setPaused(false);
+    setCurrentBoundaryIndex(0);
+    setActiveLineNumber(null);
   }, []);
 
-  const speak = useCallback((text, options = {}) => {
-    const message = String(text ?? '').trim();
-    const isForced = options.force === true;
-    if (isForced && !enabled) {
-      setEnabled(true);
-    }
-    if (!message || (!enabled && !isForced) || typeof window === 'undefined' ||
-      !window.speechSynthesis || typeof window.SpeechSynthesisUtterance !== 'function') {
+  const speak = useCallback(
+    (text, options = {}) => {
+      const message = String(text ?? '').trim();
+      const isForced = options.force === true;
+
+      if (isForced && !enabled) {
+        setEnabled(true);
+      }
+
+      if (
+        !message ||
+        (!enabled && !isForced) ||
+        typeof window === 'undefined' ||
+        !window.speechSynthesis ||
+        typeof window.SpeechSynthesisUtterance !== 'function'
+      ) {
+        stop();
+        return false;
+      }
+
+      const synth = window.speechSynthesis;
+      const requestId = ++generation.current;
+      synth.cancel();
+
+      lastSpokenRef.current = { text: message, options };
+
+      const utterance = new window.SpeechSynthesisUtterance(message);
+      const language = options.lang || voiceLanguage;
+      utterance.lang = language;
+      utterance.rate = Math.max(0.6, Math.min(1.5, Number(options.rate ?? rate) || 1));
+
+      const selectedVoice =
+        voices.find((v) => v.name === (options.voiceName || voiceName)) ||
+        resolveVoice(language, options.voiceName || voiceName, voices);
+
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+      }
+
+      utterance.onboundary = (event) => {
+        if (generation.current === requestId && typeof event.charIndex === 'number') {
+          setCurrentBoundaryIndex(event.charIndex);
+        }
+      };
+
+      utterance.onstart = () => {
+        if (generation.current === requestId) {
+          setSpeaking(true);
+          setPaused(false);
+          if (options.lineNumber !== undefined) {
+            setActiveLineNumber(options.lineNumber);
+          }
+        }
+      };
+
+      utterance.onend = () => {
+        if (generation.current === requestId) {
+          setSpeaking(false);
+          setPaused(false);
+          if (typeof options.onEnd === 'function') {
+            options.onEnd();
+          }
+        }
+      };
+
+      utterance.onerror = (err) => {
+        if (generation.current === requestId) {
+          setSpeaking(false);
+          setPaused(false);
+          if (typeof options.onError === 'function') {
+            options.onError(err);
+          }
+        }
+      };
+
+      synth.speak(utterance);
+      return true;
+    },
+    [enabled, rate, resolveVoice, stop, voiceLanguage, voiceName, voices]
+  );
+
+  // Play a sequence of explanation steps with synchronized line numbers
+  const speakSequence = useCallback(
+    (items = [], options = {}) => {
+      if (!Array.isArray(items) || items.length === 0) {
+        stop();
+        return false;
+      }
+
       stop();
-      return false;
+      sequenceRef.current = {
+        items,
+        index: options.startIndex || 0,
+        active: true,
+        onStepChange: options.onStepChange || null,
+        onComplete: options.onComplete || null,
+      };
+
+      const playCurrentSequenceStep = () => {
+        const { items: seqItems, index: idx, active } = sequenceRef.current;
+        if (!active || idx >= seqItems.length) {
+          sequenceRef.current.active = false;
+          setSpeaking(false);
+          setActiveLineNumber(null);
+          if (typeof sequenceRef.current.onComplete === 'function') {
+            sequenceRef.current.onComplete();
+          }
+          return;
+        }
+
+        const currentItem = seqItems[idx];
+        setActiveStepIndex(idx);
+        if (currentItem.lineNumber) {
+          setActiveLineNumber(currentItem.lineNumber);
+        }
+
+        if (typeof sequenceRef.current.onStepChange === 'function') {
+          sequenceRef.current.onStepChange(idx, currentItem);
+        }
+
+        speak(currentItem.text, {
+          ...options,
+          force: true,
+          lineNumber: currentItem.lineNumber,
+          onEnd: () => {
+            if (sequenceRef.current.active) {
+              sequenceRef.current.index += 1;
+              setTimeout(playCurrentSequenceStep, 350);
+            }
+          },
+        });
+      };
+
+      playCurrentSequenceStep();
+      return true;
+    },
+    [speak, stop]
+  );
+
+  const nextStep = useCallback(() => {
+    if (sequenceRef.current.active && sequenceRef.current.index < sequenceRef.current.items.length - 1) {
+      sequenceRef.current.index += 1;
+      const nextItem = sequenceRef.current.items[sequenceRef.current.index];
+      setActiveStepIndex(sequenceRef.current.index);
+      if (nextItem.lineNumber) setActiveLineNumber(nextItem.lineNumber);
+      if (typeof sequenceRef.current.onStepChange === 'function') {
+        sequenceRef.current.onStepChange(sequenceRef.current.index, nextItem);
+      }
+      speak(nextItem.text, { force: true, lineNumber: nextItem.lineNumber });
     }
-    const synth = window.speechSynthesis;
-    const requestId = ++generation.current;
-    synth.cancel();
-    const utterance = new window.SpeechSynthesisUtterance(message);
-    const language = options.lang || voiceLanguage;
-    utterance.lang = language;
-    utterance.rate = Math.max(0.7, Math.min(1.3, Number(options.rate ?? rate) || 1));
-    const selectedVoice = voices.find((voice) => voice.name === (options.voiceName || voiceName));
-    if (selectedVoice) utterance.voice = selectedVoice;
-    else {
-      const languageVoice = voices.find((voice) => voice.lang?.toLowerCase() === language.toLowerCase()) ||
-        voices.find((voice) => voice.lang?.toLowerCase().startsWith(language.slice(0, 2).toLowerCase()));
-      if (languageVoice) utterance.voice = languageVoice;
+  }, [speak]);
+
+  const prevStep = useCallback(() => {
+    if (sequenceRef.current.active && sequenceRef.current.index > 0) {
+      sequenceRef.current.index -= 1;
+      const prevItem = sequenceRef.current.items[sequenceRef.current.index];
+      setActiveStepIndex(sequenceRef.current.index);
+      if (prevItem.lineNumber) setActiveLineNumber(prevItem.lineNumber);
+      if (typeof sequenceRef.current.onStepChange === 'function') {
+        sequenceRef.current.onStepChange(sequenceRef.current.index, prevItem);
+      }
+      speak(prevItem.text, { force: true, lineNumber: prevItem.lineNumber });
     }
-    utterance.onstart = () => {
-      if (generation.current === requestId) { setSpeaking(true); setPaused(false); }
-    };
-    utterance.onend = () => {
-      if (generation.current === requestId) { setSpeaking(false); setPaused(false); }
-    };
-    utterance.onerror = () => {
-      if (generation.current === requestId) { setSpeaking(false); setPaused(false); }
-    };
-    synth.speak(utterance);
-    return true;
-  }, [enabled, rate, stop, voiceLanguage, voiceName, voices]);
+  }, [speak]);
+
+  const repeat = useCallback(() => {
+    if (lastSpokenRef.current.text) {
+      speak(lastSpokenRef.current.text, {
+        ...lastSpokenRef.current.options,
+        force: true,
+      });
+      return true;
+    }
+    return false;
+  }, [speak]);
 
   const pause = useCallback(() => {
     if (typeof window !== 'undefined' && window.speechSynthesis?.speaking) {
@@ -90,27 +312,53 @@ export function useTextToSpeech() {
       setPaused(true);
     }
   }, []);
+
   const resume = useCallback(() => {
     if (typeof window !== 'undefined' && window.speechSynthesis?.paused) {
       window.speechSynthesis.resume();
       setPaused(false);
     }
   }, []);
+
   const toggleEnabled = useCallback(() => {
     setEnabled((previous) => {
       if (previous && typeof window !== 'undefined' && window.speechSynthesis) {
         generation.current += 1;
+        sequenceRef.current.active = false;
         window.speechSynthesis.cancel();
         setSpeaking(false);
         setPaused(false);
+        setActiveLineNumber(null);
       }
       return !previous;
     });
   }, []);
 
   return {
-    supported, enabled, speaking, paused, voiceLanguage, rate, voices, voiceName,
-    setVoiceLanguage, setRate, setVoiceName, toggleEnabled, speak, pause, resume, stop,
+    supported,
+    enabled,
+    speaking,
+    paused,
+    voiceLanguage,
+    rate,
+    voices,
+    voiceName,
+    currentBoundaryIndex,
+    activeStepIndex,
+    activeLineNumber,
+    setVoiceLanguage: handleSetVoiceLanguage,
+    setRate,
+    setVoiceName,
+    toggleEnabled,
+    speak,
+    speakSequence,
+    nextStep,
+    prevStep,
+    repeat,
+    pause,
+    resume,
+    stop,
   };
 }
+
 export default useTextToSpeech;

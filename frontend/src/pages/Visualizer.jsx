@@ -17,6 +17,8 @@ import { useExecutionTimeline } from '../hooks/useExecutionTimeline';
 import ExecutionNarration from '../components/ExecutionNarration';
 import { getExecutionTrace, extractNumbersFromCode, alignTraceLinesWithSource } from '../services/executionSimulator';
 import { validateSourceCode } from '../services/codeValidator';
+import { requestUniversalAiExplanation } from '../services/aiExplanationEngine';
+import VoiceTutorPanel from '../components/VoiceTutorPanel';
 import { DEFAULT_JAVA_CODE, SAMPLE_PROGRAMS, LANGUAGE_DEFAULTS, CURRICULUM_CATEGORIES } from '../utils/sampleCodes';
 import { STRIVER_PROBLEMS } from '../utils/striverCatalog';
 import { executeProgram, analyzeCode, checkBackendHealth, recordExecutionHistory } from '../services/apiService';
@@ -271,6 +273,65 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false,
   const [traceNotice, setTraceNotice] = useState('');
   const executionAbortRef = useRef(null);
   const [syntaxErrorLine, setSyntaxErrorLine] = useState(null);
+
+  // Universal Voice Tutor state & handlers
+  const [voiceTutorExplanation, setVoiceTutorExplanation] = useState(null);
+  const [isExplainingWithVoice, setIsExplainingWithVoice] = useState(false);
+  const [voiceTutorHighlightedLine, setVoiceTutorHighlightedLine] = useState(null);
+
+  const handleExplainCodeWithVoice = async () => {
+    setIsExplainingWithVoice(true);
+    try {
+      const res = await requestUniversalAiExplanation({
+        code,
+        language,
+        action: 'EXPLAIN_CODE',
+        actualOutput: runtimeOutput,
+        error: executionError,
+        currentStep,
+      });
+      setVoiceTutorExplanation(res);
+      if (res?.lineSteps?.[0]?.lineNumber) {
+        setVoiceTutorHighlightedLine(res.lineSteps[0].lineNumber);
+      }
+    } finally {
+      setIsExplainingWithVoice(false);
+    }
+  };
+
+  const handleExplainLineWithVoice = async (line) => {
+    setIsExplainingWithVoice(true);
+    try {
+      const res = await requestUniversalAiExplanation({
+        code,
+        language,
+        action: 'EXPLAIN_LINE',
+        lineNumber: line,
+        actualOutput: runtimeOutput,
+        currentStep,
+      });
+      setVoiceTutorExplanation(res);
+      setVoiceTutorHighlightedLine(line);
+    } finally {
+      setIsExplainingWithVoice(false);
+    }
+  };
+
+  const handleExplainErrorWithVoice = async (errText) => {
+    setIsExplainingWithVoice(true);
+    try {
+      const res = await requestUniversalAiExplanation({
+        code,
+        language,
+        action: 'DEBUG_ERROR',
+        error: errText,
+        actualOutput: runtimeOutput,
+      });
+      setVoiceTutorExplanation(res);
+    } finally {
+      setIsExplainingWithVoice(false);
+    }
+  };
   // Modals & responsive view state
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [isQuizOpen, setIsQuizOpen] = useState(false);
@@ -1270,13 +1331,24 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false,
           <span className="truncate">
             <strong>Execution error:</strong> {executionError}
           </span>
-          <button
-            type="button"
-            onClick={() => setExecutionError(null)}
-            className="shrink-0 px-2 py-1 rounded border border-current/20 hover:bg-black/10"
-          >
-            Dismiss
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleExplainErrorWithVoice(executionError)}
+              disabled={isExplainingWithVoice}
+              className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-rose-500/20 text-rose-200 border border-rose-500/40 hover:bg-rose-500/30 flex items-center gap-1 cursor-pointer transition disabled:opacity-50"
+            >
+              <Sparkles size={12} className={isExplainingWithVoice ? 'animate-spin' : ''} />
+              <span>{isExplainingWithVoice ? 'Explaining...' : 'AI Voice Explain Error'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setExecutionError(null)}
+              className="px-2 py-1 rounded border border-current/20 hover:bg-black/10 cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
       {/* Main Studio: only Code + 3D */}
@@ -1308,7 +1380,7 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false,
                 onChangeLanguage={handleLanguageChange}
                 onOpenCodeDoctor={() => setIsCodeDoctorOpen(true)}
                 onOpenPersonalProblem={() => setIsCodeDoctorOpen(true)}
-                currentLineNumber={currentStep?.lineNumber || null}
+                currentLineNumber={voiceTutorHighlightedLine || currentStep?.lineNumber || null}
                 syntaxErrorLine={syntaxErrorLine}
                 isPlaying={isPlaying}
                 onPlay={handleRunCode}
@@ -1326,6 +1398,9 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false,
                 breakpoints={breakpoints}
                 onToggleBreakpoint={toggleBreakpoint}
                 onSelectLine={handleSelectLineFromEditor}
+                onExplainCode={handleExplainCodeWithVoice}
+                onExplainLine={handleExplainLineWithVoice}
+                isExplaining={isExplainingWithVoice}
                 readOnly={!universalOnly}
               />
             </EditorErrorBoundary>
@@ -1553,6 +1628,21 @@ export default function Visualizer({ initialConcept, initialOpenStriver = false,
         isOpen={isCompareOpen}
         onClose={() => setIsCompareOpen(false)}
       />
+      {voiceTutorExplanation && (
+        <div className="fixed bottom-4 right-4 z-50 w-full max-w-md animate-slideUp">
+          <VoiceTutorPanel
+            explanationData={voiceTutorExplanation}
+            code={code}
+            language={language}
+            currentLineNumber={voiceTutorHighlightedLine || currentStep?.lineNumber || null}
+            onHighlightLine={(line) => setVoiceTutorHighlightedLine(line)}
+            onClose={() => {
+              setVoiceTutorExplanation(null);
+              setVoiceTutorHighlightedLine(null);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

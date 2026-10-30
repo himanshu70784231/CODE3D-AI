@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 
 import Editor from '@monaco-editor/react';
 
-import { Play, RotateCcw, FileCode, CheckCircle2, RefreshCw, ChevronDown, Coffee, Braces, Hash, Terminal } from 'lucide-react';
+import { Play, RotateCcw, FileCode, CheckCircle2, RefreshCw, ChevronDown, Coffee, Braces, Hash, Terminal, Sparkles, Volume2 } from 'lucide-react';
 
 import { useTheme } from '../context/ThemeContext';
 
@@ -139,6 +139,9 @@ export default function CodeEditor({
 
   readOnly = false,
   hideRunButton = false,
+  onExplainCode = null,
+  onExplainLine = null,
+  isExplaining = false,
 
 }) {
 
@@ -894,6 +897,40 @@ export default function CodeEditor({
 
             </button>
 
+          )}
+
+          {onExplainCode && (
+            <button
+              type="button"
+              onClick={onExplainCode}
+              disabled={isExplaining}
+              title="Explain Code with AI Voice Tutor"
+              className={`h-8 px-2.5 rounded-lg border flex items-center gap-1.5 text-xs font-semibold transition cursor-pointer disabled:opacity-50 ${
+                isBright
+                  ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                  : 'border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+              }`}
+            >
+              <Sparkles size={13} className={isExplaining ? 'animate-spin' : 'text-amber-400'} />
+              <span>{isExplaining ? 'Explaining...' : 'Explain Code'}</span>
+            </button>
+          )}
+
+          {onExplainLine && currentLineNumber && (
+            <button
+              type="button"
+              onClick={() => onExplainLine(currentLineNumber)}
+              disabled={isExplaining}
+              title={`Explain Line ${currentLineNumber} with AI Voice Tutor`}
+              className={`hidden sm:flex h-8 px-2.5 rounded-lg border items-center gap-1.5 text-xs font-semibold transition cursor-pointer disabled:opacity-50 ${
+                isBright
+                  ? 'border-cyan-300 bg-cyan-50 text-cyan-800 hover:bg-cyan-100'
+                  : 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20'
+              }`}
+            >
+              <Volume2 size={13} className="text-cyan-400" />
+              <span>Line {currentLineNumber}</span>
+            </button>
           )}
 
         </div>

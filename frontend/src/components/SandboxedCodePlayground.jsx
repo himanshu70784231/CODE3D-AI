@@ -14,8 +14,11 @@ import {
   ExternalLink,
   Flame,
   Info,
+  Sparkles,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { requestUniversalAiExplanation } from '../services/aiExplanationEngine';
+import VoiceTutorPanel from './VoiceTutorPanel';
 
 export const PLAYGROUND_PRESETS = [
   {
@@ -209,6 +212,29 @@ export default function SandboxedCodePlayground() {
   const [logs, setLogs] = useState([]);
   const [error, setError] = useState(null);
   const [showSecurityModal, setShowSecurityModal] = useState(false);
+  const [voiceTutorExplanation, setVoiceTutorExplanation] = useState(null);
+  const [isExplaining, setIsExplaining] = useState(false);
+  const [highlightedLine, setHighlightedLine] = useState(null);
+
+  const handleExplainPlaygroundCode = async () => {
+    setIsExplaining(true);
+    try {
+      const res = await requestUniversalAiExplanation({
+        code,
+        language: 'html',
+        action: 'EXPLAIN_CODE',
+        actualOutput: logs.map(l => l.msg),
+        error,
+        question: 'Explain the HTML DOM structure, CSS layout styling, and JavaScript logic of this web component.',
+      });
+      setVoiceTutorExplanation(res);
+      if (res?.lineSteps?.[0]?.lineNumber) {
+        setHighlightedLine(res.lineSteps[0].lineNumber);
+      }
+    } finally {
+      setIsExplaining(false);
+    }
+  };
 
   const iframeRef = useRef(null);
 
@@ -478,6 +504,20 @@ export default function SandboxedCodePlayground() {
             </button>
 
             <button
+              onClick={handleExplainPlaygroundCode}
+              disabled={isExplaining}
+              className={`h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50 ${
+                isBright
+                  ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                  : 'border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+              }`}
+              title="Explain HTML/CSS/JS with AI Voice Tutor"
+            >
+              <Sparkles className={`w-3.5 h-3.5 ${isExplaining ? 'animate-spin' : 'text-amber-400'}`} />
+              {isExplaining ? 'Explaining...' : 'Explain Code'}
+            </button>
+
+            <button
               onClick={handleClear}
               className="h-8 px-3 rounded-xl border border-slate-700 hover:bg-slate-800 text-xs font-semibold text-rose-400 hover:text-rose-300 flex items-center gap-1.5 transition cursor-pointer"
               title="Clear editor code and canvas"
@@ -563,6 +603,22 @@ export default function SandboxedCodePlayground() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* Voice Tutor Panel */}
+      {voiceTutorExplanation && (
+        <div className="fixed bottom-4 right-4 z-50 w-full max-w-md animate-slideUp">
+          <VoiceTutorPanel
+            explanationData={voiceTutorExplanation}
+            code={code}
+            language="html"
+            currentLineNumber={highlightedLine}
+            onHighlightLine={(line) => setHighlightedLine(line)}
+            onClose={() => {
+              setVoiceTutorExplanation(null);
+              setHighlightedLine(null);
+            }}
+          />
         </div>
       )}
     </div>

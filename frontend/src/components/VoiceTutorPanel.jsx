@@ -1,0 +1,352 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Volume2,
+  VolumeX,
+  Play,
+  Pause,
+  Square,
+  RotateCcw,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+  BookOpen,
+  Code2,
+  AlertTriangle,
+  X,
+  CheckCircle,
+} from 'lucide-react';
+import { useTextToSpeech } from '../hooks/useTextToSpeech';
+import { useTheme } from '../context/ThemeContext';
+
+export default function VoiceTutorPanel({
+  explanationData = null,
+  code = '',
+  language = 'java',
+  currentLineNumber = null,
+  onHighlightLine = null,
+  onClose = null,
+  compact = false,
+}) {
+  const { isBright } = useTheme();
+  const {
+    supported,
+    speaking,
+    paused,
+    voiceLanguage,
+    rate,
+    voices,
+    voiceName,
+    setVoiceLanguage,
+    setRate,
+    setVoiceName,
+    speak,
+    speakSequence,
+    pause,
+    resume,
+    stop,
+    repeat,
+  } = useTextToSpeech();
+
+  const [currentStepIdx, setCurrentStepIdx] = useState(0);
+  const [silentMode, setSilentMode] = useState(false);
+
+  const steps = explanationData?.lineSteps || [];
+  const activeStep = steps[currentStepIdx] || steps[0] || null;
+
+  // Whenever active step changes, inform parent editor to highlight line
+  useEffect(() => {
+    if (activeStep?.lineNumber && typeof onHighlightLine === 'function') {
+      onHighlightLine(activeStep.lineNumber);
+    }
+  }, [activeStep, onHighlightLine]);
+
+  // Handle Play All sequence
+  const handlePlayAll = () => {
+    if (steps.length === 0) {
+      if (explanationData?.overview) {
+        speak(explanationData.overview, { force: true });
+      }
+      return;
+    }
+
+    setSilentMode(false);
+    speakSequence(steps, {
+      startIndex: currentStepIdx,
+      onStepChange: (idx, item) => {
+        setCurrentStepIdx(idx);
+        if (item.lineNumber && typeof onHighlightLine === 'function') {
+          onHighlightLine(item.lineNumber);
+        }
+      },
+      onComplete: () => {
+        // completed sequence
+      },
+    });
+  };
+
+  const handleSpeakCurrentStep = (stepToSpeak = activeStep) => {
+    if (!stepToSpeak) return;
+    setSilentMode(false);
+    if (stepToSpeak.lineNumber && typeof onHighlightLine === 'function') {
+      onHighlightLine(stepToSpeak.lineNumber);
+    }
+    const textToNarrate = voiceLanguage.startsWith('hi')
+      ? `Line ${stepToSpeak.lineNumber}. ${stepToSpeak.explanation}`
+      : `Line ${stepToSpeak.lineNumber}. ${stepToSpeak.explanation}`;
+    speak(textToNarrate, { force: true, lineNumber: stepToSpeak.lineNumber });
+  };
+
+  const handleNext = () => {
+    if (currentStepIdx < steps.length - 1) {
+      const nextIdx = currentStepIdx + 1;
+      setCurrentStepIdx(nextIdx);
+      if (!silentMode && speaking) {
+        handleSpeakCurrentStep(steps[nextIdx]);
+      } else if (steps[nextIdx]?.lineNumber && typeof onHighlightLine === 'function') {
+        onHighlightLine(steps[nextIdx].lineNumber);
+      }
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentStepIdx > 0) {
+      const prevIdx = currentStepIdx - 1;
+      setCurrentStepIdx(prevIdx);
+      if (!silentMode && speaking) {
+        handleSpeakCurrentStep(steps[prevIdx]);
+      } else if (steps[prevIdx]?.lineNumber && typeof onHighlightLine === 'function') {
+        onHighlightLine(steps[prevIdx].lineNumber);
+      }
+    }
+  };
+
+  const handleTogglePlay = () => {
+    if (speaking) {
+      if (paused) resume();
+      else pause();
+    } else {
+      handlePlayAll();
+    }
+  };
+
+  const handleStopAll = () => {
+    stop();
+  };
+
+  if (!explanationData) return null;
+
+  return (
+    <div
+      className={`rounded-xl border transition-all duration-200 overflow-hidden shadow-xl ${
+        isBright
+          ? 'bg-white border-slate-200 text-slate-800'
+          : 'bg-slate-900/95 border-cyan-500/30 text-slate-100 shadow-cyan-950/40'
+      }`}
+    >
+      {/* Top Header */}
+      <div
+        className={`px-3.5 py-2.5 border-b flex items-center justify-between gap-2 ${
+          isBright ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/70 border-slate-800'
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+            <Sparkles size={14} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold tracking-wide">Universal AI Voice Tutor</span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 uppercase">
+                {language}
+              </span>
+            </div>
+            {steps.length > 0 && (
+              <span className="text-[10px] opacity-70">
+                Step {currentStepIdx + 1} of {steps.length}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          {/* Language selector: English / Hindi */}
+          <select
+            value={voiceLanguage}
+            onChange={(e) => setVoiceLanguage(e.target.value)}
+            className={`text-[11px] h-7 px-2 rounded-lg border cursor-pointer font-medium ${
+              isBright ? 'bg-white border-slate-300' : 'bg-slate-800 border-slate-700 text-cyan-200'
+            }`}
+            title="Narration Language"
+          >
+            <option value="en-US">English</option>
+            <option value="hi-IN">Hindi (हिंदी)</option>
+          </select>
+
+          {/* Speed selector */}
+          <select
+            value={rate}
+            onChange={(e) => setRate(Number(e.target.value))}
+            className={`text-[11px] h-7 px-1.5 rounded-lg border cursor-pointer font-medium ${
+              isBright ? 'bg-white border-slate-300' : 'bg-slate-800 border-slate-700'
+            }`}
+            title="Speaking Speed"
+          >
+            <option value={0.8}>0.8×</option>
+            <option value={1}>1.0×</option>
+            <option value={1.2}>1.2×</option>
+          </select>
+
+          {onClose && (
+            <button
+              onClick={() => {
+                stop();
+                onClose();
+              }}
+              className="p-1 rounded-md opacity-60 hover:opacity-100 hover:bg-slate-700/30 transition cursor-pointer"
+              title="Close Voice Tutor"
+            >
+              <X size={15} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Main Body */}
+      <div className="p-3.5 space-y-3">
+        {/* Overview Box */}
+        {explanationData.overview && (
+          <div
+            className={`p-2.5 rounded-lg text-xs leading-relaxed border ${
+              isBright
+                ? 'bg-cyan-50/60 border-cyan-200 text-slate-700'
+                : 'bg-cyan-950/20 border-cyan-800/40 text-cyan-100'
+            }`}
+          >
+            <p className="font-medium">{explanationData.overview}</p>
+            {explanationData.complexity && (
+              <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
+                <span className="px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 font-mono text-cyan-300">
+                  Time: {explanationData.complexity.time}
+                </span>
+                <span className="px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 font-mono text-purple-300">
+                  Space: {explanationData.complexity.space}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Active Line Step Card */}
+        {activeStep ? (
+          <div
+            className={`p-3 rounded-xl border transition-all ${
+              isBright
+                ? 'bg-slate-50 border-slate-200'
+                : 'bg-slate-950/60 border-slate-800 shadow-inner'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                <Code2 size={12} />
+                Line {activeStep.lineNumber}
+              </span>
+              <span className="text-[10px] opacity-60 font-mono truncate max-w-[200px]">
+                {activeStep.codeLine}
+              </span>
+            </div>
+
+            <p className="text-xs leading-relaxed text-slate-300">
+              {activeStep.explanation}
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs opacity-70 italic">Select or step through lines to hear explanations.</p>
+        )}
+
+        {/* Error warning if present */}
+        {explanationData.error && (
+          <div className="p-2.5 rounded-lg text-xs bg-rose-950/40 border border-rose-800/50 text-rose-200 flex items-start gap-2">
+            <AlertTriangle size={15} className="text-rose-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold">Error Explanation:</p>
+              <p className="opacity-90">{explanationData.error}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Playback & Step Controls */}
+        <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/60">
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={handleTogglePlay}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition cursor-pointer shadow-sm"
+              title={speaking ? (paused ? 'Resume Narration' : 'Pause Narration') : 'Play All Steps'}
+            >
+              {speaking && !paused ? (
+                <>
+                  <Pause size={13} /> Pause
+                </>
+              ) : (
+                <>
+                  <Play size={13} /> {paused ? 'Resume' : 'Play All'}
+                </>
+              )}
+            </button>
+
+            {speaking && (
+              <button
+                onClick={handleStopAll}
+                className="p-1.5 rounded-lg text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                title="Stop Speech"
+              >
+                <Square size={13} />
+              </button>
+            )}
+
+            <button
+              onClick={() => handleSpeakCurrentStep(activeStep)}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-700 hover:border-cyan-500 transition cursor-pointer"
+              title="Explain Current Line Only"
+            >
+              <Volume2 size={13} />
+              <span>Current Line</span>
+            </button>
+
+            <button
+              onClick={repeat}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              title="Repeat Last Narration"
+            >
+              <RotateCcw size={13} />
+            </button>
+          </div>
+
+          {/* Stepper Controls */}
+          {steps.length > 1 && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handlePrev}
+                disabled={currentStepIdx === 0}
+                className="p-1.5 rounded-lg border border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed hover:border-cyan-500 transition cursor-pointer"
+                title="Previous Step"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <span className="text-[10px] font-mono px-1 opacity-70">
+                {currentStepIdx + 1}/{steps.length}
+              </span>
+              <button
+                onClick={handleNext}
+                disabled={currentStepIdx === steps.length - 1}
+                className="p-1.5 rounded-lg border border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed hover:border-cyan-500 transition cursor-pointer"
+                title="Next Step"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
