@@ -1,6 +1,7 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, BookOpen, Brain, CheckCircle2, ChevronRight, Clock3, HardDrive, Layers3, Search, Sparkles, Target, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, Brain, CheckCircle2, ChevronRight, Clock3, HardDrive, Layers3, Search, Sparkles, Target, X, Volume2, VolumeX, RotateCcw, Play, Pause, Square } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useTextToSpeech } from '../hooks/useTextToSpeech';
 
 const LEARNING_TOPICS = [
   {
@@ -1173,6 +1174,8 @@ function DetailSection({ title, icon, children, isBright }) {
 
 export default function DsaLearningPage() {
   const { isBright } = useTheme();
+  const { supported: ttsSupported, speaking, paused, speak, stop, pause, resume } = useTextToSpeech();
+  const [lastSpokenText, setLastSpokenText] = useState('');
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -1183,6 +1186,19 @@ export default function DsaLearningPage() {
   const [revealedComplexity, setRevealedComplexity] = useState({});
   const scrollRef = useRef(null);
   const listScrollTopRef = useRef(0);
+
+  const handleSpeakTopic = (topic) => {
+    if (!topic) return;
+    const narration = `${topic.title}. ${topic.summary} Level: ${topic.level}. Key operations include: ${topic.operations?.map((op) => `${op[0]} with complexity ${op[1]}`).join(', ') || 'standard operations'}. Main memory characteristics: ${topic.memory || 'Contiguous or linked structure'}. Advantages: ${topic.advantages?.join(', ') || 'efficient processing'}.`;
+    setLastSpokenText(narration);
+    speak(narration, { force: true });
+  };
+
+  const handleSpeakText = (title, text) => {
+    const narration = `${title}. ${text}`;
+    setLastSpokenText(narration);
+    speak(narration, { force: true });
+  };
 
   useLayoutEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -1197,12 +1213,14 @@ export default function DsaLearningPage() {
   }, [selected, showIntro, showComplexity, showMemory, showProblemSolving]);
 
   const openTopic = (topic) => {
+    stop();
     listScrollTopRef.current = scrollRef.current?.scrollTop || 0;
     setSelectedVariant(null);
     setSelected(topic);
   };
 
   const openIntro = () => {
+    stop();
     listScrollTopRef.current = scrollRef.current?.scrollTop || 0;
     setSelected(null);
     setSelectedVariant(null);
@@ -1211,6 +1229,7 @@ export default function DsaLearningPage() {
   };
 
   const openComplexity = () => {
+    stop();
     listScrollTopRef.current = scrollRef.current?.scrollTop || 0;
     setSelected(null);
     setSelectedVariant(null);
@@ -1220,6 +1239,7 @@ export default function DsaLearningPage() {
   };
 
   const openMemory = () => {
+    stop();
     listScrollTopRef.current = scrollRef.current?.scrollTop || 0;
     setSelected(null);
     setSelectedVariant(null);
@@ -1229,6 +1249,7 @@ export default function DsaLearningPage() {
   };
 
   const openProblemSolving = () => {
+    stop();
     listScrollTopRef.current = scrollRef.current?.scrollTop || 0;
     setSelected(null);
     setSelectedVariant(null);
@@ -1780,6 +1801,55 @@ Node* b = a;
                 <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-400">{selected.summary}</p>
               </div>
 
+              {ttsSupported && (
+                <div className={`flex items-center gap-1.5 p-2 rounded-xl border shrink-0 ${isBright ? 'bg-slate-100 border-slate-300' : 'bg-slate-800/80 border-slate-700'}`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (speaking) {
+                        if (paused) resume();
+                        else pause();
+                      } else {
+                        handleSpeakTopic(selected);
+                      }
+                    }}
+                    title={speaking ? (paused ? 'Resume Voice' : 'Pause Voice') : 'Listen to Topic'}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition-colors cursor-pointer"
+                  >
+                    {speaking && !paused ? (
+                      <>
+                        <Pause size={14} /> Pause
+                      </>
+                    ) : (
+                      <>
+                        <Volume2 size={14} /> {paused ? 'Resume' : 'Listen'}
+                      </>
+                    )}
+                  </button>
+
+                  {speaking && (
+                    <button
+                      type="button"
+                      onClick={stop}
+                      title="Stop Voice"
+                      className="p-1.5 rounded-lg text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                    >
+                      <Square size={14} />
+                    </button>
+                  )}
+
+                  {lastSpokenText && (
+                    <button
+                      type="button"
+                      onClick={() => speak(lastSpokenText, { force: true })}
+                      title="Repeat Narration"
+                      className="p-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer"
+                    >
+                      <RotateCcw size={14} />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

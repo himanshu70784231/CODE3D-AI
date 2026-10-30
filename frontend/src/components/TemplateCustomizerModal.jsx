@@ -44,7 +44,7 @@ export default function TemplateCustomizerModal({ isOpen, onClose }) {
           <div className="flex items-center gap-2.5">
             <div
               className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-950 font-bold shadow-md"
-              style={{ backgroundColor: isBright ? currentAccent.bright : currentAccent.dark }}
+              style={{ backgroundColor: isBright ? (currentAccent?.bright || '#06b6d4') : (currentAccent?.dark || '#38bdf8') }}
             >
               <Palette size={16} />
             </div>
@@ -103,7 +103,7 @@ export default function TemplateCustomizerModal({ isOpen, onClose }) {
                           <span
                             className="w-4 h-4 rounded-full flex items-center justify-center text-slate-950 text-[10px] font-bold"
                             style={{
-                              backgroundColor: isBright ? currentAccent.bright : currentAccent.dark,
+                              backgroundColor: isBright ? (currentAccent?.bright || '#06b6d4') : (currentAccent?.dark || '#38bdf8'),
                             }}
                           >
                             <Check size={10} />
@@ -135,9 +135,9 @@ export default function TemplateCustomizerModal({ isOpen, onClose }) {
               </span>
               <span
                 className="text-[11px] font-mono font-bold"
-                style={{ color: isBright ? currentAccent.bright : currentAccent.dark }}
+                style={{ color: isBright ? (currentAccent?.bright || '#06b6d4') : (currentAccent?.dark || '#38bdf8') }}
               >
-                {currentAccent.name}
+                {currentAccent?.name || 'Cyan'}
               </span>
             </div>
 
@@ -231,13 +231,13 @@ export default function TemplateCustomizerModal({ isOpen, onClose }) {
           }`}
         >
           <span className="text-[11px] font-mono opacity-70">
-            Active: {currentTemplate.name} • {currentAccent.name}
+            Active: {currentTemplate?.name || 'Bento'} • {currentAccent?.name || 'Cyan'}
           </span>
           <button
             onClick={onClose}
             className="px-5 py-2 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer"
             style={{
-              backgroundColor: isBright ? currentAccent.bright : currentAccent.dark,
+              backgroundColor: isBright ? (currentAccent?.bright || '#06b6d4') : (currentAccent?.dark || '#38bdf8'),
             }}
           >
             Apply &amp; Experience

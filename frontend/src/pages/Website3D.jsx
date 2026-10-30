@@ -146,7 +146,7 @@ export default function Website3D({ onLaunchConcept }) {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const activeHex = isBright ? currentAccent.bright : currentAccent.dark;
+  const activeHex = isBright ? (currentAccent?.bright || '#06b6d4') : (currentAccent?.dark || '#38bdf8');
 
   const handleLaunchStudio = (concept) => {
     if (!isAuthenticated) {
@@ -631,7 +631,7 @@ export default function Website3D({ onLaunchConcept }) {
             <div
               className="p-6 rounded-2xl border"
               style={{
-                backgroundColor: isBright ? `${currentAccent.bright}10` : `${currentAccent.dark}15`,
+                backgroundColor: isBright ? `${currentAccent?.bright || '#06b6d4'}10` : `${currentAccent?.dark || '#38bdf8'}15`,
                 borderColor: activeHex,
               }}
             >
@@ -668,7 +668,7 @@ export default function Website3D({ onLaunchConcept }) {
           className="bento-card p-8 sm:p-14 relative overflow-hidden text-center space-y-6 shadow-2xl"
           style={{
             background: isBright
-              ? `linear-gradient(135deg, ${currentAccent.bright}, #0284c7, #6366f1)`
+              ? `linear-gradient(135deg, ${currentAccent?.bright || '#06b6d4'}, #0284c7, #6366f1)`
               : `linear-gradient(135deg, #09152b, #040916, #0e1e3c)`,
             borderColor: activeHex,
           }}

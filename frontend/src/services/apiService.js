@@ -80,16 +80,47 @@ async function smartFetch(endpoint, options = {}, { allowFallback = true } = {})
   }
 }
 
-export async function checkBackendHealth({ allowFallback = true } = {}) {
-  try {
-    const res = await smartFetch('/health', {
-      method: 'GET'
-    }, { allowFallback });
+let inFlightHealthPromise = null;
+let lastHealthCheckTime = 0;
+let cachedHealthResult = null;
 
-    return res.ok;
-  } catch (err) {
-    return false;
+export async function checkBackendHealth({ allowFallback = true, force = false } = {}) {
+  const now = Date.now();
+  // Return cached result if fresh within 10 seconds and not forced
+  if (!force && cachedHealthResult !== null && (now - lastHealthCheckTime) < 10000) {
+    return cachedHealthResult;
   }
+
+  // Deduplicate concurrent requests across Navbar, Visualizer, StrictMode
+  if (inFlightHealthPromise) {
+    return inFlightHealthPromise;
+  }
+
+  inFlightHealthPromise = (async () => {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 6000);
+
+      const res = await smartFetch('/health', {
+        method: 'GET',
+        signal: controller.signal,
+      }, { allowFallback });
+
+      clearTimeout(timer);
+      const isUp = Boolean(res && res.ok);
+      cachedHealthResult = isUp;
+      lastHealthCheckTime = Date.now();
+      return isUp;
+    } catch (err) {
+      cachedHealthResult = false;
+      lastHealthCheckTime = Date.now();
+      return false;
+    } finally {
+      inFlightHealthPromise = null;
+    }
+  })();
+
+  return inFlightHealthPromise;
 }
 
 export async function fetchDsaConcepts() {

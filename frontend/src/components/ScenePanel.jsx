@@ -33,7 +33,7 @@ export function ScenePanel({
   const statusLabel = currentStep?.dataStructureState?.label || null;
   const activeDetails = currentStep?.dataStructureState?.focusInfo || null;
 
-  const accentHex = isBright ? currentAccent.bright : currentAccent.dark;
+  const accentHex = isBright ? (currentAccent?.bright || '#06b6d4') : (currentAccent?.dark || '#38bdf8');
 
   return (
     <div

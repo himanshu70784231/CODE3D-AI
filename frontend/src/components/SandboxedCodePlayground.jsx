@@ -200,7 +200,8 @@ window.__animate = (time) => {
 
 export default function SandboxedCodePlayground() {
   const { isBright, currentAccent } = useTheme();
-  const accentHex = isBright ? currentAccent.bright : currentAccent.dark;
+  const accentHex = isBright ? (currentAccent?.bright || '#06b6d4') : (currentAccent?.dark || '#38bdf8');
+  const accentGlow = currentAccent?.glow || 'rgba(6, 182, 212, 0.25)';
 
   const [selectedPreset, setSelectedPreset] = useState(PLAYGROUND_PRESETS[0]);
   const [code, setCode] = useState(PLAYGROUND_PRESETS[0].code);
@@ -451,7 +452,7 @@ export default function SandboxedCodePlayground() {
               onClick={handleRun}
               style={{
                 backgroundColor: accentHex,
-                boxShadow: `0 4px 12px ${currentAccent.glow}`,
+                boxShadow: `0 4px 12px ${accentGlow}`,
               }}
               className="h-8 px-4 rounded-xl text-xs font-bold text-slate-950 flex items-center gap-1.5 transition hover:opacity-90 active:scale-97 cursor-pointer"
             >

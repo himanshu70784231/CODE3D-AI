@@ -39,7 +39,7 @@ const SAMPLE_PROMPTS = [
 
 export default function NlTo3dPage() {
   const { isBright, currentAccent } = useTheme();
-  const accentHex = isBright ? currentAccent.bright : currentAccent.dark;
+  const accentHex = isBright ? (currentAccent?.bright || '#06b6d4') : (currentAccent?.dark || '#38bdf8');
 
   const [prompt, setPrompt] = useState(SAMPLE_PROMPTS[0].prompt);
   const [loading, setLoading] = useState(false);

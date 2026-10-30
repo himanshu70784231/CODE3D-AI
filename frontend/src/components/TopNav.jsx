@@ -42,7 +42,7 @@ export function TopNav({
   const { isBright, currentAccent } = useTheme();
   const [copiedLink, setCopiedLink] = useState(false);
 
-  const accentHex = isBright ? currentAccent.bright : currentAccent.dark;
+  const accentHex = isBright ? (currentAccent?.bright || '#06b6d4') : (currentAccent?.dark || '#38bdf8');
 
   const handleShareClick = () => {
     if (onShare) {

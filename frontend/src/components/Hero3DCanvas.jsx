@@ -26,7 +26,7 @@ function HologramCore({ isBright, currentAccent }) {
     }
   });
 
-  const primaryColor = isBright ? currentAccent.bright : currentAccent.dark;
+  const primaryColor = isBright ? (currentAccent?.bright || '#06b6d4') : (currentAccent?.dark || '#38bdf8');
   const secondaryColor = isBright ? '#6366f1' : '#a855f7';
 
   return (
@@ -89,7 +89,7 @@ function OrbitingNodes({ isBright, currentAccent }) {
     const items = [];
     const count = 8;
     const radius = 3.3;
-    const primary = isBright ? currentAccent.bright : currentAccent.dark;
+    const primary = isBright ? (currentAccent?.bright || '#06b6d4') : (currentAccent?.dark || '#38bdf8');
     const colors = [
       primary,
       '#06b6d4',
@@ -154,7 +154,7 @@ function PointerRings({ isBright, currentAccent }) {
     }
   });
 
-  const primary = isBright ? currentAccent.bright : currentAccent.dark;
+  const primary = isBright ? (currentAccent?.bright || '#06b6d4') : (currentAccent?.dark || '#38bdf8');
 
   return (
     <group>
@@ -185,7 +185,7 @@ function PointerRings({ isBright, currentAccent }) {
 export default function Hero3DCanvas() {
   const { isBright, currentAccent } = useTheme();
 
-  const accentHex = isBright ? currentAccent.bright : currentAccent.dark;
+  const accentHex = isBright ? (currentAccent?.bright || '#06b6d4') : (currentAccent?.dark || '#38bdf8');
 
   return (
     <div className="w-full h-full relative cursor-grab active:cursor-grabbing">

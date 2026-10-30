@@ -83,13 +83,31 @@ export default function Navbar({ activeTab, setActiveTab }) {
    * ================================
    */
   useEffect(() => {
-    checkBackendHealth().then(setBackendOnline);
+    let isMounted = true;
 
-    const id = setInterval(() => {
-      checkBackendHealth().then(setBackendOnline);
-    }, 15000);
+    const performCheck = async () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      const isUp = await checkBackendHealth();
+      if (isMounted) setBackendOnline(isUp);
+    };
 
-    return () => clearInterval(id);
+    performCheck();
+
+    // Poll periodically while active, pausing when backgrounded
+    const id = setInterval(performCheck, 45000);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        performCheck();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      isMounted = false;
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, []);
 
   /*
